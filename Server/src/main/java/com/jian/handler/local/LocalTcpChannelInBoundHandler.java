@@ -82,6 +82,9 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
 
         //获取该通道上绑定的远程通道
         Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
+        if(Objects.isNull(remoteChannel)){
+            return;
+        }
         //从远程通道上获取绑定的本地通道信息，且移除本地通道
         Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         localChannelMap.remove(thisChannelHash);
