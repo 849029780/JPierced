@@ -1,0 +1,174 @@
+package com.jian.handler.remote;
+
+import com.jian.beans.Client;
+import com.jian.beans.transfer.*;
+import com.jian.commons.Constants;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.util.ReferenceCountUtil;
+
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/***
+ *
+ * @author Jian
+ * @date 2022/4/2
+ */
+@ChannelHandler.Sharable
+public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, BaseTransferPacks> {
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) throws Exception {
+        int packSize = Constants.BASE_PACK_SIZE;
+        byte type = baseTransferPacks.getType();
+        ByteBuf buffer = ctx.alloc().buffer();
+        switch (type) {
+            case 1: { //服务发起连接请求
+                ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
+                packSize += 8 + 8 + 4 + 4;
+                byte[] hostBytes = connectReqPacks.getHost().getBytes(StandardCharsets.UTF_8);
+                int hostLen = hostBytes.length;
+                packSize += hostLen;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(connectReqPacks.getThisChannelHash());
+                buffer.writeLong(connectReqPacks.getTarChannelHash());
+                buffer.writeInt(connectReqPacks.getPort());
+                buffer.writeInt(hostLen);
+                if (hostLen > 0) {
+                    buffer.writeBytes(hostBytes);
+                }
+                break;
+            }
+            case 3: { //服务发起断开连接请求
+                DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
+                packSize += 8;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(disConnectReqPacks.getTarChannelHash());
+                break;
+            }
+            case 5: { //认证结果响应
+                ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
+                packSize += 8 + 1 + 4;
+                String msg = connectAuthRespPacks.getMsg();
+                byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+                int msgLen = msgBytes.length;
+                if (msgLen > 0) {
+                    packSize += msgLen;
+                }
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(connectAuthRespPacks.getKey());
+                buffer.writeByte(connectAuthRespPacks.getState());
+                buffer.writeInt(msgLen);
+                if (msgLen > 0) {
+                    buffer.writeBytes(msgBytes);
+                }
+                break;
+            }
+            case 7: { //传输数据
+                TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
+                packSize += 8;
+                ByteBuf datas = transferDataPacks.getDatas();
+                int readableBytes = datas.readableBytes();
+                packSize += readableBytes;
+
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(transferDataPacks.getTargetChannelHash());
+                buffer.writeBytes(datas);
+                break;
+            }
+        }
+        out.add(buffer);
+    }
+
+    @Override
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
+        int packSize = byteBuf.readInt();
+        byte type = byteBuf.readByte();
+        switch (type) {
+            case 2: {//连接响应
+                ConnectRespPacks connectRespPacks = new ConnectRespPacks();
+                long thisChannelHash = byteBuf.readLong();
+                byte state = byteBuf.readByte();
+                int msgLen = byteBuf.readInt();
+
+                connectRespPacks.setPackSize(packSize);
+                connectRespPacks.setThisChannelHash(thisChannelHash);
+                connectRespPacks.setState(state);
+                connectRespPacks.setMsgLen(msgLen);
+                if (msgLen > 0) {
+                    ByteBuf msgBuf = byteBuf.readBytes(msgLen);
+                    String msg = msgBuf.toString(StandardCharsets.UTF_8);
+                    connectRespPacks.setMsg(msg);
+                    ReferenceCountUtil.release(msgBuf);
+                }
+                list.add(connectRespPacks);
+                break;
+            }
+            case 3: {//客户发起断开连接请求
+                DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
+                long tarChannelHash = byteBuf.readLong();
+                disConnectReqPacks.setTarChannelHash(tarChannelHash);
+                list.add(disConnectReqPacks);
+                break;
+            }
+            case 4: {//客户端认证请求
+                ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
+                long key = byteBuf.readLong();
+                int pwdLen = byteBuf.readInt();
+                if (pwdLen > 0) {
+                    ByteBuf pwdBuff = byteBuf.readBytes(pwdLen);
+                    String pwd = pwdBuff.toString(StandardCharsets.UTF_8);
+                    ReferenceCountUtil.release(pwdBuff);
+                    connectAuthReqPacks.setPwd(pwd);
+                }
+                connectAuthReqPacks.setPackSize(packSize);
+                connectAuthReqPacks.setKey(key);
+                connectAuthReqPacks.setPwdLen(pwdLen);
+                list.add(connectAuthReqPacks);
+                break;
+            }
+            case 7: { //传输数据
+                TransferDataPacks transferDataPacks = new TransferDataPacks();
+                long targetChannelHash = byteBuf.readLong();
+                int readableBytes = byteBuf.readableBytes();
+                ByteBuf buffer = channelHandlerContext.alloc().buffer(readableBytes);
+                buffer.writeBytes(byteBuf);
+                transferDataPacks.setTargetChannelHash(targetChannelHash);
+                transferDataPacks.setDatas(buffer);
+                break;
+            }
+        }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
+        Channel channel = ctx.channel();
+        Client client = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        Optional.ofNullable(client).ifPresent(cli -> {
+            cli.setOnline(false);
+            cli.setRemoteChannel(null);
+            //获取该客户端监听的所有端口，并将这些端口全部取消监听
+            Map<Integer, Channel> listenPortMap = client.getListenPortMap();
+            Iterator<Map.Entry<Integer, Channel>> iterator = listenPortMap.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<Integer, Channel> listen = iterator.next();
+                Channel listenChannel = listen.getValue();
+                Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
+            }
+            client.setListenPortMap(new ConcurrentHashMap<>());
+        });
+    }
+}
