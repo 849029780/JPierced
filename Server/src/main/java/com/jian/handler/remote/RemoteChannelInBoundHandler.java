@@ -1,19 +1,15 @@
 package com.jian.handler.remote;
 
-import com.jian.beans.Client;
+import com.jian.start.ClientConnectInfo;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.handler.local.LocalListener;
-import com.jian.start.Server;
 import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 
 /***
  *
@@ -60,36 +56,36 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             case 4: {//客户端认证请求
                 ConnectAuthReqPacks connectAuthReqPacks = (ConnectAuthReqPacks) baseTransferPacks;
                 Long key = connectAuthReqPacks.getKey();
-                Client client = Constants.CLIENTS.get(key);
-                if (Objects.isNull(client)) {
+                ClientConnectInfo clientConnectInfo = Constants.CLIENTS.get(key);
+                if (Objects.isNull(clientConnectInfo)) {
                     ConnectAuthRespPacks connectAuthRespPacks = new ConnectAuthRespPacks();
                     connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.FAIL);
                     connectAuthRespPacks.setKey(key);
                     connectAuthRespPacks.setMsg("当前key无权限连接..");
-                    ctx.writeAndFlush(connectAuthRespPacks);
+                    ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     return;
                 }
 
-                if (!client.getPwd().equals(connectAuthReqPacks.getPwd())) {
+                if (!clientConnectInfo.getPwd().equals(connectAuthReqPacks.getPwd())) {
                     ConnectAuthRespPacks connectAuthRespPacks = new ConnectAuthRespPacks();
                     connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.FAIL);
                     connectAuthRespPacks.setKey(key);
                     connectAuthRespPacks.setMsg("当前key密码错误..");
-                    ctx.writeAndFlush(connectAuthRespPacks);
+                    ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     return;
                 }
 
 
-                client.setOnline(true);
-                client.setRemoteChannel(channel);
+                clientConnectInfo.setOnline(true);
+                clientConnectInfo.setRemoteChannel(channel);
                 channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).set(new ConcurrentHashMap<>());
-                channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).set(client);
+                channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).set(clientConnectInfo);
 
 
                 //异步启动该客户端需要监听的端口
                 Constants.FIXED_THREAD_POOL.execute(() -> {
-                    Map<Integer, InetSocketAddress> portMappingAddress = client.getPortMappingAddress();
-                    new LocalListener().listen(portMappingAddress.keySet(), client);
+                    Map<Integer, InetSocketAddress> portMappingAddress = clientConnectInfo.getPortMappingAddress();
+                    new LocalListener().listen(portMappingAddress.keySet(), clientConnectInfo);
                 });
 
                 break;
@@ -98,7 +94,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
                 Long targetChannelHash = transferDataPacks.getTargetChannelHash();
                 Channel localChannel = localChannelMap.get(targetChannelHash);
-                Optional.ofNullable(localChannel).ifPresent(localChannel::writeAndFlush);
+                Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
                 break;
             }
         }

@@ -1,6 +1,6 @@
 package com.jian.handler.local;
 
-import com.jian.beans.Client;
+import com.jian.start.ClientConnectInfo;
 import com.jian.beans.transfer.ConnectReqPacks;
 import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.beans.transfer.TransferDataPacks;
@@ -14,6 +14,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /***
  *
@@ -35,8 +36,8 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         InetSocketAddress socketAddress = (InetSocketAddress) channel.localAddress();
         Integer port = socketAddress.getPort();
         //通过端口号获取该端口是哪个客户端监听的
-        Client client = Constants.PORT_MAPPING_CLIENT.get(port);
-        if (Objects.isNull(client) || client.isOnline()) {
+        ClientConnectInfo clientConnectInfo = Constants.PORT_MAPPING_CLIENT.get(port);
+        if (Objects.isNull(clientConnectInfo) || !clientConnectInfo.isOnline()) {
             //客户端未连接
             channel.close();
             return;
@@ -49,7 +50,7 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         channel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
         channel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
         //该通道绑定好客户端通道
-        Channel remoteChannel = client.getRemoteChannel();
+        Channel remoteChannel = clientConnectInfo.getRemoteChannel();
         channel.attr(Constants.REMOTE_CHANNEL_KEY).set(remoteChannel);
 
         //当前hash对应本地连接通道
@@ -63,7 +64,7 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         connectReqPacks.setTarChannelHash(thisChannelHash);
 
         //从客户信息中获取该端口对应的哪个本地连接
-        InetSocketAddress inetSocketAddress = client.getPortMappingAddress().get(port);
+        InetSocketAddress inetSocketAddress = clientConnectInfo.getPortMappingAddress().get(port);
         connectReqPacks.setHost(inetSocketAddress.getHostString());
         connectReqPacks.setPort(inetSocketAddress.getPort());
 
@@ -113,4 +114,13 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         remoteChannel.writeAndFlush(transferDataPacks);
     }
 
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        super.channelWritabilityChanged(ctx);
+        Channel channel = ctx.channel();
+        //获取该通道上绑定的远程通道
+        Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
+        //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
+        Optional.ofNullable(remoteChannel).ifPresent(rch->rch.config().setAutoRead(channel.isWritable()));
+    }
 }

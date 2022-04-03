@@ -35,6 +35,15 @@ public class Server {
         return server;
     }
 
+    public static Server getLocalInstance() {
+        return getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
+    }
+
+    public static Server getRemoteInstance() {
+        return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
+    }
+
+
     public ChannelFuture listen(Integer port) {
         return serverBootstrap.bind(port);
     }

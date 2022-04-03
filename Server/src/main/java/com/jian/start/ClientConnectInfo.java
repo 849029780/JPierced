@@ -1,4 +1,4 @@
-package com.jian.beans;
+package com.jian.start;
 
 import io.netty.channel.Channel;
 import lombok.Data;
@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2022/4/2
  */
 @Data
-public class Client {
+public class ClientConnectInfo {
 
     /***
      * 客户标识

@@ -44,8 +44,6 @@ public class BaseTransferPacks {
          * 传输数据
          */
         Byte TRANSFER_DATA = 7;
-
-
     }
 
 }

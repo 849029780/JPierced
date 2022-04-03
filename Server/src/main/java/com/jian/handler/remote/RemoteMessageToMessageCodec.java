@@ -1,6 +1,6 @@
 package com.jian.handler.remote;
 
-import com.jian.beans.Client;
+import com.jian.start.ClientConnectInfo;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +11,6 @@ import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -146,6 +145,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeBytes(byteBuf);
                 transferDataPacks.setTargetChannelHash(targetChannelHash);
                 transferDataPacks.setDatas(buffer);
+                list.add(transferDataPacks);
                 break;
             }
         }
@@ -156,19 +156,41 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
-        Client client = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        Optional.ofNullable(client).ifPresent(cli -> {
+        ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        Optional.ofNullable(clientConnectInfo).ifPresent(cli -> {
             cli.setOnline(false);
             cli.setRemoteChannel(null);
+
             //获取该客户端监听的所有端口，并将这些端口全部取消监听
-            Map<Integer, Channel> listenPortMap = client.getListenPortMap();
+            Map<Integer, Channel> listenPortMap = clientConnectInfo.getListenPortMap();
             Iterator<Map.Entry<Integer, Channel>> iterator = listenPortMap.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<Integer, Channel> listen = iterator.next();
+                //端口号
+                Integer port = listen.getKey();
+                //监听的端口通道，非连接通道
                 Channel listenChannel = listen.getValue();
+                //关闭监听的端口
                 Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
+                //移除端口映射
+                Constants.PORT_MAPPING_CLIENT.remove(port);
             }
-            client.setListenPortMap(new ConcurrentHashMap<>());
+            clientConnectInfo.setListenPortMap(new ConcurrentHashMap<>());
         });
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        super.channelWritabilityChanged(ctx);
+        Channel channel = ctx.channel();
+        boolean writable = channel.isWritable();
+        //远程通道写缓冲状态和本地自动读状态设置为一致，如果通道缓冲写满了，则不允许本地通道自动读
+        Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
+        Iterator<Map.Entry<Long, Channel>> iterator = localChannelMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Long, Channel> entry = iterator.next();
+            Channel localChannel = entry.getValue();
+            Optional.ofNullable(localChannel).ifPresent(ch->ch.config().setAutoRead(writable));
+        }
     }
 }

@@ -3,7 +3,7 @@ package com.jian.beans.transfer;
 import lombok.Data;
 
 /***
- *
+ * 连接请求
  * @author Jian
  * @date 2022/4/2
  */

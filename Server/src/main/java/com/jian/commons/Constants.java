@@ -1,6 +1,6 @@
 package com.jian.commons;
 
-import com.jian.beans.Client;
+import com.jian.start.ClientConnectInfo;
 import com.jian.handler.local.LocalChannelInitializer;
 import com.jian.handler.remote.RemoteChannelInitializer;
 import io.netty.channel.Channel;
@@ -53,7 +53,7 @@ public class Constants {
     /***
      * 绑定在远程通道上的 当前客户端连接信息
      */
-    public static final AttributeKey<Client> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
+    public static final AttributeKey<ClientConnectInfo> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
 
     /***
      * 基础包头大小
@@ -63,12 +63,12 @@ public class Constants {
     /***
      * 本地服务端端口映射被穿透机器上的地址和端口(Client中的portMappingAddress)
      */
-    public static Map<Integer, Client> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
+    public static Map<Integer, ClientConnectInfo> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
 
     /***
      * 客户端配置信息
      */
-    public static Map<Long, Client> CLIENTS = new ConcurrentHashMap<>();
+    public static Map<Long, ClientConnectInfo> CLIENTS = new ConcurrentHashMap<>();
 
     /***
      * 固定活动线程数的线程池
