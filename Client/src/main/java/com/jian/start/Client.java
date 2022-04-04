@@ -96,6 +96,7 @@ public class Client {
             recount.set(count);
             if (count.intValue() > Constants.RECONNECT_MAX_COUNT) {
                 log.info("已超过最大重连次数:{}次，已退出重连..", Constants.RECONNECT_MAX_COUNT);
+                System.exit(0);
                 return;
             }
             try {
