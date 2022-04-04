@@ -88,6 +88,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeBytes(datas);
                 break;
             }
+            case 9: { //响应心跳
+                HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
+                packSize += 8;
+
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(healthRespPacks.getMsgId());
+            }
         }
         out.add(buffer);
     }
@@ -150,6 +158,12 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 list.add(transferDataPacks);
                 break;
             }
+            case 8: { //接收心跳请求
+                HealthReqPacks healthReqPacks = new HealthReqPacks();
+                long msgId = byteBuf.readLong();
+                healthReqPacks.setMsgId(msgId);
+                list.add(healthReqPacks);
+            }
         }
     }
 
@@ -162,7 +176,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Optional.ofNullable(clientConnectInfo).ifPresent(cli -> {
             //获取该客户端监听的所有端口，并将这些端口全部取消监听
             Map<Integer, Channel> listenPortMap = clientConnectInfo.getListenPortMap();
-            log.info("客户端key:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientConnectInfo.getKey(), listenPortMap.keySet());
+            log.info("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), listenPortMap.keySet());
             cli.setOnline(false);
             cli.setRemoteChannel(null);
 
@@ -194,15 +208,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         while (iterator.hasNext()) {
             Map.Entry<Long, Channel> entry = iterator.next();
             Channel localChannel = entry.getValue();
-            Optional.ofNullable(localChannel).ifPresent(ch->ch.config().setAutoRead(writable));
+            Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
         Channel channel = ctx.channel();
         ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        log.error("远程通道发生错误,客户端key:{}", clientConnectInfo.getKey(), cause);
+        log.error("远程通道发生错误,客户端key:{},name:{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), cause);
     }
 }

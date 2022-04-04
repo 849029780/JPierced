@@ -1,10 +1,14 @@
 package com.jian.handler.remote;
 
+import com.jian.commons.Constants;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.timeout.IdleStateHandler;
+
+import java.util.concurrent.TimeUnit;
 
 /***
  *
@@ -26,6 +30,7 @@ public class RemoteChannelInitializer extends ChannelInitializer {
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
         pipeline.addLast(remoteMessageToMessageCodec);
+        pipeline.addLast(new IdleStateHandler(0,0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
         pipeline.addLast(remoteChannelInBoundHandler);
     }
 }

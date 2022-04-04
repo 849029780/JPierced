@@ -4,6 +4,7 @@ import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.start.Client;
 import io.netty.channel.*;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +66,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.remove(tarChannelHash);
                 Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
-                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
+                log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
                 break;
             }
             case 5: { //认证响应
@@ -92,6 +93,36 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
                 break;
             }
+            case 9:{ //心跳响应
+                HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
+                Long msgId = healthRespPacks.getMsgId();
+                log.info("接收到服务端的心跳响应，msgId:{}", msgId);
+            }
+        }
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        super.userEventTriggered(ctx, evt);
+        IdleStateEvent event = (IdleStateEvent) evt;
+        switch (event.state()) {
+            case READER_IDLE: //读空闲
+                break;
+            case WRITER_IDLE: //写空闲
+                long msgId = System.nanoTime();
+                log.info("发送心跳请求，msgId:{}", msgId);
+                HealthReqPacks healthReqPacks = new HealthReqPacks();
+                healthReqPacks.setMsgId(msgId);
+                ctx.writeAndFlush(healthReqPacks);
+                // 不处理
+                break;
+            case ALL_IDLE: //读写空闲
+                // 记录上一次接收到心跳的时间，如果时间超过规定阈值则该连接已经断开
+                log.warn("接收服务端响应的心跳超时！已自动认为该连接已断开，准备关闭本地连接...");
+                //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
+                ctx.close();
+                // 不处理
+                break;
         }
     }
 }

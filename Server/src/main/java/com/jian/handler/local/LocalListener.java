@@ -23,10 +23,10 @@ public class LocalListener {
 
     public void listen(Set<Integer> ports, ClientConnectInfo clientConnectInfo) {
         if (!clientConnectInfo.isOnline()) {
-            log.info("客户端key:{}，当前不在线，暂不可监听端口！", clientConnectInfo.getKey());
+            log.info("客户端key:{},name:{}，当前不在线，暂不可监听端口！", clientConnectInfo.getKey(), clientConnectInfo.getName());
             return;
         }
-        log.error("客户端key:{}，需要监听端口:{}", clientConnectInfo.getKey(), ports);
+        log.error("客户端key:{},name:{}，需要监听端口:{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), ports);
         StringBuffer stringBuffer = new StringBuffer();
         CountDownLatch countDownLatch = new CountDownLatch(ports.size());
         for (Integer port : ports) {
@@ -41,16 +41,16 @@ public class LocalListener {
                 stringBuffer.append(port1);
                 if (future1.isSuccess()) {
                     stringBuffer.append("监听成功；");
-                    log.info("客户端key：{}，监听端口:{}成功！", clientConnectInfo.getKey(), port1);
+                    log.info("客户端key：{}，name:{}，监听端口:{}成功！", clientConnectInfo.getKey(), clientConnectInfo.getName(), port1);
                     clientConnectInfo.getListenPortMap().put(port1, channel1);
                     Constants.PORT_MAPPING_CLIENT.put(port1, clientConnectInfo);
                 } else {
                     if (future1.cause() instanceof BindException) {
                         stringBuffer.append("监听失败，该端口已被使用；");
-                        log.info("客户端key：{}，监听端口:{}失败！该端口已被占用！", clientConnectInfo.getKey(), port1);
+                        log.info("客户端key：{}，name:{}，监听端口:{}失败！该端口已被占用！", clientConnectInfo.getKey(), clientConnectInfo.getName(), port1);
                     } else {
                         stringBuffer.append("监听失败；");
-                        log.info("客户端key：{}，监听端口:{}失败！", clientConnectInfo.getKey(), port1);
+                        log.info("客户端key：{}，name:{}，监听端口:{}失败！", clientConnectInfo.getKey(), clientConnectInfo.getName(), port1);
                     }
                 }
             });
@@ -64,7 +64,7 @@ public class LocalListener {
         connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
         connectAuthRespPacks.setKey(clientConnectInfo.getKey());
         String listenInfo = stringBuffer.toString();
-        log.info("客户端key:{},{}", clientConnectInfo.getKey(), listenInfo);
+        log.debug("客户端key:{},name:{},{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), listenInfo);
         connectAuthRespPacks.setMsg(listenInfo);
         clientConnectInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
     }

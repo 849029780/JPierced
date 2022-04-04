@@ -39,7 +39,7 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         InetSocketAddress socketAddress = (InetSocketAddress) channel.localAddress();
 
         Integer port = socketAddress.getPort();
-        log.info("端口:{}，新的连接..", port);
+        log.debug("端口:{}，新的连接..", port);
         //通过端口号获取该端口是哪个客户端监听的
         ClientConnectInfo clientConnectInfo = Constants.PORT_MAPPING_CLIENT.get(port);
         if (Objects.isNull(clientConnectInfo) || !clientConnectInfo.isOnline()) {
@@ -134,7 +134,6 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
         log.error("本地通道发生错误错误", cause);
     }
 }

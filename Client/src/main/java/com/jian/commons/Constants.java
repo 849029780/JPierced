@@ -67,11 +67,16 @@ public class Constants {
     /***
      * 重连间隔时间 s
      */
-    public static final int RECONNECT_DELAY = 5;
+    public static final int RECONNECT_DELAY = 20;
 
     /***
      * 重连最大次数
      */
-    public static final int RECONNECT_MAX_COUNT = 3;
+    public static final int RECONNECT_MAX_COUNT = 5;
+
+    /***
+     * 超过该阈值未接收到心跳则代表该连接已断开
+     */
+    public static final int DISCONNECT_HEALTH_SECONDS = 70;
 
 }

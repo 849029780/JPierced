@@ -44,6 +44,16 @@ public class BaseTransferPacks {
          * 传输数据
          */
         Byte TRANSFER_DATA = 7;
+
+        /***
+         * 心跳请求
+         */
+        Byte HEALTH_REQ = 8;
+
+        /***
+         * 心跳响应
+         */
+        Byte HEALTH_RESP = 9;
     }
 
 }

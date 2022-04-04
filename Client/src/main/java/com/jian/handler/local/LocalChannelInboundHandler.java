@@ -59,7 +59,6 @@ public class LocalChannelInboundHandler extends SimpleChannelInboundHandler<Byte
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
         log.error("本地通道发生错误！", cause);
     }
 }

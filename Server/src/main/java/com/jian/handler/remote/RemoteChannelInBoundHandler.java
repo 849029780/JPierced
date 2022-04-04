@@ -5,6 +5,7 @@ import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.handler.local.LocalListener;
 import io.netty.channel.*;
+import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
@@ -51,7 +52,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Channel localChannel = localChannelMap.remove(tarChannelHash);
                 //关闭本地连接的通道
                 Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
-                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
+                log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
                 break;
             }
             case 4: {//客户端认证请求
@@ -98,6 +99,38 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
                 break;
             }
+            case 8: { //接收心跳请求
+                ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+                HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
+                Long msgId = healthReqPacks.getMsgId();
+                log.info("接收到客户端key:{}，name:{}，的心跳请求，msgId:{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), msgId);
+                HealthRespPacks healthRespPacks = new HealthRespPacks();
+                healthRespPacks.setMsgId(msgId);
+                ctx.writeAndFlush(healthRespPacks);
+            }
         }
     }
+
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        Channel channel = ctx.channel();
+        ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        IdleStateEvent event = (IdleStateEvent) evt;
+        switch (event.state()) {
+            case READER_IDLE:
+                break;
+            case WRITER_IDLE:
+                // 写空闲，不处理
+                break;
+            case ALL_IDLE:
+                //所有空闲
+                log.warn("客户端心跳接收已超过{}s，已默认为失去连接，准备关闭该客户端key:{},name:{}监听的所有端口...", Constants.DISCONNECT_HEALTH_SECONDS, clientConnectInfo.getKey(), clientConnectInfo.getName());
+                //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
+                ctx.close();
+                break;
+        }
+    }
+
+
 }

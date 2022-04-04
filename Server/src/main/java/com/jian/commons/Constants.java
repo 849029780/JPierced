@@ -75,9 +75,22 @@ public class Constants {
      */
     public static final ExecutorService FIXED_THREAD_POOL = Executors.newFixedThreadPool(5);
 
+    /***
+     * 本地通道初始化handler
+     */
     public static final ChannelInitializer LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
 
+
+    /***
+     * 远程通道初始化Handler
+     */
     public static final ChannelInitializer REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+
+    /***
+     * 通道心跳间隔阈值 秒s，超过该时间的通道未发送心跳，则默认该通道已失去连接，需要关闭通道并停止本地端口监听
+     */
+    public static final Integer DISCONNECT_HEALTH_SECONDS = 70;
+
 
 
 }

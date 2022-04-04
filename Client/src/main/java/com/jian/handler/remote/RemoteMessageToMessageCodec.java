@@ -89,6 +89,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeBytes(datas);
                 break;
             }
+            case 8: {//心跳请求
+                HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
+                packSize += 8;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+
+                buffer.writeLong(healthReqPacks.getMsgId());
+            }
         }
         out.add(buffer);
     }
@@ -153,6 +161,12 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 list.add(transferDataPacks);
                 break;
             }
+            case 9: {//心跳响应
+                HealthRespPacks healthRespPacks = new HealthRespPacks();
+                long msgId = byteBuf.readLong();
+                healthRespPacks.setMsgId(msgId);
+                list.add(healthRespPacks);
+            }
         }
     }
 
@@ -193,7 +207,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
         log.error("远程通道发生错误!", cause);
     }
 }
