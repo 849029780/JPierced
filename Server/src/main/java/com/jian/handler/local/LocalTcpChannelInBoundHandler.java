@@ -10,8 +10,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,6 +23,7 @@ import java.util.Optional;
  * @author Jian
  * @date 2022/4/2
  */
+@Slf4j
 @ChannelHandler.Sharable
 public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
@@ -34,10 +37,13 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         channel.config().setAutoRead(Boolean.FALSE);
 
         InetSocketAddress socketAddress = (InetSocketAddress) channel.localAddress();
+
         Integer port = socketAddress.getPort();
+        log.info("端口:{}，新的连接..", port);
         //通过端口号获取该端口是哪个客户端监听的
         ClientConnectInfo clientConnectInfo = Constants.PORT_MAPPING_CLIENT.get(port);
         if (Objects.isNull(clientConnectInfo) || !clientConnectInfo.isOnline()) {
+            log.info("该端口:{}，未找到在线的客户端，连接已关闭..", port);
             //客户端未连接
             channel.close();
             return;
@@ -101,6 +107,7 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
         Channel channel = channelHandlerContext.channel();
+        SocketAddress socketAddress = channel.localAddress();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
         //获取该通道上绑定的远程通道
         Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
@@ -112,6 +119,7 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         transferDataPacks.setDatas(buffer);
 
         remoteChannel.writeAndFlush(transferDataPacks);
+        log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
     }
 
     @Override
@@ -122,5 +130,11 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
         Optional.ofNullable(remoteChannel).ifPresent(rch->rch.config().setAutoRead(channel.isWritable()));
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        log.error("本地通道发生错误错误", cause);
     }
 }

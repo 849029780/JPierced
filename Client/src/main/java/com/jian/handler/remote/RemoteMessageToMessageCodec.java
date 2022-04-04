@@ -173,7 +173,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
 
         log.warn("与服务端的连接断开，本地所有连接已关闭..{}s后将发起重连..", Constants.RECONNECT_DELAY);
         Client client = channel.attr(Constants.CLIENT_KEY).get();
-        Optional.ofNullable(client).ifPresent(cli->cli.reConnct());
+        Optional.ofNullable(client).ifPresent(cli -> cli.reConnct());
     }
 
 
@@ -187,7 +187,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         while (iterator.hasNext()) {
             Map.Entry<Long, Channel> entry = iterator.next();
             Channel localChannel = entry.getValue();
-            Optional.ofNullable(localChannel).ifPresent(ch->ch.config().setAutoRead(writable));
+            Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
         }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        log.error("远程通道发生错误!", cause);
     }
 }

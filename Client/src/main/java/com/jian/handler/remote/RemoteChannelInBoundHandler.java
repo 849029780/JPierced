@@ -65,6 +65,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.remove(tarChannelHash);
                 Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
+                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
                 break;
             }
             case 5: { //认证响应

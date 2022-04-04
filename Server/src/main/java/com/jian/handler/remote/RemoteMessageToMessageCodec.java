@@ -10,6 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -20,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Jian
  * @date 2022/4/2
  */
+@Slf4j
 @ChannelHandler.Sharable
 public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, BaseTransferPacks> {
 
@@ -158,11 +160,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Channel channel = ctx.channel();
         ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         Optional.ofNullable(clientConnectInfo).ifPresent(cli -> {
+            //获取该客户端监听的所有端口，并将这些端口全部取消监听
+            Map<Integer, Channel> listenPortMap = clientConnectInfo.getListenPortMap();
+            log.info("客户端key:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientConnectInfo.getKey(), listenPortMap.keySet());
             cli.setOnline(false);
             cli.setRemoteChannel(null);
 
-            //获取该客户端监听的所有端口，并将这些端口全部取消监听
-            Map<Integer, Channel> listenPortMap = clientConnectInfo.getListenPortMap();
+
             Iterator<Map.Entry<Integer, Channel>> iterator = listenPortMap.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<Integer, Channel> listen = iterator.next();
@@ -192,5 +196,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             Channel localChannel = entry.getValue();
             Optional.ofNullable(localChannel).ifPresent(ch->ch.config().setAutoRead(writable));
         }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        Channel channel = ctx.channel();
+        ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        log.error("远程通道发生错误,客户端key:{}", clientConnectInfo.getKey(), cause);
     }
 }
