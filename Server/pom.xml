@@ -15,14 +15,46 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
+        <vertx.version>4.2.6</vertx.version>
+        <jackson.version>2.13.2.2</jackson.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.jian</groupId>
             <artifactId>Commons</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${jian.commons.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web</artifactId>
+            <version>${vertx.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-auth-jwt</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
     </dependencies>
 
 </project>

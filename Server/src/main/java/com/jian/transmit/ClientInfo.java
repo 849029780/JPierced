@@ -1,6 +1,8 @@
-package com.jian.start;
+package com.jian.transmit;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.netty.channel.Channel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.net.InetSocketAddress;
@@ -13,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2022/4/2
  */
 @Data
-public class ClientConnectInfo {
+public class ClientInfo {
 
     /***
      * 客户标识
@@ -33,22 +35,24 @@ public class ClientConnectInfo {
     /***
      * 客户端连接通道
      */
+    @JsonIgnore
     private Channel remoteChannel;
 
     /***
      * 是否在线 默认false
      */
+    @JsonIgnore
     private boolean isOnline = false;
 
     /***
      * 需要在服务端映射的端口及被穿透机器上的地址和端口
      */
-    private Map<Integer, InetSocketAddress> portMappingAddress;
+    private Map<Integer, NetAddress> portMappingAddress = new ConcurrentHashMap<>();
 
     /***
      * 监听的端口 对应通道 客户端在线时才有连接数据，否则为空
      */
+    @JsonIgnore
     private Map<Integer, Channel> listenPortMap = new ConcurrentHashMap<>();
-
 
 }

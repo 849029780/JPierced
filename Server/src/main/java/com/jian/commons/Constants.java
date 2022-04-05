@@ -1,15 +1,17 @@
 package com.jian.commons;
 
-import com.jian.start.ClientConnectInfo;
-import com.jian.handler.local.LocalChannelInitializer;
-import com.jian.handler.remote.RemoteChannelInitializer;
+import com.jian.transmit.ClientInfo;
+import com.jian.transmit.handler.local.LocalChannelInitializer;
+import com.jian.transmit.handler.remote.RemoteChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.AttributeKey;
+import io.vertx.core.Vertx;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,7 +55,7 @@ public class Constants {
     /***
      * 绑定在远程通道上的 当前客户端连接信息
      */
-    public static final AttributeKey<ClientConnectInfo> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
+    public static final AttributeKey<ClientInfo> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
 
     /***
      * 基础包头大小
@@ -63,12 +65,12 @@ public class Constants {
     /***
      * 本地服务端端口映射被穿透机器上的地址和端口(Client中的portMappingAddress)
      */
-    public static Map<Integer, ClientConnectInfo> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
+    public static Map<Integer, ClientInfo> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
 
     /***
      * 客户端配置信息
      */
-    public static Map<Long, ClientConnectInfo> CLIENTS = new ConcurrentHashMap<>();
+    public static Map<Long, ClientInfo> CLIENTS = new ConcurrentHashMap<>();
 
     /***
      * 固定活动线程数的线程池
@@ -90,6 +92,47 @@ public class Constants {
      * 通道心跳间隔阈值 秒s，超过该时间的通道未发送心跳，则默认该通道已失去连接，需要关闭通道并停止本地端口监听
      */
     public static final Integer DISCONNECT_HEALTH_SECONDS = 70;
+
+    /***
+     * 配置属性
+     */
+    public static Properties CONFIG = new Properties();
+
+    /***
+     * vertx
+     */
+    public static Vertx VERTX;
+
+    /***
+     * vertx部署的web实例id 用于重启web
+     */
+    public static String VERTX_WEB_DEPLOY_ID;
+
+    /***
+     * 传输服务监听的端口channel 用于重启操作
+     */
+    public static Channel LISTEN_REMOTE_CHANNEL;
+
+    /***
+     * 传输端口配置文件属性名
+     */
+    public static final String TRANSMIT_PORT_PROPERTY = "transmit.port";
+
+
+    /***
+     * web端口配置文件属性名
+     */
+    public static final String WEB_PORT_PROPERTY = "web.port";
+
+    /***
+     * 默认传输端口
+     */
+    public static final String DEF_TRANSMIT_PORT = "9999";
+
+    /***
+     * 默认web端口
+     */
+    public static final String DEF_WEB_PORT = "8000";
 
 
 

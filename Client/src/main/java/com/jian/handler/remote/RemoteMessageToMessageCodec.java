@@ -11,10 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -174,20 +171,22 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
         Channel channel = ctx.channel();
-        //和服务端的连接断开，关闭本地所有的连接
-        Iterator<Map.Entry<Long, Channel>> iterator = Constants.LOCAL_CHANNEL_MAP.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<Long, Channel> entry = iterator.next();
-            Optional.ofNullable(entry.getValue()).ifPresent(ChannelOutboundInvoker::close);
+
+        if (Objects.nonNull(Constants.LOCAL_CHANNEL_MAP)) {
+            //和服务端的连接断开，关闭本地所有的连接
+            Iterator<Map.Entry<Long, Channel>> iterator = Constants.LOCAL_CHANNEL_MAP.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<Long, Channel> entry = iterator.next();
+                Optional.ofNullable(entry.getValue()).ifPresent(ChannelOutboundInvoker::close);
+            }
+            //本地连接关闭后置空
+            Constants.LOCAL_CHANNEL_MAP = null;
         }
         //将连接置空
         Constants.REMOTE_CHANNEL = null;
-        //本地连接关闭后置空
-        Constants.LOCAL_CHANNEL_MAP = new ConcurrentHashMap<>();
-
         log.warn("与服务端的连接断开，本地所有连接已关闭..{}s后将发起重连..", Constants.RECONNECT_DELAY);
         Client client = channel.attr(Constants.CLIENT_KEY).get();
-        Optional.ofNullable(client).ifPresent(cli -> cli.reConnct());
+        Optional.ofNullable(client).ifPresent(Client::reConnct);
     }
 
 

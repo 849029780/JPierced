@@ -5,6 +5,7 @@ import com.jian.commons.Constants;
 import com.jian.start.Client;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /***
  *
@@ -47,6 +50,9 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                         localChannel.config().setAutoRead(Boolean.FALSE);
                         localChannel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
                         localChannel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
+                        if (Objects.isNull(Constants.LOCAL_CHANNEL_MAP)) {
+                            Constants.LOCAL_CHANNEL_MAP = new ConcurrentHashMap<>();
+                        }
                         Constants.LOCAL_CHANNEL_MAP.put(thisChannelHash, localChannel);
                         localChannel.config().setAutoRead(Boolean.TRUE);
                         connectRespPacks.setState(ConnectRespPacks.STATE.SUCCESS);
@@ -64,25 +70,36 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             case 3: {//断开连接
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
-                Channel localChannel = Constants.LOCAL_CHANNEL_MAP.remove(tarChannelHash);
-                Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
-                log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
+                Optional.ofNullable(Constants.LOCAL_CHANNEL_MAP).ifPresent(map -> {
+                    Channel localChannel = map.remove(tarChannelHash);
+                    Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
+                });
+                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
                 break;
             }
             case 5: { //认证响应
                 ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
                 Byte state = connectAuthRespPacks.getState();
                 String msg = connectAuthRespPacks.getMsg();
-                if (!StringUtil.isNullOrEmpty(msg)) {
-                    log.info(msg);
-                }
                 if (state.byteValue() == ConnectRespPacks.STATE.SUCCESS) {
+                    log.info("{}", msg);
+                    //是否已开启心跳
+                    Boolean isOpenHealth = channel.attr(Constants.HEALTH_IS_OPEN_KEY).get();
+                    if(Objects.isNull(isOpenHealth)){
+                        log.info("连接服务成功！{}", msg);
+                        log.info("心跳已开启..");
+                        channel.pipeline().addFirst(new IdleStateHandler(0, 30, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
+                        channel.attr(Constants.HEALTH_IS_OPEN_KEY).set(Boolean.TRUE);
+                    }
+
                     //连接成功后保存通道，并重置该连接的重试次数为0，只要连接上后都断连都将重试
                     if (Objects.isNull(Constants.REMOTE_CHANNEL)) {
                         Constants.REMOTE_CHANNEL = channel;
                     }
                     Client client = channel.attr(Constants.CLIENT_KEY).get();
                     Optional.ofNullable(client).ifPresent(cli -> client.getRecount().set(0));
+                }else{
+                    log.info("连接服务失败！{}", msg);
                 }
                 break;
             }
@@ -93,7 +110,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
                 break;
             }
-            case 9:{ //心跳响应
+            case 9: { //心跳响应
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 Long msgId = healthRespPacks.getMsgId();
                 log.info("接收到服务端的心跳响应，msgId:{}", msgId);

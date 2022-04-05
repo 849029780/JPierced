@@ -37,12 +37,17 @@ public class Constants {
     /***
      * 本地连接的所有通道
      */
-    public static Map<Long, Channel> LOCAL_CHANNEL_MAP = new ConcurrentHashMap<>();
+    public static Map<Long, Channel> LOCAL_CHANNEL_MAP;
 
     /***
      * 通道上绑定的连接信息
      */
     public static final AttributeKey<Client> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
+
+    /***
+     * 远程通道是否已开启心跳
+     */
+    public static final AttributeKey<Boolean> HEALTH_IS_OPEN_KEY = AttributeKey.valueOf("HEALTH_IS_OPEN");
 
     /***
      * 服务通道

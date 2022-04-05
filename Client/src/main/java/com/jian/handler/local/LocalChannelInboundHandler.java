@@ -26,8 +26,7 @@ public class LocalChannelInboundHandler extends SimpleChannelInboundHandler<Byte
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         Channel channel = ctx.channel();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-        int readableBytes = byteBuf.readableBytes();
-        ByteBuf buffer = ctx.alloc().buffer(readableBytes);
+        ByteBuf buffer = ctx.alloc().buffer();
         buffer.writeBytes(byteBuf);
 
         TransferDataPacks transferDataPacks = new TransferDataPacks();

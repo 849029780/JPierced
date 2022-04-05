@@ -18,12 +18,12 @@ import java.util.function.Consumer;
 public class App {
 
     public static void main(String[] args) {
-        Client.getRemoteInstance().connect(new InetSocketAddress("localhost", 6666),(Consumer<Future>) future -> {
+        Client.getRemoteInstance().connect(new InetSocketAddress("localhost", 9999),(Consumer<Future>) future -> {
             ChannelFuture future1 = (ChannelFuture) future;
             Channel channel = future1.channel();
             ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
             connectAuthReqPacks.setKey(123456l);
-            connectAuthReqPacks.setPwd("xxxx");
+            connectAuthReqPacks.setPwd("xxx");
             channel.writeAndFlush(connectAuthReqPacks);
         });
     }

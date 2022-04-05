@@ -1,4 +1,4 @@
-package com.jian.handler.local;
+package com.jian.transmit.handler.local;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;

@@ -30,7 +30,6 @@ public class RemoteChannelInitializer extends ChannelInitializer {
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
         pipeline.addLast(this.remoteMessageToMessageCodec);
-        pipeline.addLast(new IdleStateHandler(0, 30, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
         pipeline.addLast(this.remoteChannelInBoundHandler);
     }
 }

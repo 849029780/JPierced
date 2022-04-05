@@ -1,6 +1,6 @@
-package com.jian.handler.remote;
+package com.jian.transmit.handler.remote;
 
-import com.jian.start.ClientConnectInfo;
+import com.jian.transmit.ClientInfo;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import io.netty.buffer.ByteBuf;
@@ -172,18 +172,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
-        ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        Optional.ofNullable(clientConnectInfo).ifPresent(cli -> {
-            //获取该客户端监听的所有端口，并将这些端口全部取消监听
-            Map<Integer, Channel> listenPortMap = clientConnectInfo.getListenPortMap();
-            log.info("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), listenPortMap.keySet());
+        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        Optional.ofNullable(clientInfo).ifPresent(cli -> {
             cli.setOnline(false);
             cli.setRemoteChannel(null);
-
-
-            Iterator<Map.Entry<Integer, Channel>> iterator = listenPortMap.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<Integer, Channel> listen = iterator.next();
+            //获取该客户端监听的所有端口，并将这些端口全部取消监听
+            Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
+            log.info("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());
+            for (Map.Entry<Integer, Channel> listen : listenPortMap.entrySet()) {
                 //端口号
                 Integer port = listen.getKey();
                 //监听的端口通道，非连接通道
@@ -193,7 +189,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 //移除端口映射
                 Constants.PORT_MAPPING_CLIENT.remove(port);
             }
-            clientConnectInfo.setListenPortMap(new ConcurrentHashMap<>());
+            clientInfo.setListenPortMap(new ConcurrentHashMap<>());
         });
     }
 
@@ -215,7 +211,11 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Channel channel = ctx.channel();
-        ClientConnectInfo clientConnectInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        log.error("远程通道发生错误,客户端key:{},name:{}", clientConnectInfo.getKey(), clientConnectInfo.getName(), cause);
+        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        if(Objects.isNull(clientInfo)){
+            log.error("远程通道发生错误!", cause);
+        }else{
+            log.error("远程通道发生错误,客户端key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
+        }
     }
 }
