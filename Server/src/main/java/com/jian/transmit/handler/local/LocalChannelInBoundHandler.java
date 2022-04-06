@@ -7,11 +7,9 @@ import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -111,7 +109,10 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
-        channelHandlerContext.fireChannelRead(byteBuf);
+        int readableBytes = byteBuf.readableBytes();
+        ByteBuf buffer = channelHandlerContext.alloc().buffer(readableBytes);
+        buffer.writeBytes(byteBuf);
+        channelHandlerContext.fireChannelRead(buffer);
     }
 
     @Override

@@ -15,6 +15,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 
 /***
  * http协议处理器
@@ -261,6 +262,9 @@ import java.util.List;
 
         while (true) {
             ParseAppendableCharSequence parseAppendableCharSequence = httpParser.parseReset(buffer);
+            if(Objects.isNull(parseAppendableCharSequence)){
+                return null;
+            }
             AppendableCharSequence line = parseAppendableCharSequence.getAppendableCharSequence();
             if (line == null) {
                 return null;
