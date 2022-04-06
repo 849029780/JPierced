@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -33,25 +32,23 @@ public class Config {
     static String dataPath = dirPath + File.separator + ".data";
 
     //配置文件路径，默认在该jar包下
-    static String propertiesPath = dirPath + File.separator + "config.properties";
+    static String propertiesPath = dirPath + File.separator + "server.properties";
 
     /***
      * 初始化配置
      */
-    public static boolean initConfig() {
+    public static void initConfig() {
         File file = new File(propertiesPath);
         if (!file.exists()) {
-            log.error("当前目录不存在config.properties文件，将使用默认配置启动，web端口:{}，传输端口为:{}", Constants.DEF_WEB_PORT, Constants.DEF_TRANSMIT_PORT);
-            return false;
+            log.error("当前目录不存在:{}文件，将使用默认配置启动，web端口:{}，传输端口为:{}", propertiesPath, Constants.DEF_WEB_PORT, Constants.DEF_TRANSMIT_PORT);
+            return;
         }
         try (InputStream inputStream = Files.newInputStream(file.toPath())) {
             Constants.CONFIG.load(inputStream);
             log.info("配置文件加载成功！");
         } catch (IOException e) {
             log.error("加载config.properties文件错误！", e);
-            return false;
         }
-        return true;
     }
 
     /***

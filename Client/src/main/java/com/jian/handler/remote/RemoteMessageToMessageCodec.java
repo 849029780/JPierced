@@ -4,17 +4,19 @@ import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.start.Client;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 /***
  *
@@ -31,7 +33,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         byte type = baseTransferPacks.getType();
         ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
-            case 2: { //连接请求响应
+            case 2 -> { //连接请求响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
                 packSize += 8 + 1 + 4;
                 String msg = connectRespPacks.getMsg();
@@ -47,17 +49,15 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (msgLen > 0) {
                     buffer.writeBytes(msgBytes);
                 }
-                break;
             }
-            case 3: { //发起断开连接请求
+            case 3 -> { //发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 packSize += 8;
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(disConnectReqPacks.getTarChannelHash());
-                break;
             }
-            case 4: { //发起认证
+            case 4 -> { //发起认证
                 ConnectAuthReqPacks connectAuthReqPacks = (ConnectAuthReqPacks) baseTransferPacks;
                 packSize += 8 + 4;
                 String pwd = connectAuthReqPacks.getPwd();
@@ -71,9 +71,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (pwdLen > 0) {
                     buffer.writeBytes(pwdBytes);
                 }
-                break;
             }
-            case 7: { //传输数据
+            case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
                 packSize += 8;
                 ByteBuf datas = transferDataPacks.getDatas();
@@ -84,14 +83,12 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(type);
                 buffer.writeLong(transferDataPacks.getTargetChannelHash());
                 buffer.writeBytes(datas);
-                break;
             }
-            case 8: {//心跳请求
+            case 8 -> {//心跳请求
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 packSize += 8;
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
-
                 buffer.writeLong(healthReqPacks.getMsgId());
             }
         }
@@ -103,7 +100,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
         switch (type) {
-            case 1: {//连接响应
+            case 1 -> {//连接响应
                 ConnectReqPacks connectRespPacks = new ConnectReqPacks();
                 long thisChannelHash = byteBuf.readLong();
                 long tarChannelHash = byteBuf.readLong();
@@ -120,16 +117,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 connectRespPacks.setTarChannelHash(tarChannelHash);
                 connectRespPacks.setPort(port);
                 list.add(connectRespPacks);
-                break;
             }
-            case 3: {//发起断开连接请求
+            case 3 -> {//发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
                 long tarChannelHash = byteBuf.readLong();
                 disConnectReqPacks.setTarChannelHash(tarChannelHash);
                 list.add(disConnectReqPacks);
-                break;
             }
-            case 5: {
+            case 5 -> {
                 ConnectAuthRespPacks connectAuthRespPacks = new ConnectAuthRespPacks();
                 long key = byteBuf.readLong();
                 byte state = byteBuf.readByte();
@@ -145,9 +140,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 connectAuthRespPacks.setMsgLen(msgLen);
                 connectAuthRespPacks.setPackSize(packSize);
                 list.add(connectAuthRespPacks);
-                break;
             }
-            case 7: { //传输数据
+            case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = new TransferDataPacks();
                 long targetChannelHash = byteBuf.readLong();
                 int readableBytes = byteBuf.readableBytes();
@@ -156,9 +150,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 transferDataPacks.setTargetChannelHash(targetChannelHash);
                 transferDataPacks.setDatas(buffer);
                 list.add(transferDataPacks);
-                break;
             }
-            case 9: {//心跳响应
+            case 9 -> {//心跳响应
                 HealthRespPacks healthRespPacks = new HealthRespPacks();
                 long msgId = byteBuf.readLong();
                 healthRespPacks.setMsgId(msgId);
@@ -174,9 +167,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
 
         if (Objects.nonNull(Constants.LOCAL_CHANNEL_MAP)) {
             //和服务端的连接断开，关闭本地所有的连接
-            Iterator<Map.Entry<Long, Channel>> iterator = Constants.LOCAL_CHANNEL_MAP.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<Long, Channel> entry = iterator.next();
+            for (Map.Entry<Long, Channel> entry : Constants.LOCAL_CHANNEL_MAP.entrySet()) {
                 Optional.ofNullable(entry.getValue()).ifPresent(ChannelOutboundInvoker::close);
             }
             //本地连接关闭后置空
@@ -184,9 +175,16 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         }
         //将连接置空
         Constants.REMOTE_CHANNEL = null;
-        log.warn("与服务端的连接断开，本地所有连接已关闭..{}s后将发起重连..", Constants.RECONNECT_DELAY);
         Client client = channel.attr(Constants.CLIENT_KEY).get();
-        Optional.ofNullable(client).ifPresent(Client::reConnct);
+        Optional.ofNullable(client).ifPresent(cli->{
+            if (client.isCanReconnect()) {
+                log.info("与服务端的连接断开，本地所有连接已关闭..{}s后将发起重连..", Constants.RECONNECT_DELAY);
+                //重连
+                cli.reConnct();
+            }else{
+                System.exit(0);
+            }
+        });
     }
 
 
@@ -196,9 +194,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Channel channel = ctx.channel();
         boolean writable = channel.isWritable();
         //远程通道写缓冲状态和本地自动读状态设置为一致，如果通道缓冲写满了，则不允许本地通道自动读
-        Iterator<Map.Entry<Long, Channel>> iterator = Constants.LOCAL_CHANNEL_MAP.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<Long, Channel> entry = iterator.next();
+        for (Map.Entry<Long, Channel> entry : Constants.LOCAL_CHANNEL_MAP.entrySet()) {
             Channel localChannel = entry.getValue();
             Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
         }

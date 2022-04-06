@@ -9,6 +9,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
@@ -36,13 +37,26 @@ public class Client {
      * 保存连接成功后发送的消息
      */
     private GenericFutureListener futureListener;
+
+    /***
+     * 重连过程
+     */
     private Consumer<Future> reconnectConsumer;
+
+    /***
+     * 是否可进行重连，只有登录成功后断开连接才允许重连，别的操作不允许重连
+     */
+    private boolean canReconnect = false;
 
     /***
      * 重连次数
      */
     private AtomicReference<Integer> recount = new AtomicReference<>(0);
 
+    /***
+     * 重连次数
+     * @return
+     */
     public AtomicReference<Integer> getRecount() {
         return recount;
     }
@@ -53,6 +67,14 @@ public class Client {
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
         this.bootstrap.channel(NioSocketChannel.class);
+    }
+
+    public boolean isCanReconnect() {
+        return canReconnect;
+    }
+
+    public void setCanReconnect(boolean canReconnect) {
+        this.canReconnect = canReconnect;
     }
 
     public static Client getInstance() {
@@ -91,21 +113,26 @@ public class Client {
     public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<Future> successFuture) {
         ChannelFuture channelFuture = connect(socketAddress);
         reconnectConsumer = future -> {
-            Integer count = recount.get();
-            count++;
-            recount.set(count);
-            if (count.intValue() > Constants.RECONNECT_MAX_COUNT) {
-                log.info("已超过最大重连次数:{}次，已退出重连..", Constants.RECONNECT_MAX_COUNT);
+            if (canReconnect) {
+                Integer count = recount.get();
+                count++;
+                recount.set(count);
+                if (count > Constants.RECONNECT_MAX_COUNT) {
+                    log.info("已超过最大重连次数:{}次，已退出重连..", Constants.RECONNECT_MAX_COUNT);
+                    System.exit(0);
+                    return;
+                }
+                try {
+                    Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
+                } catch (InterruptedException e) {
+                    log.error("重连延迟错误..", e);
+                }
+                log.info("连接服务失败！正在尝试第:{}次,重连:{}，", count, this.connectInetSocketAddress);
+                connect(socketAddress, futureListener);
+            }else{
+                log.info("连接服务失败！");
                 System.exit(0);
-                return;
             }
-            try {
-                Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
-            } catch (InterruptedException e) {
-                log.error("重连延迟错误..", e);
-            }
-            log.info("连接服务失败！正在尝试第:{}次,重连:{}，", count, this.connectInetSocketAddress);
-            connect(socketAddress, futureListener);
         };
 
         futureListener = future -> {
@@ -125,7 +152,6 @@ public class Client {
         Optional.ofNullable(futureOnSuccess).ifPresent(fs -> channelFuture.addListener(futureOnSuccess));
         return channelFuture;
     }
-
 
     /***
      * 重连

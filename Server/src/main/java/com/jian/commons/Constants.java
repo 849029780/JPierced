@@ -2,6 +2,7 @@ package com.jian.commons;
 
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.handler.local.LocalChannelInitializer;
+import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
 import com.jian.transmit.handler.remote.RemoteChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -75,7 +76,7 @@ public class Constants {
     /***
      * 固定活动线程数的线程池
      */
-    public static final ExecutorService FIXED_THREAD_POOL = Executors.newFixedThreadPool(5);
+    public static final ExecutorService FIXED_THREAD_POOL = Executors.newFixedThreadPool(3);
 
     /***
      * 本地通道初始化handler
@@ -87,6 +88,11 @@ public class Constants {
      * 远程通道初始化Handler
      */
     public static final ChannelInitializer REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+
+    /***
+     *
+     */
+    public static final LocalTcpChannelInBoundHandler LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER = new LocalTcpChannelInBoundHandler();
 
     /***
      * 通道心跳间隔阈值 秒s，超过该时间的通道未发送心跳，则默认该通道已失去连接，需要关闭通道并停止本地端口监听

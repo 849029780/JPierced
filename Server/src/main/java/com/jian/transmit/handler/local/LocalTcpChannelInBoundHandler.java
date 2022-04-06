@@ -1,20 +1,17 @@
 package com.jian.transmit.handler.local;
 
-import com.jian.transmit.ClientInfo;
-import com.jian.beans.transfer.ConnectReqPacks;
-import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.beans.transfer.TransferDataPacks;
 import com.jian.commons.Constants;
-import com.jian.transmit.NetAddress;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.List;
 
 /***
  *
@@ -24,88 +21,6 @@ import java.util.Optional;
 @Slf4j
 @ChannelHandler.Sharable
 public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<ByteBuf> {
-
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        super.channelActive(ctx);
-
-        Channel channel = ctx.channel();
-        //设置通道不自动读
-        channel.config().setAutoRead(Boolean.FALSE);
-
-        InetSocketAddress socketAddress = (InetSocketAddress) channel.localAddress();
-
-        Integer port = socketAddress.getPort();
-        log.debug("端口:{}，新的连接..", port);
-        //通过端口号获取该端口是哪个客户端监听的
-        ClientInfo clientInfo = Constants.PORT_MAPPING_CLIENT.get(port);
-        if (Objects.isNull(clientInfo) || !clientInfo.isOnline()) {
-            log.info("该端口:{}，未找到在线的客户端，连接已关闭..", port);
-            //客户端未连接
-            channel.close();
-            return;
-        }
-
-        //生成通道码
-        Long thisChannelHash = System.nanoTime();
-        Long tarChannelHash = System.nanoTime();
-
-        channel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
-        channel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
-        //该通道绑定好客户端通道
-        Channel remoteChannel = clientInfo.getRemoteChannel();
-        channel.attr(Constants.REMOTE_CHANNEL_KEY).set(remoteChannel);
-
-        //当前hash对应本地连接通道
-        Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        localChannelMap.put(thisChannelHash, channel);
-
-
-        ConnectReqPacks connectReqPacks = new ConnectReqPacks();
-        //设置远端绑定时是相反绑定
-        connectReqPacks.setThisChannelHash(tarChannelHash);
-        connectReqPacks.setTarChannelHash(thisChannelHash);
-
-        //从客户信息中获取该端口对应的哪个本地连接
-        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
-        connectReqPacks.setHost(netAddress.getHost());
-        connectReqPacks.setPort(netAddress.getPort());
-        //http协议时需要额外添加handler处理
-        if (netAddress.getProtocol() == NetAddress.Protocol.HTTP) {
-            ChannelPipeline pipeline = channel.pipeline();
-            pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
-        }
-
-        //给客户端发送客户端本地的连接信息
-        remoteChannel.writeAndFlush(connectReqPacks);
-    }
-
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
-        Channel channel = ctx.channel();
-        //获取目标通道
-        Long thisChannelHash = channel.attr(Constants.THIS_CHANNEL_HASH_KEY).get();
-        Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-
-        //获取该通道上绑定的远程通道
-        Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
-        if (Objects.isNull(remoteChannel)) {
-            return;
-        }
-        //从远程通道上获取绑定的本地通道信息，且移除本地通道
-        Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        localChannelMap.remove(thisChannelHash);
-
-        DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
-        disConnectReqPacks.setTarChannelHash(tarChannelHash);
-        if (remoteChannel.isOpen()) {
-            //发送关闭通道消息
-            remoteChannel.writeAndFlush(disConnectReqPacks);
-        }
-    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
@@ -125,18 +40,4 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
     }
 
-    @Override
-    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        super.channelWritabilityChanged(ctx);
-        Channel channel = ctx.channel();
-        //获取该通道上绑定的远程通道
-        Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
-        //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        Optional.ofNullable(remoteChannel).ifPresent(rch -> rch.config().setAutoRead(channel.isWritable()));
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("本地通道发生错误错误", cause);
-    }
 }

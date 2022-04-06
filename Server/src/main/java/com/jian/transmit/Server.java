@@ -3,10 +3,8 @@ package com.jian.transmit;
 import com.jian.beans.transfer.ConnectAuthRespPacks;
 import com.jian.commons.Constants;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.*;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
@@ -112,7 +110,7 @@ public class Server {
             connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
             connectAuthRespPacks.setKey(clientInfo.getKey());
             String listenInfo = stringBuffer.toString();
-            log.info("客户端key:{},name:{},{}已连接！", clientInfo.getKey(), clientInfo.getName(), listenInfo);
+            log.info("客户端key:{},name:{}已连接！{}", clientInfo.getKey(), clientInfo.getName(), listenInfo);
             connectAuthRespPacks.setMsg(listenInfo);
             clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
         });
@@ -136,7 +134,13 @@ public class Server {
                         for (Map.Entry<Long, ClientInfo> clientInfoEntry : Constants.CLIENTS.entrySet()) {
                             ClientInfo clientInfo = clientInfoEntry.getValue();
                             clientInfo.setOnline(false);
-                            clientInfo.setRemoteChannel(null);
+                            //客户端连接
+                            Channel remoteChannel = clientInfo.getRemoteChannel();
+                            Optional.ofNullable(remoteChannel).ifPresent(ch->{
+                                //关闭客户端连接
+                                ch.close();
+                                clientInfo.setRemoteChannel(null);
+                            });
                             Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
                             Optional.ofNullable(listenPortMap).ifPresent(map -> {
                                 for (Map.Entry<Integer, Channel> listenEntry : map.entrySet()) {

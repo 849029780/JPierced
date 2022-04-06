@@ -23,7 +23,7 @@ import java.net.SocketAddress;
 public class LocalChannelInboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         Channel channel = ctx.channel();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
         ByteBuf buffer = ctx.alloc().buffer();

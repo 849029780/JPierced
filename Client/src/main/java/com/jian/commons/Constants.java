@@ -10,6 +10,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.AttributeKey;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /***
@@ -83,5 +84,31 @@ public class Constants {
      * 超过该阈值未接收到心跳则代表该连接已断开
      */
     public static final int DISCONNECT_HEALTH_SECONDS = 70;
+
+    /***
+     * 服务地址属性名
+     */
+    public static final String HOST_PROPERTY_NAME = "server.host";
+
+    /***
+     * 服务端口属性名
+     */
+    public static final String PORT_PROPERTY_NAME = "server.port";
+
+    /***
+     * key属性名
+     */
+    public static final String KEY_PROPERTY_NAME = "key";
+
+    /***
+     * pwd属性名
+     */
+    public static final String PWD_PROPERTY_NAME = "pwd";
+
+    /***
+     * 配置
+     */
+    public static Properties CONFIG = new Properties();
+
 
 }

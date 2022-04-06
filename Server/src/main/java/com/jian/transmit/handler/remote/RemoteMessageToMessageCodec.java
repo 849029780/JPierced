@@ -26,12 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, BaseTransferPacks> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
         ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
-            case 1: { //服务发起连接请求
+            case 1 -> { //服务发起连接请求
                 ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
                 packSize += 8 + 8 + 4 + 4;
                 byte[] hostBytes = connectReqPacks.getHost().getBytes(StandardCharsets.UTF_8);
@@ -46,17 +46,15 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (hostLen > 0) {
                     buffer.writeBytes(hostBytes);
                 }
-                break;
             }
-            case 3: { //服务发起断开连接请求
+            case 3 -> { //服务发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 packSize += 8;
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(disConnectReqPacks.getTarChannelHash());
-                break;
             }
-            case 5: { //认证结果响应
+            case 5 -> { //认证结果响应
                 ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
                 packSize += 8 + 1 + 4;
                 String msg = connectAuthRespPacks.getMsg();
@@ -73,9 +71,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (msgLen > 0) {
                     buffer.writeBytes(msgBytes);
                 }
-                break;
             }
-            case 7: { //传输数据
+            case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
                 packSize += 8;
                 ByteBuf datas = transferDataPacks.getDatas();
@@ -86,9 +83,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(type);
                 buffer.writeLong(transferDataPacks.getTargetChannelHash());
                 buffer.writeBytes(datas);
-                break;
             }
-            case 9: { //响应心跳
+            case 9 -> { //响应心跳
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 packSize += 8;
 
@@ -101,11 +97,11 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     }
 
     @Override
-    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) {
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
         switch (type) {
-            case 2: {//连接响应
+            case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = new ConnectRespPacks();
                 long thisChannelHash = byteBuf.readLong();
                 byte state = byteBuf.readByte();
@@ -122,16 +118,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                     ReferenceCountUtil.release(msgBuf);
                 }
                 list.add(connectRespPacks);
-                break;
             }
-            case 3: {//客户发起断开连接请求
+            case 3 -> {//客户发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
                 long tarChannelHash = byteBuf.readLong();
                 disConnectReqPacks.setTarChannelHash(tarChannelHash);
                 list.add(disConnectReqPacks);
-                break;
             }
-            case 4: {//客户端认证请求
+            case 4 -> {//客户端认证请求
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
                 long key = byteBuf.readLong();
                 int pwdLen = byteBuf.readInt();
@@ -145,9 +139,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 connectAuthReqPacks.setKey(key);
                 connectAuthReqPacks.setPwdLen(pwdLen);
                 list.add(connectAuthReqPacks);
-                break;
             }
-            case 7: { //传输数据
+            case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = new TransferDataPacks();
                 long targetChannelHash = byteBuf.readLong();
                 int readableBytes = byteBuf.readableBytes();
@@ -156,9 +149,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 transferDataPacks.setTargetChannelHash(targetChannelHash);
                 transferDataPacks.setDatas(buffer);
                 list.add(transferDataPacks);
-                break;
             }
-            case 8: { //接收心跳请求
+            case 8 -> { //接收心跳请求
                 HealthReqPacks healthReqPacks = new HealthReqPacks();
                 long msgId = byteBuf.readLong();
                 healthReqPacks.setMsgId(msgId);
@@ -200,16 +192,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         boolean writable = channel.isWritable();
         //远程通道写缓冲状态和本地自动读状态设置为一致，如果通道缓冲写满了，则不允许本地通道自动读
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        Iterator<Map.Entry<Long, Channel>> iterator = localChannelMap.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<Long, Channel> entry = iterator.next();
+        for (Map.Entry<Long, Channel> entry : localChannelMap.entrySet()) {
             Channel localChannel = entry.getValue();
             Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         if(Objects.isNull(clientInfo)){

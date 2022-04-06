@@ -11,6 +11,8 @@ import com.jian.web.result.Page;
 import com.jian.web.result.Result;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.channel.DefaultChannelId;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -18,6 +20,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.StringUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -40,12 +43,15 @@ import java.util.stream.Collectors;
 @Slf4j
 public class WebManagerVerticle extends AbstractVerticle {
 
+    HttpServer httpServer;
+
     @Override
     public void start() {
         String webPort = Constants.CONFIG.getProperty(Constants.WEB_PORT_PROPERTY, Constants.DEF_WEB_PORT);
         Integer port = Integer.valueOf(webPort);
         Router router = routerManager();
-        vertx.createHttpServer().requestHandler(router).listen(port).onSuccess(han -> {
+        httpServer = vertx.createHttpServer();
+        httpServer.requestHandler(router).listen(port).onSuccess(han -> {
             log.info("web服务启动完成！端口:{}", port);
         }).onFailure(han -> {
             Throwable cause = han.getCause();
@@ -53,6 +59,10 @@ public class WebManagerVerticle extends AbstractVerticle {
         });
     }
 
+    @Override
+    public void stop() {
+        httpServer.close();
+    }
 
     public Router routerManager() {
         Router router = Router.router(this.vertx);
@@ -298,17 +308,17 @@ public class WebManagerVerticle extends AbstractVerticle {
 
         //获取该客户端的远程连接，如果连接为空，则该客户端不在线
         Channel remoteChannel = clientInfo.getRemoteChannel();
-        Optional.ofNullable(remoteChannel).ifPresent(remoteCh->{
+        Optional.ofNullable(remoteChannel).ifPresent(remoteCh -> {
             //客户端在线，则获取该客户端上绑定的本地连接通道
             Map<Long, Channel> longChannelMap = remoteCh.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-            if(longChannelMap.size() > 0){
+            if (longChannelMap.size() > 0) {
                 //本地所有连接通道判断端口号是否和当前移除的端口号一致，一致则需要通知远程关闭该通道对应的连接
                 for (Map.Entry<Long, Channel> longChannelEntry : longChannelMap.entrySet()) {
                     Channel localChannel = longChannelEntry.getValue();
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) localChannel.localAddress();
-                    if(inetSocketAddress.getPort() == serverPort){
+                    if (inetSocketAddress.getPort() == serverPort) {
                         Long tarChannelHash = localChannel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-                        if(Objects.nonNull(tarChannelHash)){
+                        if (Objects.nonNull(tarChannelHash)) {
                             //通知客户端关闭该端口上的连接通道对应的远程通道
                             DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
                             disConnectReqPacks.setTarChannelHash(tarChannelHash);
@@ -334,10 +344,12 @@ public class WebManagerVerticle extends AbstractVerticle {
         if (Objects.isNull(port) || port < 0 || port > 65535) {
             return Result.FAIL("设置传输服务端口失败！端口号为空或非法！");
         }
+
         //原端口
         String oldPort = Constants.CONFIG.getProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
         //设置配置
         Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, port.toString());
+        //Config.saveProperties();
         //关闭监听的传输端口
         Constants.LISTEN_REMOTE_CHANNEL.close().addListener(closeFuture -> {
             if (closeFuture.isSuccess()) {
@@ -345,7 +357,6 @@ public class WebManagerVerticle extends AbstractVerticle {
                 //重新监听服务
                 Server.listenRemote().addListener(future -> {
                     if (future.isSuccess()) {
-                        log.info("重启传输服务成功！，端口:{}", port);
                         //保存配置
                         Config.saveProperties();
                     } else {
@@ -373,29 +384,30 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
         //原端口
         String oldPort = Constants.CONFIG.getProperty(Constants.WEB_PORT_PROPERTY, Constants.WEB_PORT_PROPERTY);
-        //设置配置
-        Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, port.toString());
-        Constants.VERTX.undeploy(Constants.VERTX_WEB_DEPLOY_ID).onSuccess(han -> {
-            log.info("web服务已停止，准备重启web服务，端口:{}", port);
-            Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> {
-                log.info("web服务重启成功！端口:{}", port);
-                Constants.VERTX_WEB_DEPLOY_ID = deployId;
-                //保存配置
-                Config.saveProperties();
-            }).onFailure(hann -> {
-                log.info("web服务重启失败！端口:{}，将恢复原端口:{}重启...", port, oldPort);
-                //设置配置
-                Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, oldPort);
-                //原端口
-                Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> Constants.VERTX_WEB_DEPLOY_ID = deployId);
+        Constants.FIXED_THREAD_POOL.execute(()->{
+            //设置配置
+            Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, port.toString());
+            Constants.VERTX.undeploy(Constants.VERTX_WEB_DEPLOY_ID).onSuccess(han -> {
+                log.info("web服务已停止，准备重启web服务，端口:{}", port);
+                Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> {
+                    Constants.VERTX_WEB_DEPLOY_ID = deployId;
+                    //保存配置
+                    Config.saveProperties();
+                }).onFailure(hann -> {
+                    log.error("web服务重启失败！端口:{}，将恢复原端口:{}重启...", port, oldPort, hann);
+                    //设置配置
+                    Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, oldPort);
+                    //原端口
+                    Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> Constants.VERTX_WEB_DEPLOY_ID = deployId);
+                });
             });
         });
         return Result.SUCCESS("web端口已重新设置！");
     }
 
-    JsonObject getBodyAsJson(RoutingContext context){
+    JsonObject getBodyAsJson(RoutingContext context) {
         JsonObject bodyAsJson = context.getBodyAsJson();
-        if(Objects.isNull(bodyAsJson)){
+        if (Objects.isNull(bodyAsJson)) {
             bodyAsJson = new JsonObject();
         }
         return bodyAsJson;

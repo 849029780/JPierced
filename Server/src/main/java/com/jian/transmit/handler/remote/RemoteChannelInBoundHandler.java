@@ -1,8 +1,8 @@
 package com.jian.transmit.handler.remote;
 
-import com.jian.transmit.ClientInfo;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
+import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
 import com.jian.transmit.Server;
 import com.jian.utils.JsonUtils;
@@ -11,10 +11,11 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 /***
@@ -27,12 +28,12 @@ import java.util.concurrent.TimeUnit;
 public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTransferPacks> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) {
         byte type = baseTransferPacks.getType();
         Channel channel = ctx.channel();
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         switch (type) {
-            case 2: {//连接响应
+            case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
                 Channel localChannel = localChannelMap.get(connectRespPacks.getThisChannelHash());
 
@@ -42,25 +43,23 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 }
 
                 //连接成功
-                if (connectRespPacks.getState().byteValue() == ConnectRespPacks.STATE.SUCCESS) {
+                if (connectRespPacks.getState() == ConnectRespPacks.STATE.SUCCESS) {
                     //设置本地通道为自动读
                     localChannel.config().setAutoRead(Boolean.TRUE);
                 } else {
                     //远程连接失败，则关闭本地的连接
                     localChannel.close();
                 }
-                break;
             }
-            case 3: {//客户发起断开连接请求
+            case 3 -> {//客户发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
                 Channel localChannel = localChannelMap.remove(tarChannelHash);
                 //关闭本地连接的通道
                 Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
                 log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
-                break;
             }
-            case 4: {//客户端认证请求
+            case 4 -> {//客户端认证请求
                 ConnectAuthReqPacks connectAuthReqPacks = (ConnectAuthReqPacks) baseTransferPacks;
                 Long key = connectAuthReqPacks.getKey();
                 ClientInfo clientInfo = Constants.CLIENTS.get(key);
@@ -105,30 +104,28 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Set<Integer> ports = portMappingAddress.keySet();
 
                 //开启心跳检测
-                channel.pipeline().addFirst(new IdleStateHandler(0,0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
+                channel.pipeline().addFirst(new IdleStateHandler(0, 0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
 
                 connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
                 connectAuthRespPacks.setKey(clientInfo.getKey());
                 log.info("客户端key:{},name:{}已连接！", clientInfo.getKey(), clientInfo.getName());
-                if(ports.size() == 0){
+                if (ports.size() == 0) {
                     connectAuthRespPacks.setMsg("客户端暂未配置映射端口！");
-                }else{
+                    clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
+                } else {
                     connectAuthRespPacks.setMsg("客户端配置的服务端映射端口为：" + JsonUtils.toJson(ports));
+                    clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
+                    //异步启动该客户端需要监听的端口
+                    Server.listenLocal(ports, clientInfo);
                 }
-                clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
-
-                //异步启动该客户端需要监听的端口
-                Server.listenLocal(ports, clientInfo);
-                break;
             }
-            case 7: { //传输数据
+            case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
                 Long targetChannelHash = transferDataPacks.getTargetChannelHash();
                 Channel localChannel = localChannelMap.get(targetChannelHash);
                 Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
-                break;
             }
-            case 8: { //接收心跳请求
+            case 8 -> { //接收心跳请求
                 ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 Long msgId = healthReqPacks.getMsgId();

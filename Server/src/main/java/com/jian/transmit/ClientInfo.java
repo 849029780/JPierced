@@ -47,12 +47,12 @@ public class ClientInfo {
     /***
      * 需要在服务端映射的端口及被穿透机器上的地址和端口
      */
-    private Map<Integer, NetAddress> portMappingAddress = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, NetAddress> portMappingAddress = new ConcurrentHashMap<>();
 
     /***
      * 监听的端口 对应通道 客户端在线时才有连接数据，否则为空
      */
     @JsonIgnore
-    private Map<Integer, Channel> listenPortMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, Channel> listenPortMap = new ConcurrentHashMap<>();
 
 }

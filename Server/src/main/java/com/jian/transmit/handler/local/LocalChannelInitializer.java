@@ -11,16 +11,16 @@ import io.netty.channel.ChannelPipeline;
  */
 public class LocalChannelInitializer extends ChannelInitializer {
 
-    LocalTcpChannelInBoundHandler localTcpChannelInBoundHandler;
+    LocalChannelInBoundHandler localChannelInBoundHandler;
 
     public LocalChannelInitializer() {
-        this.localTcpChannelInBoundHandler = new LocalTcpChannelInBoundHandler();
+        this.localChannelInBoundHandler = new LocalChannelInBoundHandler();
     }
 
     @Override
     protected void initChannel(Channel channel) {
         ChannelPipeline pipeline = channel.pipeline();
-        pipeline.addLast(localTcpChannelInBoundHandler);
+        pipeline.addLast(localChannelInBoundHandler);
     }
 
 }

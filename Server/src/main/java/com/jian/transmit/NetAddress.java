@@ -2,6 +2,7 @@ package com.jian.transmit;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 描述
@@ -10,6 +11,7 @@ import lombok.Data;
  * @date 2022/04/04
  */
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class NetAddress {
 

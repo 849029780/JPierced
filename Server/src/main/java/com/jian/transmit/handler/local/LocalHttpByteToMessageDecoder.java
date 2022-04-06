@@ -20,8 +20,8 @@ import java.util.List;
  * http协议处理器
  * @author Jian
  * @date 2022/04/04
- */
-public class LocalHttpByteToMessageDecoder extends ByteToMessageDecoder {
+ */public class LocalHttpByteToMessageDecoder extends ByteToMessageDecoder {
+
 
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
 
@@ -140,7 +140,7 @@ public class LocalHttpByteToMessageDecoder extends ByteToMessageDecoder {
                 //获取是否包含Content-length,如果包含,则需要标记读取位置
                 String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
                 if (!StringUtil.isNullOrEmpty(contentLengthStr)) {
-                    contentLen = Integer.valueOf(contentLengthStr);
+                    contentLen = Integer.parseInt(contentLengthStr);
                     if (contentLen > 0) {
                         //如果有内容长度,则需要标记内容读取长度
                         state = STATE.CONTENT_READ;
