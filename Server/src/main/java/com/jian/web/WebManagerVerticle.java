@@ -2,8 +2,8 @@ package com.jian.web;
 
 import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.commons.Constants;
-import com.jian.transmit.ClientInfo;
 import com.jian.start.Config;
+import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
 import com.jian.transmit.Server;
 import com.jian.utils.JsonUtils;
@@ -11,12 +11,7 @@ import com.jian.web.result.Page;
 import com.jian.web.result.Result;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundInvoker;
-import io.netty.channel.DefaultChannelId;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.StringUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
@@ -29,9 +24,7 @@ import io.vertx.ext.web.handler.ResponseContentTypeHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
-import java.nio.channels.ServerSocketChannel;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**

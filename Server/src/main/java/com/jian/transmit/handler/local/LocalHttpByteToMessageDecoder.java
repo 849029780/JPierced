@@ -5,7 +5,7 @@ import com.jian.transmit.handler.local.http.HttpParser;
 import com.jian.transmit.handler.local.http.ParseAppendableCharSequence;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -21,7 +21,7 @@ import java.util.Objects;
  * http协议处理器
  * @author Jian
  * @date 2022/04/04
- */public class LocalHttpByteToMessageDecoder extends ByteToMessageDecoder {
+ */public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
 
 
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;

@@ -45,7 +45,7 @@ public class LocalChannelInboundHandler extends SimpleChannelInboundHandler<Byte
         DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
         disConnectReqPacks.setTarChannelHash(tarChannelHash);
         Constants.REMOTE_CHANNEL.writeAndFlush(disConnectReqPacks);
-        log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
+        log.info("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
     }
 
     @Override

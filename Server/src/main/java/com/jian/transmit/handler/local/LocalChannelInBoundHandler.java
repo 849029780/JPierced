@@ -126,7 +126,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("本地通道发生错误错误", cause);
     }
 }
