@@ -17,31 +17,20 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <netty.version>4.1.75.Final</netty.version>
         <lombok.version>1.18.22</lombok.version>
-        <fastjson.version>1.2.78</fastjson.version>
-        <logback.version>1.2.10</logback.version>
+        <netty.version>4.1.75.Final</netty.version>
     </properties>
 
 
     <dependencies>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>${netty.version}</version>
-            <optional>true</optional>
-        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-        </dependency>
+
     </dependencies>
 
     <build>

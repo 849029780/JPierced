@@ -6,6 +6,7 @@ import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
 import com.jian.transmit.Server;
 import com.jian.utils.JsonUtils;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -56,7 +57,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
                 Channel localChannel = localChannelMap.remove(tarChannelHash);
                 //关闭本地连接的通道
-                Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
+                Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
                 log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
             case 4 -> {//客户端认证请求

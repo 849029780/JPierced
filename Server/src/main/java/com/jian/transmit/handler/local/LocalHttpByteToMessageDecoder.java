@@ -32,13 +32,13 @@ import java.util.Objects;
 
     private STATE state = STATE.URL_START;
 
-    private HttpParser httpParser;
+    private final HttpParser httpParser;
 
     private HttpHeaders headers;
 
-    private String host;
+    private final String host;
 
-    private Integer port;
+    private final Integer port;
 
     public LocalHttpByteToMessageDecoder(String host, Integer port) {
         this.host = host;
@@ -80,8 +80,11 @@ import java.util.Objects;
         switch (state) {
             case URL_START: {
                 ParseAppendableCharSequence parseAppendableCharSequence = httpParser.parseReset(byteBuf);
+                if(Objects.isNull(parseAppendableCharSequence)){
+                    return;
+                }
                 AppendableCharSequence line = parseAppendableCharSequence.getAppendableCharSequence();
-                if (line == null) {
+                if (Objects.isNull(line)) {
                     return;
                 }
                 String[] initialLine = splitInitialLine(line);
@@ -97,7 +100,7 @@ import java.util.Objects;
             case HEADER_START: {
                 headerHostIndex = new HeaderHostIndex();
                 headers = readHeaders(byteBuf, headerHostIndex);
-                if (headers == null) {
+                if (Objects.isNull(headers)) {
                     return;
                 }
                 //标记header结束位置
@@ -266,14 +269,14 @@ import java.util.Objects;
                 return null;
             }
             AppendableCharSequence line = parseAppendableCharSequence.getAppendableCharSequence();
-            if (line == null) {
+            if (Objects.isNull(line)) {
                 return null;
             }
             if (line.length() == 0) {
                 break;
             }
             splitHeader(line);
-            if (name != null) {
+            if (Objects.nonNull(name)) {
                 if (name.toLowerCase().equals(HttpHeaderNames.HOST.toString())) {
                     headerHostIndex.setStartIndex(parseAppendableCharSequence.getStartIndex());
                     headerHostIndex.setEndIndex(parseAppendableCharSequence.getEndIndex());

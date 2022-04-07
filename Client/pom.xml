@@ -9,19 +9,34 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.jian</groupId>
     <artifactId>Client</artifactId>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
+        <netty.version>4.1.75.Final</netty.version>
+        <logback.version>1.2.11</logback.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.jian</groupId>
             <artifactId>Commons</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${jian.commons.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
         </dependency>
     </dependencies>
 

@@ -118,17 +118,24 @@ public class Constants {
      * 传输服务监听的端口channel 用于重启操作
      */
     public static Channel LISTEN_REMOTE_CHANNEL;
-
     /***
      * 传输端口配置文件属性名
      */
     public static final String TRANSMIT_PORT_PROPERTY = "transmit.port";
-
-
     /***
      * web端口配置文件属性名
      */
     public static final String WEB_PORT_PROPERTY = "web.port";
+
+    /***
+     * web登录的用户名
+     */
+    public static final String LOGIN_USERNAME_PROPERTY = "login.username";
+
+    /***
+     * web登录的密码
+     */
+    public static final String LOGIN_PWD_PROPERTY = "login.pwd";
 
     /***
      * 默认传输端口

@@ -9,7 +9,6 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.jian</groupId>
     <artifactId>Server</artifactId>
 
     <properties>
@@ -18,9 +17,24 @@
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
         <vertx.version>4.2.6</vertx.version>
         <jackson.version>2.13.2.2</jackson.version>
+        <logback.version>1.2.11</logback.version>
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>com.jian</groupId>
             <artifactId>Commons</artifactId>
@@ -41,12 +55,6 @@
                     <artifactId>jackson-core</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-auth-jwt</artifactId>
-            <version>${vertx.version}</version>
         </dependency>
 
         <dependency>

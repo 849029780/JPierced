@@ -3,6 +3,7 @@ package com.jian.handler.remote;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.start.Client;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -70,7 +71,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
                 Optional.ofNullable(Constants.LOCAL_CHANNEL_MAP).ifPresent(map -> {
                     Channel localChannel = map.remove(tarChannelHash);
-                    Optional.ofNullable(localChannel).ifPresent(ChannelOutboundInvoker::close);
+                    Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
                 });
                 log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
