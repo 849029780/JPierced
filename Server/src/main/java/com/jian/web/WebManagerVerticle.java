@@ -1,5 +1,9 @@
 package com.jian.web;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.SignatureVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.commons.Constants;
 import com.jian.start.Config;
@@ -17,6 +21,7 @@ import io.netty.util.internal.StringUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
@@ -28,6 +33,11 @@ import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -42,6 +52,17 @@ import java.util.stream.Collectors;
 public class WebManagerVerticle extends AbstractVerticle {
 
     HttpServer httpServer;
+
+    /***
+     * 登录页面
+     */
+    private final String LOGIN_PAGE_URI = "/page/login.html";
+
+    /***
+     * 登录请求
+     */
+    private final String LOGIN_URI = "/api/login";
+
 
     @Override
     public void start() {
@@ -65,34 +86,44 @@ public class WebManagerVerticle extends AbstractVerticle {
     public Router routerManager() {
         Router router = Router.router(this.vertx);
         ResponseContentTypeHandler responseContentTypeHandler = ResponseContentTypeHandler.create();
-        Route route = router.route();
         //设置响应头Content-type为json
-        route.produces(HttpHeaderValues.APPLICATION_JSON.toString()).handler(responseContentTypeHandler);
-        route.handler(BodyHandler.create());
-        route.handler(han -> {
-            log.info("权限认证...");
-            HttpServerResponse response = han.response();
-            //获取请求token
-            String token = han.request().getHeader("token");
-            if(StringUtil.isNullOrEmpty(token)){
-                //需要登录
-                System.out.println("需要登录...");
-            }else{
+        router.route("/api/*").produces(HttpHeaderValues.APPLICATION_JSON.toString()).handler(responseContentTypeHandler);
+        router.route()
+                .handler(BodyHandler.create())
+                .handler(han -> {
+                    HttpServerRequest request = han.request();
+                    String uri = request.uri();
+                    //如果访问路径为登录页面或登录请求，则跳过权限认证(白名单)
+                    if (uri.equals(LOGIN_PAGE_URI) || uri.equals(LOGIN_URI)) {
+                        han.next();
+                        return;
+                    }
+                    //获取请求token
+                    String token = request.getHeader("token");
+                    //token为空，则跳转到登录页
+                    if (StringUtil.isNullOrEmpty(token)) {
+                        //需要登录，跳转到登录页
+                        han.reroute(HttpMethod.GET, LOGIN_PAGE_URI);
+                    } else {
+                        //token认证
+                        if (checkToken(token)) {
+                            //token正确
+                            han.next();
+                        } else {
+                            //需要登录，跳转到登录页
+                            han.reroute(HttpMethod.GET, LOGIN_PAGE_URI);
+                        }
+                    }
+                });
 
-            }
-            //权限认证
-            han.next();
-        });
-
-
-        //登录页
-        router.route(HttpMethod.GET, "/login.html")
+        //静态页面
+        router.route(HttpMethod.GET, "/page/*")
                 .handler(responseContentTypeHandler)
                 .produces(HttpHeaderValues.TEXT_HTML.toString())
                 .handler(StaticHandler.create("static").setCachingEnabled(true));
 
 
-        router.route(HttpMethod.GET, "/login").handler(han -> {
+        router.route(HttpMethod.POST, "/api/login").handler(han -> {
             JsonObject params = getBodyAsJson(han);
             Result result = login(params);
             han.response().end(JsonUtils.toJson(result));
@@ -141,21 +172,54 @@ public class WebManagerVerticle extends AbstractVerticle {
         return router;
     }
 
+
+    /***
+     * 校验token
+     * @param token
+     * @return
+     */
+    public boolean checkToken(String token) {
+        boolean isOk = false;
+        try {
+            DecodedJWT tokenDecode = JWT.decode(token);
+            //验证token
+            Constants.JWT_ALGORITHM.verify(tokenDecode);
+            //失效时间戳
+            Long expiresAt = tokenDecode.getClaim("expiresAt").asLong();
+            //失效时间
+            LocalDateTime expireTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(expiresAt), ZoneId.systemDefault());
+            LocalDateTime now = LocalDateTime.now();
+            //token是否过期
+            boolean isBefore = expireTime.isAfter(now);
+            //token不能过期
+            if (isBefore) {
+                isOk = true;
+            }
+        } catch (JWTDecodeException | SignatureVerificationException e) {
+            //token错误
+        }
+        return isOk;
+    }
+
+
     /***
      * 登录
      * @param params {"username":"", "pwd":""}
-     * @return
+     * @return token
      */
-    public Result login(JsonObject params){
-        String username = params.getString("username");
-        String pwd = params.getString("pwd");
-        String sysUserName = Constants.CONFIG.getProperty(Constants.LOGIN_USERNAME_PROPERTY);
-        String sysPwd = Constants.CONFIG.getProperty(Constants.LOGIN_PWD_PROPERTY);
+    public Result login(JsonObject params) {
+        String username = params.getString("username", "");
+        String pwd = params.getString("pwd", "");
+        String sysUserName = Constants.CONFIG.getProperty(Constants.LOGIN_USERNAME_PROPERTY, "");
+        String sysPwd = Constants.CONFIG.getProperty(Constants.LOGIN_PWD_PROPERTY, "");
         Result result;
         //
-        if(sysUserName.equals(username) && sysPwd.equals(pwd)){
-            result = Result.SUCCESS("", "");
-        }else{
+        if (sysUserName.equals(username) && sysPwd.equals(pwd)) {
+            LocalDateTime localDateTime = LocalDateTime.now().plusDays(7l);
+            long expiresTimestamp = localDateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
+            String token = JWT.create().withClaim("auther", "Jian").withKeyId("0508").withClaim("uname", username).withClaim("expiresAt", expiresTimestamp).sign(Constants.JWT_ALGORITHM);
+            result = Result.SUCCESS(token, "登录成功！");
+        } else {
             result = Result.FAIL("用户名或密码错误！");
         }
         return result;

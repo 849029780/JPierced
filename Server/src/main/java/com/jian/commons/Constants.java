@@ -1,5 +1,6 @@
 package com.jian.commons;
 
+import com.auth0.jwt.algorithms.Algorithm;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.handler.local.LocalChannelInitializer;
 import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
@@ -136,6 +137,11 @@ public class Constants {
      * web登录的密码
      */
     public static final String LOGIN_PWD_PROPERTY = "login.pwd";
+
+    /***
+     * JWT校验器
+     */
+    public static final Algorithm JWT_ALGORITHM = Algorithm.HMAC512("jian0321");
 
     /***
      * 默认传输端口

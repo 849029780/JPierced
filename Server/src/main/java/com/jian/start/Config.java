@@ -41,6 +41,8 @@ public class Config {
         File file = new File(propertiesPath);
         if (!file.exists()) {
             log.error("当前目录不存在:{}文件，将使用默认配置启动，web端口:{}，传输端口为:{}", propertiesPath, Constants.DEF_WEB_PORT, Constants.DEF_TRANSMIT_PORT);
+            Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, Constants.DEF_WEB_PORT);
+            Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
             return;
         }
         try (InputStream inputStream = Files.newInputStream(file.toPath())) {
