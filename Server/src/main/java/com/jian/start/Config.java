@@ -2,8 +2,10 @@ package com.jian.start;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.util.BeanUtil;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
+import com.jian.transmit.ClientInfoSaved;
 import com.jian.utils.JsonUtils;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -81,7 +84,16 @@ public class Config {
      */
     public static void saveTransmitData() {
         try {
-            String dataJson = JsonUtils.JSON_PARSER.writeValueAsString(Constants.CLIENTS);
+            //简单浅copy保存的数据
+            Map<Long, ClientInfoSaved> mapSaved = new ConcurrentHashMap<>(Constants.CLIENTS.size());
+            for (Map.Entry<Long, ClientInfo> clientInfoEntry : Constants.CLIENTS.entrySet()) {
+                Long key = clientInfoEntry.getKey();
+                ClientInfo clientInfo = clientInfoEntry.getValue();
+                ClientInfoSaved clientInfoSaved = new ClientInfoSaved(clientInfo);
+                mapSaved.put(key, clientInfoSaved);
+            }
+            //序列化浅copy对象为json
+            String dataJson = JsonUtils.JSON_PARSER.writeValueAsString(mapSaved);
             File dataFile = new File(dataPath);
             if (!dataFile.exists()) {
                 dataFile.createNewFile();

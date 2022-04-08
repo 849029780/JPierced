@@ -57,6 +57,10 @@ public class Result<T> {
         return FAIL(null, null);
     }
 
+    public static <T> Result<T> UN_LOGIN(String msg){
+        return newInstance(UN_LOGIN, null, msg);
+    }
+
 
     /***
      * 成功状态
@@ -67,6 +71,11 @@ public class Result<T> {
      * 失败状态
      */
     public static final int FAIL_CODE = 201;
+
+    /***
+     * 未登录
+     */
+    public static final int UN_LOGIN = 205;
 
 
 }

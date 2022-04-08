@@ -15,7 +15,7 @@ import java.util.Optional;
 @Data
 public class Page {
 
-    private Object data;
+    private Object page;
 
     private int size;
 
@@ -25,7 +25,7 @@ public class Page {
     public static <T> Page page(Collection<T> data) {
         Page tPage = new Page();
         Optional.ofNullable(data).ifPresent(dt->{
-            tPage.setData(data);
+            tPage.setPage(data);
             tPage.setSize(data.size());
         });
         return tPage;
@@ -34,7 +34,7 @@ public class Page {
     public static <K, V> Page page(Map<K, V> data) {
         Page tPage = new Page();
         Optional.ofNullable(data).ifPresent(dt->{
-            tPage.setData(data);
+            tPage.setPage(data);
             tPage.setSize(data.size());
         });
         return tPage;

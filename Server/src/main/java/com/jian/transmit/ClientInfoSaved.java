@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2022/4/2
  */
 @Data
-public class ClientInfo {
+public class ClientInfoSaved {
 
     /***
      * 客户标识
@@ -30,25 +30,19 @@ public class ClientInfo {
     private String name;
 
     /***
-     * 客户端连接通道
-     */
-    @JsonIgnore
-    private Channel remoteChannel;
-
-    /***
-     * 是否在线 默认false
-     */
-    private boolean isOnline = false;
-
-    /***
      * 需要在服务端映射的端口及被穿透机器上的地址和端口
      */
     private ConcurrentHashMap<Integer, NetAddress> portMappingAddress = new ConcurrentHashMap<>();
 
-    /***
-     * 监听的端口 对应通道 客户端在线时才有连接数据，否则为空
-     */
-    @JsonIgnore
-    private ConcurrentHashMap<Integer, Channel> listenPortMap = new ConcurrentHashMap<>();
+
+    public ClientInfoSaved() {
+
+    }
+
+    public ClientInfoSaved(ClientInfo clientInfo) {
+        setKey(clientInfo.getKey());
+        setPwd(clientInfo.getPwd());
+        setName(clientInfo.getName());
+    }
 
 }

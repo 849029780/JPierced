@@ -26,6 +26,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.ResponseContentTypeHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -51,14 +52,11 @@ public class WebManagerVerticle extends AbstractVerticle {
     HttpServer httpServer;
 
     /***
-     * 登录页面
-     */
-    private final String LOGIN_PAGE_URI = "/page/login.html";
-
-    /***
      * 登录请求
      */
     private final String LOGIN_URI = "/api/login";
+
+    private final String STATIC_START_WITH_URI = "/page/";
 
 
     @Override
@@ -82,16 +80,34 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     public Router routerManager() {
         Router router = Router.router(this.vertx);
+        Set<String> allowedHeaders = new HashSet<>();
+        allowedHeaders.add("Access-Control-Allow-Origin");
+        allowedHeaders.add("Access-Control-Allow-Method");
+        allowedHeaders.add("Access-Control-Allow-Credentials");
+        allowedHeaders.add("Content-Type");
+
+        Set<HttpMethod> allowedMethods = new HashSet<>();
+        allowedMethods.add(HttpMethod.GET);
+        allowedMethods.add(HttpMethod.POST);
+        allowedMethods.add(HttpMethod.OPTIONS);
+        /*
+         * these methods aren't necessary for this sample,
+         * but you may need them for your projects
+         */
+        allowedMethods.add(HttpMethod.DELETE);
+        allowedMethods.add(HttpMethod.PATCH);
+        allowedMethods.add(HttpMethod.PUT);
         ResponseContentTypeHandler responseContentTypeHandler = ResponseContentTypeHandler.create();
         //设置响应头Content-type为json
         router.route("/api/*").produces(HttpHeaderValues.APPLICATION_JSON.toString()).handler(responseContentTypeHandler);
         router.route()
+                .handler(CorsHandler.create("http://localhost:8082").allowedHeaders(allowedHeaders).allowedMethods(allowedMethods))
                 .handler(BodyHandler.create())
                 .handler(han -> {
                     HttpServerRequest request = han.request();
                     String uri = request.uri();
                     //如果访问路径为登录页面或登录请求，则跳过权限认证(白名单)
-                    if (uri.equals(LOGIN_PAGE_URI) || uri.equals(LOGIN_URI)) {
+                    if (uri.equals(LOGIN_URI) || uri.startsWith(STATIC_START_WITH_URI)) {
                         han.next();
                         return;
                     }
@@ -99,22 +115,26 @@ public class WebManagerVerticle extends AbstractVerticle {
                     String token = request.getHeader("token");
                     //token为空，则跳转到登录页
                     if (StringUtil.isNullOrEmpty(token)) {
-                        //需要登录，跳转到登录页
-                        han.reroute(HttpMethod.GET, LOGIN_PAGE_URI);
+                        //需要登录
+                        han.response().end(JsonUtils.toJson(Result.UN_LOGIN("请登录后操作！")));
                     } else {
                         //token认证
                         if (checkToken(token)) {
                             //token正确
                             han.next();
                         } else {
-                            //需要登录，跳转到登录页
-                            han.reroute(HttpMethod.GET, LOGIN_PAGE_URI);
+                            //需要登录
+                            han.response().end(JsonUtils.toJson(Result.UN_LOGIN("请登录后操作！")));
                         }
                     }
                 });
 
+
+
+
+
         //静态页面
-        router.route(HttpMethod.GET, "/page/*")
+        router.route(HttpMethod.GET, STATIC_START_WITH_URI + "*")
                 .handler(responseContentTypeHandler)
                 .produces(HttpHeaderValues.TEXT_HTML.toString())
                 .handler(StaticHandler.create("static").setCachingEnabled(true));
@@ -212,7 +232,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         Result result;
         //
         if (sysUserName.equals(username) && sysPwd.equals(pwd)) {
-            LocalDateTime localDateTime = LocalDateTime.now().plusDays(7l);
+            LocalDateTime localDateTime = LocalDateTime.now().plusDays(7L);
             long expiresTimestamp = localDateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
             String token = JWT.create().withClaim("auther", "Jian").withKeyId("0508").withClaim("uname", username).withClaim("expiresAt", expiresTimestamp).sign(Constants.JWT_ALGORITHM);
             result = Result.SUCCESS(token, "登录成功！");
