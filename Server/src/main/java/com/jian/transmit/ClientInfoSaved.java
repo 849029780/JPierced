@@ -1,7 +1,5 @@
 package com.jian.transmit;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.netty.channel.Channel;
 import lombok.Data;
 
 import java.util.concurrent.ConcurrentHashMap;
