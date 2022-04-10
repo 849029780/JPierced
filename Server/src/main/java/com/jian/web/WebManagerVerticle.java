@@ -58,6 +58,11 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     private final String STATIC_START_WITH_URI = "/page/";
 
+    /***
+     * 跳过所有
+     */
+    private final Boolean SKIP_ALL = false;
+
 
     @Override
     public void start() {
@@ -86,22 +91,11 @@ public class WebManagerVerticle extends AbstractVerticle {
         allowedHeaders.add("Access-Control-Allow-Credentials");
         allowedHeaders.add("Content-Type");
 
-        Set<HttpMethod> allowedMethods = new HashSet<>();
-        allowedMethods.add(HttpMethod.GET);
-        allowedMethods.add(HttpMethod.POST);
-        allowedMethods.add(HttpMethod.OPTIONS);
-        /*
-         * these methods aren't necessary for this sample,
-         * but you may need them for your projects
-         */
-        allowedMethods.add(HttpMethod.DELETE);
-        allowedMethods.add(HttpMethod.PATCH);
-        allowedMethods.add(HttpMethod.PUT);
         ResponseContentTypeHandler responseContentTypeHandler = ResponseContentTypeHandler.create();
         //设置响应头Content-type为json
         router.route("/api/*").produces(HttpHeaderValues.APPLICATION_JSON.toString()).handler(responseContentTypeHandler);
         router.route()
-                .handler(CorsHandler.create("http://localhost:8082").allowedHeaders(allowedHeaders).allowedMethods(allowedMethods))
+                .handler(CorsHandler.create("*").allowedHeaders(allowedHeaders).allowedMethods(new HashSet<>(HttpMethod.values())))
                 .handler(BodyHandler.create())
                 .handler(han -> {
                     HttpServerRequest request = han.request();
@@ -111,6 +105,15 @@ public class WebManagerVerticle extends AbstractVerticle {
                         han.next();
                         return;
                     }
+
+
+                    //跳过所有认证
+                    if(SKIP_ALL){
+                        han.next();
+                        return;
+                    }
+
+
                     //获取请求token
                     String token = request.getHeader("token");
                     //token为空，则跳转到登录页

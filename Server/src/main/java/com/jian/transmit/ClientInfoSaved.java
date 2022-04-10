@@ -41,6 +41,7 @@ public class ClientInfoSaved {
         setKey(clientInfo.getKey());
         setPwd(clientInfo.getPwd());
         setName(clientInfo.getName());
+        setPortMappingAddress(clientInfo.getPortMappingAddress());
     }
 
 }
