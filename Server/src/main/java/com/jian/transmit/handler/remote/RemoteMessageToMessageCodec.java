@@ -12,6 +12,8 @@ import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -202,10 +204,12 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        if(Objects.isNull(clientInfo)){
-            log.error("远程通道发生错误!", cause);
-        }else{
-            log.error("远程通道发生错误,客户端key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
+        if (cause instanceof SocketException cause1) {
+            if (cause1.getMessage().equals("Connection reset")) {
+                log.error("客户端连接被重置！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName());
+                return;
+            }
         }
+        log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
     }
 }

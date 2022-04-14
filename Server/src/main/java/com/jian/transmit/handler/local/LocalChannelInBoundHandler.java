@@ -10,6 +10,8 @@ import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -127,6 +129,15 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("本地通道发生错误错误", cause);
+        Channel channel = ctx.channel();
+        SocketAddress socketAddress = channel.localAddress();
+        SocketAddress socketAddress1 = channel.remoteAddress();
+        if (cause instanceof SocketException cause1) {
+            if (cause1.getMessage().equals("Connection reset")) {
+                log.error("本地通道连接被重置！本地地址及端口:{}，远程连接：{}", socketAddress, socketAddress1);
+                return;
+            }
+        }
+        log.error("本地通道发生错误！本地地址及端口:{}，远程连接：{}", socketAddress, socketAddress1, cause);
     }
 }

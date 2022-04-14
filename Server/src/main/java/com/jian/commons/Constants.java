@@ -8,6 +8,8 @@ import com.jian.transmit.handler.remote.RemoteChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.AttributeKey;
 import io.vertx.core.Vertx;
@@ -28,11 +30,11 @@ public class Constants {
     /***
      * 服务端接受连接处理线程组
      */
-    public static final EventLoopGroup BOSS_EVENT_LOOP_GROUP = new NioEventLoopGroup();
+    public static final EventLoopGroup BOSS_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
     /***
      * 服务端编解码工作线程组
      */
-    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = new NioEventLoopGroup();
+    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
 
     /***
      * 绑定在本地通道上的 当前通道hash
@@ -152,7 +154,6 @@ public class Constants {
      * 默认web端口
      */
     public static final String DEF_WEB_PORT = "8000";
-
 
 
 }

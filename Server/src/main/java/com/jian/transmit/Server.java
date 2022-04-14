@@ -7,6 +7,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,7 +35,7 @@ public class Server {
         serverBootstrap.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
         serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
         serverBootstrap.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
-        serverBootstrap.channel(NioServerSocketChannel.class);
+        serverBootstrap.channel(Epoll.isAvailable() ? EpollServerSocketChannel.class : NioServerSocketChannel.class);
     }
 
     public static Server getInstance() {
@@ -137,7 +139,7 @@ public class Server {
                             clientInfo.setOnline(false);
                             //客户端连接
                             Channel remoteChannel = clientInfo.getRemoteChannel();
-                            Optional.ofNullable(remoteChannel).ifPresent(ch->{
+                            Optional.ofNullable(remoteChannel).ifPresent(ch -> {
                                 //关闭客户端连接
                                 ch.close();
                                 clientInfo.setRemoteChannel(null);
