@@ -9,6 +9,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,9 +35,10 @@ public class Server {
     private Server() {
         serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
-        serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
+        serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         serverBootstrap.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
-        serverBootstrap.channel(Epoll.isAvailable() ? EpollServerSocketChannel.class : NioServerSocketChannel.class);
+        serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, Boolean.TRUE);
+        serverBootstrap.channel(Epoll.isAvailable() ? EpollServerSocketChannel.class : KQueue.isAvailable() ? KQueueServerSocketChannel.class : NioServerSocketChannel.class);
     }
 
     public static Server getInstance() {

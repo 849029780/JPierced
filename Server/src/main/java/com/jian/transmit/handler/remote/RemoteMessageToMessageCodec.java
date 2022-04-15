@@ -1,21 +1,21 @@
 package com.jian.transmit.handler.remote;
 
-import com.jian.transmit.ClientInfo;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
+import com.jian.transmit.ClientInfo;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /***
@@ -166,6 +166,21 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
+
+        //本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
+        Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
+        Optional.ofNullable(localChannelMap).ifPresent(map -> {
+            if (map.size() > 0) {
+                for (Map.Entry<Long, Channel> entry : localChannelMap.entrySet()) {
+                    if (Objects.nonNull(entry)) {
+                        Channel localChannel = entry.getValue();
+                        Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
+                    }
+                }
+            }
+        });
+
+        //关闭端口监听
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         Optional.ofNullable(clientInfo).ifPresent(cli -> {
             cli.setOnline(false);
@@ -205,8 +220,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         if (cause instanceof SocketException cause1) {
-            if (cause1.getMessage().equals("Connection reset")) {
-                log.error("客户端连接被重置！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName());
+            if (cause1.getMessage().startsWith("Connection reset")) {
                 return;
             }
         }

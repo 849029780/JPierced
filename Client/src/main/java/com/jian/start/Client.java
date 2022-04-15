@@ -6,10 +6,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollSocketChannel;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
@@ -66,7 +69,7 @@ public class Client {
         this.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
-        this.bootstrap.channel(NioSocketChannel.class);
+        this.bootstrap.channel(Epoll.isAvailable() ? EpollSocketChannel.class : KQueue.isAvailable() ? KQueueSocketChannel.class : NioSocketChannel.class);
     }
 
     public boolean isCanReconnect() {
@@ -129,7 +132,7 @@ public class Client {
                 }
                 log.info("连接服务失败！正在尝试第:{}次,重连:{}，", count, this.connectInetSocketAddress);
                 connect(socketAddress, futureListener);
-            }else{
+            } else {
                 log.info("连接服务失败！");
                 System.exit(0);
             }

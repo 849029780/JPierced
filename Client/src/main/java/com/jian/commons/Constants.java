@@ -6,6 +6,10 @@ import com.jian.start.Client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.AttributeKey;
 
@@ -23,7 +27,7 @@ public class Constants {
     /***
      * 服务端编解码工作线程组
      */
-    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = new NioEventLoopGroup();
+    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : KQueue.isAvailable() ? new KQueueEventLoopGroup() : new NioEventLoopGroup();
 
     /***
      * 绑定在本地通道上的 当前通道hash
