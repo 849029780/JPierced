@@ -4,10 +4,8 @@ import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.start.Client;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -168,7 +166,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         if (Objects.nonNull(Constants.LOCAL_CHANNEL_MAP)) {
             //和服务端的连接断开，关闭本地所有的连接
             for (Map.Entry<Long, Channel> entry : Constants.LOCAL_CHANNEL_MAP.entrySet()) {
-                Optional.ofNullable(entry.getValue()).ifPresent(ChannelOutboundInvoker::close);
+                Optional.ofNullable(entry.getValue()).ifPresent(ch -> ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
             }
             //本地连接关闭后置空
             Constants.LOCAL_CHANNEL_MAP = null;

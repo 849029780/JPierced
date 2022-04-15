@@ -2,7 +2,6 @@ package com.jian.start;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.util.BeanUtil;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.ClientInfoSaved;

@@ -15,7 +15,6 @@ import io.netty.util.AttributeKey;
 
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 /***
  *
