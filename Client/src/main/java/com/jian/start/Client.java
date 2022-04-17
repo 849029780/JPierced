@@ -54,21 +54,20 @@ public class Client {
     /***
      * 重连次数
      */
-    private AtomicReference<Integer> recount = new AtomicReference<>(0);
+    //private AtomicReference<Integer> recount = new AtomicReference<>(0);
 
     /***
      * 重连次数
      * @return
      */
-    public AtomicReference<Integer> getRecount() {
+    /*public AtomicReference<Integer> getRecount() {
         return recount;
-    }
-
+    }*/
     private Client() {
         this.bootstrap = new Bootstrap();
         this.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
-        this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
+        this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
         this.bootstrap.channel(Epoll.isAvailable() ? EpollSocketChannel.class : KQueue.isAvailable() ? KQueueSocketChannel.class : NioSocketChannel.class);
     }
 
@@ -117,20 +116,20 @@ public class Client {
         ChannelFuture channelFuture = connect(socketAddress);
         reconnectConsumer = future -> {
             if (canReconnect) {
-                Integer count = recount.get();
+                /*Integer count = recount.get();
                 count++;
                 recount.set(count);
                 if (count > Constants.RECONNECT_MAX_COUNT) {
                     log.info("已超过最大重连次数:{}次，已退出重连..", Constants.RECONNECT_MAX_COUNT);
                     System.exit(0);
                     return;
-                }
+                }*/
                 try {
                     Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
                 } catch (InterruptedException e) {
                     log.error("重连延迟错误..", e);
                 }
-                log.info("连接服务失败！正在尝试第:{}次,重连:{}，", count, this.connectInetSocketAddress);
+                log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
                 connect(socketAddress, futureListener);
             } else {
                 log.info("连接服务失败！");

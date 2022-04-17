@@ -100,7 +100,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                         //可进行重连
                         client.setCanReconnect(true);
                         //重连次数置空
-                        client.getRecount().set(0);
+                        //client.getRecount().set(0);
                     });
                 } else {
                     log.info("连接服务失败！{}", msg);

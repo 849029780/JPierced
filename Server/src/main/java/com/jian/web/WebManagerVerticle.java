@@ -61,7 +61,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 跳过所有
      */
-    private final Boolean SKIP_ALL = false;
+    private final Boolean SKIP_ALL = true;
 
 
     @Override

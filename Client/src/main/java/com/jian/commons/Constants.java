@@ -76,7 +76,7 @@ public class Constants {
     /***
      * 重连间隔时间 s
      */
-    public static final int RECONNECT_DELAY = 20;
+    public static final int RECONNECT_DELAY = 30;
 
     /***
      * 重连最大次数
