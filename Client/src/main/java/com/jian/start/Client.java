@@ -48,6 +48,11 @@ public class Client {
     private Consumer<Future> reconnectConsumer;
 
     /***
+     * 连接成功后的操作
+     */
+    private Consumer<ChannelFuture> successFuture;
+
+    /***
      * 是否可进行重连，只有登录成功后断开连接才允许重连，别的操作不允许重连
      */
     private boolean canReconnect = false;
@@ -113,18 +118,19 @@ public class Client {
     }
 
 
-    public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<Future> successFuture) {
+    /*public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<Future> successFuture) {
+
         ChannelFuture channelFuture = connect(socketAddress);
         reconnectConsumer = future -> {
             if (canReconnect) {
-                /*Integer count = recount.get();
+                *//*Integer count = recount.get();
                 count++;
                 recount.set(count);
                 if (count > Constants.RECONNECT_MAX_COUNT) {
                     log.info("已超过最大重连次数:{}次，已退出重连..", Constants.RECONNECT_MAX_COUNT);
                     System.exit(0);
                     return;
-                }*/
+                }*//*
                 try {
                     Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
                 } catch (InterruptedException e) {
@@ -147,6 +153,15 @@ public class Client {
         };
         channelFuture.addListener(futureListener);
         return channelFuture;
+    }*/
+
+    public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<ChannelFuture> successFuture) {
+        this.successFuture = successFuture;
+        return connect(socketAddress).addListener(future -> {
+            if (future.isSuccess()) {
+                successFuture.accept((ChannelFuture) future);
+            }
+        });
     }
 
 
@@ -161,7 +176,22 @@ public class Client {
      * @return
      */
     public ChannelFuture reConnct() {
-        return connect(this.connectInetSocketAddress, (GenericFutureListener) future -> reconnectConsumer.accept(future));
+        ChannelFuture channelFuture = connect(this.connectInetSocketAddress, this.successFuture);
+        reconnectConsumer = future -> {
+            if (canReconnect) {
+                try {
+                    Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
+                } catch (InterruptedException e) {
+                    log.error("重连延迟错误..", e);
+                }
+                log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
+                reConnct();
+            } else {
+                log.info("连接服务:{}失败！", this.connectInetSocketAddress);
+                System.exit(0);
+            }
+        };
+        return channelFuture;
     }
 
 }
