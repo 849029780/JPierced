@@ -160,6 +160,17 @@ public class Client {
         return connect(socketAddress).addListener(future -> {
             if (future.isSuccess()) {
                 successFuture.accept((ChannelFuture) future);
+            } else if (canReconnect) {
+                try {
+                    Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
+                } catch (InterruptedException e) {
+                    log.error("重连延迟错误..", e);
+                }
+                log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
+                reConnct();
+            } else {
+                log.info("连接服务:{}失败！", this.connectInetSocketAddress);
+                System.exit(0);
             }
         });
     }
@@ -176,22 +187,7 @@ public class Client {
      * @return
      */
     public ChannelFuture reConnct() {
-        ChannelFuture channelFuture = connect(this.connectInetSocketAddress, this.successFuture);
-        reconnectConsumer = future -> {
-            if (canReconnect) {
-                try {
-                    Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
-                } catch (InterruptedException e) {
-                    log.error("重连延迟错误..", e);
-                }
-                log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
-                reConnct();
-            } else {
-                log.info("连接服务:{}失败！", this.connectInetSocketAddress);
-                System.exit(0);
-            }
-        };
-        return channelFuture;
+        return connect(this.connectInetSocketAddress, this.successFuture);
     }
 
 }
