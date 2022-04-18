@@ -16,6 +16,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -132,7 +133,7 @@ public class Client {
                 log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
                 connect(socketAddress, futureListener);
             } else {
-                log.info("连接服务失败！");
+                log.info("连接服务:{}失败！", socketAddress);
                 System.exit(0);
             }
         };

@@ -16,6 +16,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -27,33 +28,53 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class Config {
 
-    //获取当前jar包所在路径
+    /***
+     * 获取当前jar包所在路径
+     */
     static String dirPath = System.getProperty("user.dir");
 
-    //数据文件路径，默认在该jar包下
+    /***
+     * 数据文件路径，默认在该jar包下
+     */
     static String dataPath = dirPath + File.separator + ".data";
 
-    //配置文件路径，默认在该jar包下
-    static String propertiesPath = dirPath + File.separator + "server.properties";
+    /***
+     * 配置文件名
+     */
+    static String propertiesName = "server.properties";
+
+    /***
+     * 配置文件路径，默认在该jar包下
+     */
+    static String propertiesPath = dirPath + File.separator + propertiesName;
 
     /***
      * 初始化配置
      */
     public static void initConfig() {
         File file = new File(propertiesPath);
+        InputStream resource = null;
         if (!file.exists()) {
-            log.error("当前目录不存在:{}文件，将使用默认配置启动，web端口:{}，传输端口为:{}", propertiesPath, Constants.DEF_WEB_PORT, Constants.DEF_TRANSMIT_PORT);
-            Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, Constants.DEF_WEB_PORT);
-            Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
-            return;
+            resource = Config.class.getClassLoader().getResourceAsStream(propertiesName);
+            if (Objects.isNull(resource)) {
+                log.error("当前目录不存在:{}文件，将使用默认配置启动，web端口:{}，传输端口为:{}", propertiesPath, Constants.DEF_WEB_PORT, Constants.DEF_TRANSMIT_PORT);
+                Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, Constants.DEF_WEB_PORT);
+                Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
+                return;
+            }
         }
-        try (InputStream inputStream = Files.newInputStream(file.toPath())) {
-            Constants.CONFIG.load(inputStream);
+        try {
+            if (Objects.isNull(resource)) {
+                resource = Files.newInputStream(file.toPath());
+            }
+            Constants.CONFIG.load(resource);
             log.info("配置文件加载成功！");
+            resource.close();
         } catch (IOException e) {
             log.error("加载config.properties文件错误！", e);
         }
     }
+
 
     /***
      * 初始化传输服务数据
