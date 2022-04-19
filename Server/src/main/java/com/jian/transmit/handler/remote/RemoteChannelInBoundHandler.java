@@ -35,6 +35,9 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         switch (type) {
             case 2 -> {//连接响应
+                if (!checkIsAuth(channel)) {
+                    return;
+                }
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
                 Channel localChannel = localChannelMap.get(connectRespPacks.getThisChannelHash());
 
@@ -53,6 +56,9 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 }
             }
             case 3 -> {//客户发起断开连接请求
+                if (!checkIsAuth(channel)) {
+                    return;
+                }
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
                 Channel localChannel = localChannelMap.remove(tarChannelHash);
@@ -75,6 +81,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     connectAuthRespPacks.setMsg("当前key无权限连接！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     log.info("客户端连接key:{},当前key无权限连接！", key);
+                    ctx.close();
                     return;
                 }
 
@@ -83,6 +90,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     connectAuthRespPacks.setMsg("当前客户端已在线，不允许重复连接！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     log.info("客户端连接key:{},当前客户端已在线，不允许重复连接！", key);
+                    ctx.close();
                     return;
                 }
                 String pwd = clientInfo.getPwd();
@@ -91,6 +99,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     connectAuthRespPacks.setMsg("当前key密码错误！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     log.info("客户端连接key:{},密码:{}错误", key, pwd);
+                    ctx.close();
                     return;
                 }
 
@@ -127,6 +136,9 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
             }
             case 8 -> { //接收心跳请求
+                if (!checkIsAuth(channel)) {
+                    return;
+                }
                 ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 Long msgId = healthReqPacks.getMsgId();
@@ -136,6 +148,21 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 ctx.writeAndFlush(healthRespPacks);
             }
         }
+    }
+
+    /***
+     * 验证是否已经登录，未登录不允许发送任何数据
+     * @param channel
+     */
+    private boolean checkIsAuth(Channel channel) {
+        boolean isAuth = false;
+        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        if (Objects.nonNull(clientInfo)) {
+            isAuth = true;
+        } else {
+            channel.close();
+        }
+        return isAuth;
     }
 
 

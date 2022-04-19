@@ -11,15 +11,12 @@ import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /***
@@ -38,16 +35,6 @@ public class Client {
     private InetSocketAddress connectInetSocketAddress;
 
     /***
-     * 保存连接成功后发送的消息
-     */
-    private GenericFutureListener futureListener;
-
-    /***
-     * 重连过程
-     */
-    private Consumer<Future> reconnectConsumer;
-
-    /***
      * 连接成功后的操作
      */
     private Consumer<ChannelFuture> successFuture;
@@ -57,18 +44,6 @@ public class Client {
      */
     private boolean canReconnect = false;
 
-    /***
-     * 重连次数
-     */
-    //private AtomicReference<Integer> recount = new AtomicReference<>(0);
-
-    /***
-     * 重连次数
-     * @return
-     */
-    /*public AtomicReference<Integer> getRecount() {
-        return recount;
-    }*/
     private Client() {
         this.bootstrap = new Bootstrap();
         this.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
@@ -117,57 +92,14 @@ public class Client {
         return channelFuture;
     }
 
-
-    /*public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<Future> successFuture) {
-
-        ChannelFuture channelFuture = connect(socketAddress);
-        reconnectConsumer = future -> {
-            if (canReconnect) {
-                *//*Integer count = recount.get();
-                count++;
-                recount.set(count);
-                if (count > Constants.RECONNECT_MAX_COUNT) {
-                    log.info("已超过最大重连次数:{}次，已退出重连..", Constants.RECONNECT_MAX_COUNT);
-                    System.exit(0);
-                    return;
-                }*//*
-                try {
-                    Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
-                } catch (InterruptedException e) {
-                    log.error("重连延迟错误..", e);
-                }
-                log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
-                connect(socketAddress, futureListener);
-            } else {
-                log.info("连接服务:{}失败！", socketAddress);
-                System.exit(0);
-            }
-        };
-
-        futureListener = future -> {
-            if (future.isSuccess()) {
-                successFuture.accept(future);
-            } else {
-                reconnectConsumer.accept(future);
-            }
-        };
-        channelFuture.addListener(futureListener);
-        return channelFuture;
-    }*/
-
     public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<ChannelFuture> successFuture) {
         this.successFuture = successFuture;
         return connect(socketAddress).addListener(future -> {
             if (future.isSuccess()) {
                 successFuture.accept((ChannelFuture) future);
             } else if (canReconnect) {
-                try {
-                    Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
-                } catch (InterruptedException e) {
-                    log.error("重连延迟错误..", e);
-                }
-                log.info("连接服务失败！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
-                reConnct();
+                //重连
+                Constants.CACHED_EXECUTOR_POOL.execute(this::reConnct);
             } else {
                 log.info("连接服务:{}失败！", this.connectInetSocketAddress);
                 System.exit(0);
@@ -187,6 +119,12 @@ public class Client {
      * @return
      */
     public ChannelFuture reConnct() {
+        log.info("连接服务断开！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
+        try {
+            Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
+        } catch (InterruptedException e) {
+            log.error("重连延迟错误..", e);
+        }
         return connect(this.connectInetSocketAddress, this.successFuture);
     }
 

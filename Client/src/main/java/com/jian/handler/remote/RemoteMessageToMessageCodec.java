@@ -174,12 +174,11 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         //将连接置空
         Constants.REMOTE_CHANNEL = null;
         Client client = channel.attr(Constants.CLIENT_KEY).get();
-        Optional.ofNullable(client).ifPresent(cli->{
+        Optional.ofNullable(client).ifPresent(cli -> {
             if (client.isCanReconnect()) {
-                log.info("与服务端的连接断开，本地所有连接已关闭..{}s后将发起重连..", Constants.RECONNECT_DELAY);
                 //重连
-                cli.reConnct();
-            }else{
+                Constants.CACHED_EXECUTOR_POOL.execute(cli::reConnct);
+            } else {
                 System.exit(0);
             }
         });

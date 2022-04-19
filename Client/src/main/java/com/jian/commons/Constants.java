@@ -15,6 +15,10 @@ import io.netty.util.AttributeKey;
 
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /***
  *
@@ -79,9 +83,9 @@ public class Constants {
     public static final int RECONNECT_DELAY = 30;
 
     /***
-     * 重连最大次数
+     * 重连缓存线程
      */
-    public static final int RECONNECT_MAX_COUNT = 5;
+    public static final ExecutorService CACHED_EXECUTOR_POOL = new ThreadPoolExecutor(0, 1, 60L, TimeUnit.SECONDS, new SynchronousQueue<>());
 
     /***
      * 超过该阈值未接收到心跳则代表该连接已断开
