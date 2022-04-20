@@ -26,7 +26,7 @@ public class BaseTransferPacks {
         Byte CONNECT_RESP = 2;
 
         /***
-         * 断开连接请求
+         * 断开本地连接请求
          */
         Byte DIS_CONNECT_REQ = 3;
 
@@ -54,6 +54,11 @@ public class BaseTransferPacks {
          * 心跳响应
          */
         Byte HEALTH_RESP = 9;
+
+        /***
+         * 断开客户端连接
+         */
+        Byte DIS_CONNECT_CLIENT = 10;
     }
 
 }

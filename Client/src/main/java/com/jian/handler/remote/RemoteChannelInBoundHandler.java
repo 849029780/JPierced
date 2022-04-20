@@ -104,6 +104,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     });
                 } else {
                     log.info("连接服务失败！{}", msg);
+                    channel.close();
                 }
             }
             case 7 -> { //传输数据
@@ -116,6 +117,17 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 Long msgId = healthRespPacks.getMsgId();
                 log.info("接收到服务端的心跳响应，msgId:{}", msgId);
+            }
+            case 10 -> {//断开和远程的连接
+                //DisConnectClientReqPacks disConnectClientReqPacks = (DisConnectClientReqPacks) baseTransferPacks;
+                log.info("接收到服务端要求断开和服务端的连接！");
+                Client client = channel.attr(Constants.CLIENT_KEY).get();
+                //连接成功后才会将重试次数置空
+                Optional.ofNullable(client).ifPresent(cli -> {
+                    //设置不可进行重连
+                    client.setCanReconnect(false);
+                });
+                channel.close();
             }
         }
     }

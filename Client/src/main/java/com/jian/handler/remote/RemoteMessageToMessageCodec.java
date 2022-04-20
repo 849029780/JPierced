@@ -155,6 +155,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 healthRespPacks.setMsgId(msgId);
                 list.add(healthRespPacks);
             }
+            case 10 -> {//断开客户端
+                DisConnectClientReqPacks disConnectClientReqPacks = new DisConnectClientReqPacks();
+                byte code = byteBuf.readByte();
+                disConnectClientReqPacks.setPackSize(packSize);
+                disConnectClientReqPacks.setCode(code);
+                list.add(disConnectClientReqPacks);
+            }
         }
     }
 

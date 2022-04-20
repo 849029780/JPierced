@@ -78,25 +78,22 @@ public class Server {
                     try {
                         ChannelFuture future1 = (ChannelFuture) future;
                         Channel channel1 = future1.channel();
-
-                        InetSocketAddress socketAddress = (InetSocketAddress) channel1.localAddress();
-                        int port1 = socketAddress.getPort();
                         //映射的客户端本地连接信息
-                        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port1);
+                        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
                         stringBuffer.append("服务端端口：");
-                        stringBuffer.append(port1);
+                        stringBuffer.append(port);
                         if (future1.isSuccess()) {
                             stringBuffer.append("监听成功，映射的本地地址为:");
-                            log.info("客户端key：{}，name:{}，监听端口:{}成功！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port1, netAddress);
-                            clientInfo.getListenPortMap().put(port1, channel1);
-                            Constants.PORT_MAPPING_CLIENT.put(port1, clientInfo);
+                            log.info("客户端key：{}，name:{}，监听端口:{}成功！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
+                            clientInfo.getListenPortMap().put(port, channel1);
+                            Constants.PORT_MAPPING_CLIENT.put(port, clientInfo);
                         } else {
                             if (future1.cause() instanceof BindException) {
                                 stringBuffer.append("监听失败！该端口已被使用，映射的本地地址为：");
-                                log.info("客户端key：{}，name:{}，监听端口:{}失败！该端口已被占用！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port1, netAddress);
+                                log.info("客户端key：{}，name:{}，监听端口:{}失败！该端口已被占用！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             } else {
                                 stringBuffer.append("监听失败！映射的本地地址为：");
-                                log.info("客户端key：{}，name:{}，监听端口:{}失败！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port1, netAddress);
+                                log.info("客户端key：{}，name:{}，监听端口:{}失败！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             }
                         }
                         stringBuffer.append(netAddress.getHost());

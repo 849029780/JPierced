@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.jian.beans.transfer.DisConnectClientReqPacks;
 import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.commons.Constants;
 import com.jian.start.Config;
@@ -164,6 +165,13 @@ public class WebManagerVerticle extends AbstractVerticle {
             Result result = removeClient(params);
             han.response().end(JsonUtils.toJson(result));
         });
+
+        router.route(HttpMethod.POST, "/api/shotClient").handler(han -> {
+            JsonObject params = getBodyAsJson(han);
+            Result result = shotClient(params);
+            han.response().end(JsonUtils.toJson(result));
+        });
+
         router.route(HttpMethod.POST, "/api/modifyClientPortMapping").handler(han -> {
             JsonObject params = getBodyAsJson(han);
             Result result = modifyClientPortMapping(params);
@@ -349,6 +357,31 @@ public class WebManagerVerticle extends AbstractVerticle {
         //重新保存数据
         Config.saveTransmitData();
         return Result.SUCCESS("移除客户端成功！");
+    }
+
+    /***
+     * 踢出客户端
+     * @param params {"key":"数字去掉双引号"}
+     * @return
+     */
+    private Result shotClient(JsonObject params) {
+        Long key = params.getLong("key");
+        if (Objects.isNull(key)) {
+            return Result.FAIL("踢出客户端失败！key为空！");
+        }
+        ClientInfo clientInfo = Constants.CLIENTS.get(key);
+        if(Objects.isNull(clientInfo)){
+            return Result.FAIL("踢出客户端失败！当前客户端key不存在！");
+        }
+
+        Channel remoteChannel = clientInfo.getRemoteChannel();
+        if(Objects.isNull(remoteChannel)){
+            return Result.FAIL("踢出客户端失败！当前客户端key未连接！");
+        }
+        DisConnectClientReqPacks disConnectClientReqPacks = new DisConnectClientReqPacks();
+        disConnectClientReqPacks.setCode((byte)1);
+        remoteChannel.writeAndFlush(disConnectClientReqPacks);
+        return Result.FAIL("客户端已下线！");
     }
 
 

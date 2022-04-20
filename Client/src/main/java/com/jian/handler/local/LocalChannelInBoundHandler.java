@@ -20,7 +20,7 @@ import java.net.SocketAddress;
  */
 @Slf4j
 @ChannelHandler.Sharable
-public class LocalChannelInboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {

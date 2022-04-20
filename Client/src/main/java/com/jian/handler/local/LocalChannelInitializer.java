@@ -6,10 +6,10 @@ import io.netty.channel.ChannelPipeline;
 
 public class LocalChannelInitializer extends ChannelInitializer {
 
-    private LocalChannelInboundHandler localChannelInboundHandler;
+    private LocalChannelInBoundHandler localChannelInboundHandler;
 
     public LocalChannelInitializer() {
-        localChannelInboundHandler = new LocalChannelInboundHandler();
+        localChannelInboundHandler = new LocalChannelInBoundHandler();
     }
 
     @Override
