@@ -5,9 +5,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.timeout.IdleStateHandler;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 描述
@@ -28,6 +25,7 @@ public class RemoteChannelInitializer extends ChannelInitializer {
     @Override
     protected void initChannel(Channel channel) throws Exception {
         ChannelPipeline pipeline = channel.pipeline();
+        pipeline.addFirst(Constants.REMOTE_SSL_CONTEXT.newHandler(channel.alloc()));
         pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
         pipeline.addLast(this.remoteMessageToMessageCodec);
         pipeline.addLast(this.remoteChannelInBoundHandler);

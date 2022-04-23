@@ -1,6 +1,8 @@
 package com.jian.commons;
 
+import com.jian.handler.local.LocalChannelInBoundHandler;
 import com.jian.handler.local.LocalChannelInitializer;
+import com.jian.handler.local.LocalHttpsChannelInitializer;
 import com.jian.handler.remote.RemoteChannelInitializer;
 import com.jian.start.Client;
 import io.netty.channel.Channel;
@@ -11,6 +13,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 
 import java.util.Map;
@@ -73,9 +76,29 @@ public class Constants {
     public static final ChannelInitializer LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
 
     /***
+     * 本地通道https初始化器
+     */
+    public static final ChannelInitializer LOCAL_HTTPS_CHANNEL_INITIALIZER = new LocalHttpsChannelInitializer();
+
+    /***
+     * 本地通道第一个处理器
+     */
+    public static LocalChannelInBoundHandler LOCAL_CHANNEL_IN_BOUND_HANDLER = new LocalChannelInBoundHandler();
+
+    /***
      * 远程通道初始化Handler
      */
     public static final ChannelInitializer REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+
+    /***
+     * 本地ssl context
+     */
+    public static SslContext LOCAL_SSL_CONTEXT;
+
+    /***
+     * 远程ssl context
+     */
+    public static SslContext REMOTE_SSL_CONTEXT;
 
     /***
      * 重连间隔时间 s

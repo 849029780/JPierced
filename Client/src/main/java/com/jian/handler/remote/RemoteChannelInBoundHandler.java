@@ -38,9 +38,15 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long tarChannelHash = connectReqPacks.getTarChannelHash();
 
                 InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
-                log.info("连接本地服务:{}:{}", host, port);
+                log.info("连接本地服务:{}:{}，协议类型:{}", host, port, connectReqPacks.getProtocol());
+                Client client;
+                if (connectReqPacks.getProtocol() == ConnectReqPacks.Protocol.HTTPS) {
+                    client = Client.getLocalHttpsInstance();
+                } else {
+                    client = Client.getLocalInstance();
+                }
                 //发起连接本地
-                Client.getLocalInstance().connect(inetSocketAddress, (GenericFutureListener) null).addListener(future -> {
+                client.connect(inetSocketAddress, (GenericFutureListener) null).addListener(future -> {
                     ChannelFuture channelFuture = (ChannelFuture) future;
                     ConnectRespPacks connectRespPacks = new ConnectRespPacks();
                     connectRespPacks.setThisChannelHash(tarChannelHash);
@@ -135,25 +141,27 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
-        IdleStateEvent event = (IdleStateEvent) evt;
-        switch (event.state()) {
-            case READER_IDLE: //读空闲
-                break;
-            case WRITER_IDLE: //写空闲
-                long msgId = System.nanoTime();
-                log.info("发送心跳请求，msgId:{}", msgId);
-                HealthReqPacks healthReqPacks = new HealthReqPacks();
-                healthReqPacks.setMsgId(msgId);
-                ctx.writeAndFlush(healthReqPacks);
-                // 不处理
-                break;
-            case ALL_IDLE: //读写空闲
-                // 记录上一次接收到心跳的时间，如果时间超过规定阈值则该连接已经断开
-                log.warn("接收服务端响应的心跳超时！已自动认为该连接已断开，准备关闭本地连接...");
-                //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
-                ctx.close();
-                // 不处理
-                break;
+        if (evt instanceof IdleStateEvent) {
+            IdleStateEvent event = (IdleStateEvent) evt;
+            switch (event.state()) {
+                case READER_IDLE: //读空闲
+                    break;
+                case WRITER_IDLE: //写空闲
+                    long msgId = System.nanoTime();
+                    log.info("发送心跳请求，msgId:{}", msgId);
+                    HealthReqPacks healthReqPacks = new HealthReqPacks();
+                    healthReqPacks.setMsgId(msgId);
+                    ctx.writeAndFlush(healthReqPacks);
+                    // 不处理
+                    break;
+                case ALL_IDLE: //读写空闲
+                    // 记录上一次接收到心跳的时间，如果时间超过规定阈值则该连接已经断开
+                    log.warn("接收服务端响应的心跳超时！已自动认为该连接已断开，准备关闭本地连接...");
+                    //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
+                    ctx.close();
+                    // 不处理
+                    break;
+            }
         }
     }
 }

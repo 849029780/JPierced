@@ -74,6 +74,10 @@ public class Client {
         return getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
     }
 
+    public static Client getLocalHttpsInstance() {
+        return getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+    }
+
 
     public static Client getRemoteInstance() {
         return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);

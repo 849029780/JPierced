@@ -35,7 +35,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         switch (type) {
             case 1 -> { //服务发起连接请求
                 ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
-                packSize += 8 + 8 + 4 + 4;
+                packSize += 8 + 8 + 4 + 1 + 4;
                 byte[] hostBytes = connectReqPacks.getHost().getBytes(StandardCharsets.UTF_8);
                 int hostLen = hostBytes.length;
                 packSize += hostLen;
@@ -44,6 +44,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeLong(connectReqPacks.getThisChannelHash());
                 buffer.writeLong(connectReqPacks.getTarChannelHash());
                 buffer.writeInt(connectReqPacks.getPort());
+                buffer.writeByte(connectReqPacks.getProtocol());
                 buffer.writeInt(hostLen);
                 if (hostLen > 0) {
                     buffer.writeBytes(hostBytes);
@@ -197,14 +198,10 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
             log.info("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());
             for (Map.Entry<Integer, Channel> listen : listenPortMap.entrySet()) {
-                //端口号
-                Integer port = listen.getKey();
                 //监听的端口通道，非连接通道
                 Channel listenChannel = listen.getValue();
                 //关闭监听的端口
                 Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
-                //移除端口映射
-                Constants.PORT_MAPPING_CLIENT.remove(port);
             }
             clientInfo.setListenPortMap(new ConcurrentHashMap<>());
         });

@@ -26,12 +26,12 @@ public class Config {
     /***
      * 配置文件
      */
-    static String propertiesName = "client.properties";
+    static String propertiesFileName = "client.properties";
 
     /***
      * 配置文件路径，默认在该jar包下
      */
-    static String propertiesPath = dirPath + File.separator + propertiesName;
+    static String propertiesPath = dirPath + File.separator + propertiesFileName;
 
     /***
      * 初始化配置
@@ -40,7 +40,7 @@ public class Config {
         File file = new File(propertiesPath);
         InputStream resource = null;
         if (!file.exists()) {
-            resource = Config.class.getClassLoader().getResourceAsStream(propertiesName);
+            resource = Config.class.getClassLoader().getResourceAsStream(propertiesFileName);
             if (Objects.isNull(resource)) {
                 log.error("配置文件不存在:{}文件，启动失败！", propertiesPath);
                 return false;
@@ -59,5 +59,8 @@ public class Config {
             return false;
         }
     }
+
+
+
 
 }

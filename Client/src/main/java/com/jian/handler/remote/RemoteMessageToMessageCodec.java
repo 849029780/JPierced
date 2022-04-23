@@ -98,11 +98,12 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
         switch (type) {
-            case 1 -> {//连接响应
+            case 1 -> {//连接请求
                 ConnectReqPacks connectRespPacks = new ConnectReqPacks();
                 long thisChannelHash = byteBuf.readLong();
                 long tarChannelHash = byteBuf.readLong();
                 int port = byteBuf.readInt();
+                byte protocol = byteBuf.readByte();
                 int hostLen = byteBuf.readInt();
                 if (hostLen > 0) {
                     ByteBuf hostBuff = byteBuf.readBytes(hostLen);
@@ -114,6 +115,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 connectRespPacks.setThisChannelHash(thisChannelHash);
                 connectRespPacks.setTarChannelHash(tarChannelHash);
                 connectRespPacks.setPort(port);
+                connectRespPacks.setProtocol(protocol);
                 list.add(connectRespPacks);
             }
             case 3 -> {//发起断开连接请求

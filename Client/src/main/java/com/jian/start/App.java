@@ -4,10 +4,14 @@ import com.jian.beans.transfer.ConnectAuthReqPacks;
 import com.jian.commons.Constants;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
@@ -20,30 +24,38 @@ import java.util.function.Consumer;
 public class App {
 
     public static void main(String[] args) {
-        if(Config.initConfig()){
+        if (Config.initConfig()) {
             String hostProperty = Constants.CONFIG.getProperty(Constants.HOST_PROPERTY_NAME);
             String portProperty = Constants.CONFIG.getProperty(Constants.PORT_PROPERTY_NAME);
             String keyProperty = Constants.CONFIG.getProperty(Constants.KEY_PROPERTY_NAME);
             String pwdProperty = Constants.CONFIG.getProperty(Constants.PWD_PROPERTY_NAME);
 
-            if(StringUtil.isNullOrEmpty(hostProperty)){
+            if (StringUtil.isNullOrEmpty(hostProperty)) {
                 log.error("server.host配置为空！启动失败！");
                 return;
             }
-            if(StringUtil.isNullOrEmpty(portProperty)){
+            if (StringUtil.isNullOrEmpty(portProperty)) {
                 log.error("server.port配置为空！启动失败！");
                 return;
             }
-            if(StringUtil.isNullOrEmpty(keyProperty)){
+            if (StringUtil.isNullOrEmpty(keyProperty)) {
                 log.error("key配置为空！启动失败！");
                 return;
             }
-            if(StringUtil.isNullOrEmpty(pwdProperty)){
+            if (StringUtil.isNullOrEmpty(pwdProperty)) {
                 log.error("pwd配置为空！启动失败！");
                 return;
             }
 
-            Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, Integer.parseInt(portProperty)),(Consumer<ChannelFuture>) future -> {
+            try {
+                Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+                Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+            } catch (SSLException e) {
+                log.error("初始化SSL Context错误！", e);
+                return;
+            }
+
+            Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, Integer.parseInt(portProperty)), (Consumer<ChannelFuture>) future -> {
                 Channel channel = future.channel();
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
                 connectAuthReqPacks.setKey(Long.valueOf(keyProperty));

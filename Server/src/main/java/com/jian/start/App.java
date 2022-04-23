@@ -14,11 +14,12 @@ public class App {
 
 
     public static void main(String[] args) {
-        Config.initConfig();
-        Config.initTransmitData();
-        Server.listenRemote();
-        Constants.VERTX = Vertx.vertx();
-        Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId->Constants.VERTX_WEB_DEPLOY_ID = deployId);
+        if (Config.initConfig()) {
+            Config.initTransmitData();
+            Server.listenRemote();
+            Constants.VERTX = Vertx.vertx();
+            Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId->Constants.VERTX_WEB_DEPLOY_ID = deployId);
+        }
     }
 
 

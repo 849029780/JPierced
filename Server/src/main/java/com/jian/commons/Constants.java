@@ -2,7 +2,10 @@ package com.jian.commons;
 
 import com.auth0.jwt.algorithms.Algorithm;
 import com.jian.transmit.ClientInfo;
+import com.jian.transmit.NetAddress;
+import com.jian.transmit.handler.local.LocalChannelInBoundHandler;
 import com.jian.transmit.handler.local.LocalChannelInitializer;
+import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
 import com.jian.transmit.handler.remote.RemoteChannelInitializer;
 import io.netty.channel.Channel;
@@ -13,6 +16,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.vertx.core.Vertx;
 
@@ -71,7 +75,17 @@ public class Constants {
     /***
      * 本地服务端端口映射被穿透机器上的地址和端口(Client中的portMappingAddress)
      */
-    public static Map<Integer, ClientInfo> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
+    //public static Map<Integer, ClientInfo> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
+
+    /***
+     * 绑定在本地通道上的 当前客户端连接信息
+     */
+    public static final AttributeKey<ClientInfo> LOCAL_BIND_CLIENT_KEY = AttributeKey.valueOf("LOCAL_BIND_CLIENT");
+
+    /***
+     * 绑定在本地通道上 客户端方需要连接的地址信息
+     */
+    public static final AttributeKey<NetAddress> LOCAL_BIND_CLIENT_NET_LOCAL_KEY = AttributeKey.valueOf("LOCAL_BIND_CLIENT_NET_LOCAL");
 
     /***
      * 客户端配置信息
@@ -84,9 +98,19 @@ public class Constants {
     public static final ExecutorService FIXED_THREAD_POOL = Executors.newFixedThreadPool(3);
 
     /***
+     * 读取本地端口的第一个handler
+     */
+    public static final LocalChannelInBoundHandler LOCAL_CHANNEL_IN_BOUND_HANDLER = new LocalChannelInBoundHandler();
+
+    /***
      * 本地通道初始化handler
      */
     public static final ChannelInitializer LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
+
+    /***
+     * 本地https通道初始化handler
+     */
+    public static final ChannelInitializer LOCAL_HTTPS_CHANNEL_INITIALIZER = new LocalHttpsChannelInitializer();
 
 
     /***
@@ -141,6 +165,26 @@ public class Constants {
      * web登录的密码
      */
     public static final String LOGIN_PWD_PROPERTY = "login.pwd";
+
+    /***
+     * 是否启动https
+     */
+    public static final String ENABLE_HTTPS_PROPERTY_NAME = "enable.https";
+
+    /***
+     * 是否启用Https
+     */
+    public static boolean IS_ENABLE_HTTPS = false;
+
+    /***
+     * ssl server
+     */
+    public static SslContext SSL_LOCAL_PORT_CONTEXT;
+
+    /***
+     * 数据传输ssl
+     */
+    public static SslContext SSL_TRANSMIT_PORT_CONTEXT;
 
     /***
      * JWT校验器

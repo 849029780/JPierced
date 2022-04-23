@@ -424,6 +424,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         switch (ptype) {
             case 1 -> protocol = NetAddress.Protocol.TCP;
             case 2 -> protocol = NetAddress.Protocol.HTTP;
+            case 3 -> protocol = NetAddress.Protocol.HTTPS;
         }
 
         //
@@ -505,6 +506,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         switch (ptype) {
             case 1 -> protocol = NetAddress.Protocol.TCP;
             case 2 -> protocol = NetAddress.Protocol.HTTP;
+            case 3 -> protocol = NetAddress.Protocol.HTTPS;
         }
 
         //监听端口的通道

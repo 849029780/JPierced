@@ -26,6 +26,14 @@ public class ConnectReqPacks extends BaseTransferPacks {
     private Integer port;
 
     /***
+     * 协议类型
+     * 1--tcp
+     * 2--http
+     * 3--https
+     */
+    private Byte protocol;
+
+    /***
      * 连接的地址长度
      */
     private Integer hostLen;
@@ -38,4 +46,12 @@ public class ConnectReqPacks extends BaseTransferPacks {
     public ConnectReqPacks() {
         setType(TYPE.CONNECT_REQ);
     }
+
+
+    public interface Protocol{
+        byte TCP = 1;
+        byte HTTP = 2;
+        byte HTTPS = 3;
+    }
+
 }

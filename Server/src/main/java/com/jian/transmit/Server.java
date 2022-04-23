@@ -55,6 +55,10 @@ public class Server {
         return getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
     }
 
+    public static Server getLocalHttpsInstance() {
+        return getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+    }
+
     public static Server getRemoteInstance() {
         return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
     }
@@ -73,19 +77,28 @@ public class Server {
             StringBuffer stringBuffer = new StringBuffer();
             CountDownLatch countDownLatch = new CountDownLatch(ports.size());
             for (Integer port : ports) {
-                Server.getLocalInstance().listen(port).addListener(future -> {
+                //映射的客户端本地连接信息
+                NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
+                Server server;
+                if (netAddress.getProtocol() == NetAddress.Protocol.HTTPS) {
+                    server = Server.getLocalHttpsInstance();
+                }else{
+                    server = Server.getLocalInstance();
+                }
+                server.listen(port).addListener(future -> {
                     try {
                         ChannelFuture future1 = (ChannelFuture) future;
                         Channel channel1 = future1.channel();
-                        //映射的客户端本地连接信息
-                        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
+
                         stringBuffer.append("服务端端口：");
                         stringBuffer.append(port);
                         if (future1.isSuccess()) {
                             stringBuffer.append("监听成功，映射的本地地址为:");
                             log.info("客户端key：{}，name:{}，监听端口:{}成功！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             clientInfo.getListenPortMap().put(port, channel1);
-                            Constants.PORT_MAPPING_CLIENT.put(port, clientInfo);
+                            //设置客户端信息
+                            channel1.attr(Constants.LOCAL_BIND_CLIENT_KEY).set(clientInfo);
+                            channel1.attr(Constants.LOCAL_BIND_CLIENT_NET_LOCAL_KEY).set(netAddress);
                         } else {
                             if (future1.cause() instanceof BindException) {
                                 stringBuffer.append("监听失败！该端口已被使用，映射的本地地址为：");
@@ -146,8 +159,6 @@ public class Server {
                             Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
                             Optional.ofNullable(listenPortMap).ifPresent(map -> {
                                 for (Map.Entry<Integer, Channel> listenEntry : map.entrySet()) {
-                                    //移除端口对应的客户端
-                                    Constants.PORT_MAPPING_CLIENT.remove(listenEntry.getKey());
                                     //关闭该客户端监听的端口
                                     listenEntry.getValue().close();
                                 }

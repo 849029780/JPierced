@@ -38,7 +38,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         Integer port = socketAddress.getPort();
         log.debug("端口:{}，新的连接..", port);
         //通过端口号获取该端口是哪个客户端监听的
-        ClientInfo clientInfo = Constants.PORT_MAPPING_CLIENT.get(port);
+        ClientInfo clientInfo = channel.parent().attr(Constants.LOCAL_BIND_CLIENT_KEY).get();
         if (Objects.isNull(clientInfo) || !clientInfo.isOnline()) {
             log.info("该端口:{}，未找到在线的客户端，连接已关闭..", port);
             //客户端未连接
@@ -67,20 +67,28 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         connectReqPacks.setTarChannelHash(thisChannelHash);
 
         //从客户信息中获取该端口对应的哪个本地连接
-        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
+        NetAddress netAddress = channel.parent().attr(Constants.LOCAL_BIND_CLIENT_NET_LOCAL_KEY).get();
         connectReqPacks.setHost(netAddress.getHost());
         connectReqPacks.setPort(netAddress.getPort());
         ChannelPipeline pipeline = channel.pipeline();
         //http协议时需要额外添加handler处理
         switch (netAddress.getProtocol()) {
-            case HTTPS:
+            case HTTPS -> {
                 pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
-            case HTTP:
+                //是否启用https
+                if (Constants.IS_ENABLE_HTTPS) {
+                    connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTPS);
+                } else {
+                    log.warn("https未启用，暂不可使用https协议访问！已切换为http访问！");
+                    connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTP);
+                }
+            }
+            case HTTP -> {
                 pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
-                break;
+                connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTP);
+            }
+            case TCP -> connectReqPacks.setProtocol(ConnectReqPacks.Protocol.TCP);
         }
-
-
         //tcp处理
         pipeline.addLast(Constants.LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER);
 
