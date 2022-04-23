@@ -12,6 +12,7 @@ public class LocalChannelInitializer extends ChannelInitializer {
         localChannelInboundHandler = new LocalChannelInBoundHandler();
     }
 
+
     @Override
     protected void initChannel(Channel channel) {
         ChannelPipeline pipeline = channel.pipeline();

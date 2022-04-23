@@ -72,9 +72,14 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         connectReqPacks.setPort(netAddress.getPort());
         ChannelPipeline pipeline = channel.pipeline();
         //http协议时需要额外添加handler处理
-        if (netAddress.getProtocol() == NetAddress.Protocol.HTTP) {
-            pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
+        switch (netAddress.getProtocol()) {
+            case HTTPS:
+                pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
+            case HTTP:
+                pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
+                break;
         }
+
 
         //tcp处理
         pipeline.addLast(Constants.LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER);
