@@ -21,9 +21,8 @@ import java.util.Objects;
  * http协议处理器
  * @author Jian
  * @date 2022/04/04
- */public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
-
-
+ */
+public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
 
     public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
@@ -80,7 +79,7 @@ import java.util.Objects;
         switch (state) {
             case URL_START: {
                 ParseAppendableCharSequence parseAppendableCharSequence = httpParser.parseReset(byteBuf);
-                if(Objects.isNull(parseAppendableCharSequence)){
+                if (Objects.isNull(parseAppendableCharSequence)) {
                     return;
                 }
                 AppendableCharSequence line = parseAppendableCharSequence.getAppendableCharSequence();
@@ -265,7 +264,7 @@ import java.util.Objects;
 
         while (true) {
             ParseAppendableCharSequence parseAppendableCharSequence = httpParser.parseReset(buffer);
-            if(Objects.isNull(parseAppendableCharSequence)){
+            if (Objects.isNull(parseAppendableCharSequence)) {
                 return null;
             }
             AppendableCharSequence line = parseAppendableCharSequence.getAppendableCharSequence();

@@ -7,6 +7,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTransferPacks> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) {
         byte type = baseTransferPacks.getType();
         Channel channel = ctx.channel();
         switch (type) {
@@ -117,7 +118,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 TransferDataPacks transferDataPacks = ((TransferDataPacks) baseTransferPacks);
                 Long targetChannelHash = transferDataPacks.getTargetChannelHash();
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(targetChannelHash);
-                Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
+                try {
+                    localChannel.writeAndFlush(transferDataPacks.getDatas());
+                } catch (NullPointerException e) {
+                    ReferenceCountUtil.release(transferDataPacks.getDatas());
+                }
             }
             case 9 -> { //心跳响应
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
@@ -141,8 +146,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
-        if (evt instanceof IdleStateEvent) {
-            IdleStateEvent event = (IdleStateEvent) evt;
+        if (evt instanceof IdleStateEvent event) {
             switch (event.state()) {
                 case READER_IDLE: //读空闲
                     break;

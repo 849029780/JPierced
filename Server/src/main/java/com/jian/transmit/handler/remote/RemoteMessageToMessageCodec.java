@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @ChannelHandler.Sharable
 public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, BaseTransferPacks> {
-
     @Override
     protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;

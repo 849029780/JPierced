@@ -10,6 +10,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 @ChannelHandler.Sharable
 public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTransferPacks> {
 
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) {
         byte type = baseTransferPacks.getType();
@@ -35,7 +37,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         switch (type) {
             case 2 -> {//连接响应
-                if (!checkIsAuth(channel)) {
+                if (checkIsAuth(channel)) {
                     return;
                 }
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
@@ -56,7 +58,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 }
             }
             case 3 -> {//客户发起断开连接请求
-                if (!checkIsAuth(channel)) {
+                if (checkIsAuth(channel)) {
                     return;
                 }
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
@@ -133,10 +135,14 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
                 Long targetChannelHash = transferDataPacks.getTargetChannelHash();
                 Channel localChannel = localChannelMap.get(targetChannelHash);
-                Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(transferDataPacks.getDatas()));
+                try {
+                    localChannel.writeAndFlush(transferDataPacks.getDatas());
+                } catch (NullPointerException e) {
+                    ReferenceCountUtil.release(transferDataPacks.getDatas());
+                }
             }
             case 8 -> { //接收心跳请求
-                if (!checkIsAuth(channel)) {
+                if (checkIsAuth(channel)) {
                     return;
                 }
                 ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
@@ -147,12 +153,12 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 healthRespPacks.setMsgId(msgId);
                 ctx.writeAndFlush(healthRespPacks);
             }
+            default -> throw new IllegalStateException("Unexpected value: " + type);
         }
     }
 
     /***
      * 验证是否已经登录，未登录不允许发送任何数据
-     * @param channel
      */
     private boolean checkIsAuth(Channel channel) {
         boolean isAuth = false;
@@ -162,16 +168,15 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
         } else {
             channel.close();
         }
-        return isAuth;
+        return !isAuth;
     }
 
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if(evt instanceof IdleStateEvent){
+        if(evt instanceof IdleStateEvent event){
             Channel channel = ctx.channel();
             ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-            IdleStateEvent event = (IdleStateEvent) evt;
             switch (event.state()) {
                 case READER_IDLE:
                     break;

@@ -4,14 +4,9 @@ import com.jian.beans.transfer.ConnectAuthReqPacks;
 import com.jian.commons.Constants;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
@@ -46,15 +41,6 @@ public class App {
                 log.error("pwd配置为空！启动失败！");
                 return;
             }
-
-            try {
-                Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-                Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-            } catch (SSLException e) {
-                log.error("初始化SSL Context错误！", e);
-                return;
-            }
-
             Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, Integer.parseInt(portProperty)), (Consumer<ChannelFuture>) future -> {
                 Channel channel = future.channel();
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();

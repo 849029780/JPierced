@@ -7,6 +7,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
@@ -23,7 +24,6 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
         Channel channel = channelHandlerContext.channel();
-        SocketAddress socketAddress = channel.localAddress();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
         //获取该通道上绑定的远程通道
         Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
@@ -33,9 +33,11 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         TransferDataPacks transferDataPacks = new TransferDataPacks();
         transferDataPacks.setTargetChannelHash(tarChannelHash);
         transferDataPacks.setDatas(buffer);
-
-        remoteChannel.writeAndFlush(transferDataPacks);
-        log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
+        try {
+            remoteChannel.writeAndFlush(transferDataPacks);
+        } catch (NullPointerException e) {
+            ReferenceCountUtil.release(buffer);
+        }
     }
 
 }

@@ -6,6 +6,7 @@ import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.ClientInfoSaved;
 import com.jian.utils.JsonUtils;
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -55,14 +56,19 @@ public class Config {
     static String crtKeyFileName = "pierced.key";
 
     /***
+     * ca证书名
+     */
+    static String caCrtFileNameTransmit = "certs/ca.crt";
+
+    /***
      * 证书名
      */
-    static String crtFileNameTransmit = "server.crt";
+    static String crtFileNameTransmit = "certs/server.crt";
 
     /***
      * 证书私钥
      */
-    static String crtKeyFileNameTransmit = "server.pkcs8.key";
+    static String crtKeyFileNameTransmit = "certs/server-pkcs8.key";
 
 
     /***
@@ -125,7 +131,7 @@ public class Config {
             if (StringUtil.isNullOrEmpty(Constants.CONFIG.getProperty(Constants.TRANSMIT_PORT_PROPERTY))) {
                 Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
             }
-            log.info("配置文件加载完成！传输端口:{}，web管理端口:{}", Constants.CONFIG.getProperty(Constants.WEB_PORT_PROPERTY), Constants.CONFIG.getProperty(Constants.TRANSMIT_PORT_PROPERTY));
+            log.info("配置文件加载完成！");
             suc = initLocalPortSSL();
             suc = initTransmitPortSSL();
         } catch (IOException e) {
@@ -220,10 +226,12 @@ public class Config {
      * @return
      */
     public static boolean initTransmitPortSSL() {
+        InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
         InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
         InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
         try {
-            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).build();
+            //必须经过SSL双向认证
+            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).build();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);

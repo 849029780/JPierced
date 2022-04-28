@@ -17,8 +17,8 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <lombok.version>1.18.22</lombok.version>
-        <netty.version>4.1.75.Final</netty.version>
+        <lombok.version>1.18.24</lombok.version>
+        <netty.version>4.1.76.Final</netty.version>
     </properties>
 
 

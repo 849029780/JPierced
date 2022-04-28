@@ -8,6 +8,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
@@ -26,14 +27,18 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         Channel channel = ctx.channel();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-        ByteBuf buffer = ctx.alloc().buffer();
+        ByteBuf buffer = ctx.alloc().buffer(byteBuf.readableBytes());
         buffer.writeBytes(byteBuf);
 
         TransferDataPacks transferDataPacks = new TransferDataPacks();
         transferDataPacks.setTargetChannelHash(tarChannelHash);
         transferDataPacks.setDatas(buffer);
 
-        Constants.REMOTE_CHANNEL.writeAndFlush(transferDataPacks);
+        try {
+            Constants.REMOTE_CHANNEL.writeAndFlush(transferDataPacks);
+        } catch (NullPointerException e) {
+            ReferenceCountUtil.release(buffer);
+        }
     }
 
     @Override
@@ -57,7 +62,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("本地通道发生错误！", cause);
     }
 }

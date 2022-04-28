@@ -24,9 +24,8 @@ import java.util.Optional;
 @Slf4j
 @ChannelHandler.Sharable
 public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, BaseTransferPacks> {
-
     @Override
-    protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
         ByteBuf buffer = ctx.alloc().buffer();
@@ -94,7 +93,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     }
 
     @Override
-    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) {
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
         switch (type) {
@@ -207,7 +206,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("远程通道发生错误!", cause);
     }
 }

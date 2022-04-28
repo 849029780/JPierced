@@ -11,7 +11,6 @@ import io.netty.channel.ChannelPipeline;
  * @date 2022/4/2
  */
 public class LocalChannelInitializer extends ChannelInitializer {
-
     @Override
     protected void initChannel(Channel channel) {
         ChannelPipeline pipeline = channel.pipeline();

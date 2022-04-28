@@ -123,7 +123,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
         int readableBytes = byteBuf.readableBytes();
         ByteBuf buffer = channelHandlerContext.alloc().buffer(readableBytes);
         buffer.writeBytes(byteBuf);
