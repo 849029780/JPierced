@@ -8,6 +8,7 @@ import com.jian.transmit.ClientInfoSaved;
 import com.jian.utils.JsonUtils;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProtocols;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -73,7 +74,6 @@ public class Config {
 
     /***
      * 获取文件流
-     * @param fileName
      * @return
      */
     private static InputStream getFileInputStream(String fileName, boolean isFindClsspath) {
@@ -87,15 +87,13 @@ public class Config {
                 inputStream = Files.newInputStream(file.toPath());
             }
         } catch (IOException e) {
-            log.error("加载文件：" + fileName + "错误！", e);
+            log.error("加载文件：" + fileName + "错误！");
         }
         return inputStream;
     }
 
     /***
      * 获取文件outputsream
-     * @param fileName
-     * @return
      */
     private static OutputStream getFileOutStream(String fileName, boolean notFoundCreateNow) {
         OutputStream outputStream = null;
@@ -201,7 +199,6 @@ public class Config {
 
     /***
      * 初始化ssl
-     * @return
      */
     public static boolean initLocalPortSSL() {
         String enableHttps = Constants.CONFIG.getProperty(Constants.ENABLE_HTTPS_PROPERTY_NAME, "false");
@@ -223,7 +220,6 @@ public class Config {
 
     /***
      * 传输数据端口ssl
-     * @return
      */
     public static boolean initTransmitPortSSL() {
         InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
@@ -231,7 +227,7 @@ public class Config {
         InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
         try {
             //必须经过SSL双向认证
-            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).build();
+            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).build();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);

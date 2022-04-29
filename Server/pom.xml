@@ -17,9 +17,7 @@
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
         <vertx.version>4.2.7</vertx.version>
         <jackson.version>2.13.2.2</jackson.version>
-        <logback.version>1.2.11</logback.version>
         <jwt.version>3.19.1</jwt.version>
-        <netty-tcnative-boringssl.version>2.0.51.Final</netty-tcnative-boringssl.version>
     </properties>
 
     <dependencies>
@@ -34,7 +32,6 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>${netty.version}</version>
-            <optional>true</optional>
         </dependency>
 
         <dependency>
@@ -48,6 +45,7 @@
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
         </dependency>
+
 
         <dependency>
             <groupId>com.jian</groupId>

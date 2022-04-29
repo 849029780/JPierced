@@ -15,7 +15,6 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
-        <logback.version>1.2.11</logback.version>
     </properties>
 
     <dependencies>
