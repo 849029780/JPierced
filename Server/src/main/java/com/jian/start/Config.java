@@ -6,9 +6,7 @@ import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.ClientInfoSaved;
 import com.jian.utils.JsonUtils;
-import io.netty.handler.ssl.ClientAuth;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProtocols;
+import io.netty.handler.ssl.*;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -222,12 +220,13 @@ public class Config {
      * 传输数据端口ssl
      */
     public static boolean initTransmitPortSSL() {
+        System.out.println("Openssl是否支持:" + OpenSsl.isAvailable());
         InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
         InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
         InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
         try {
             //必须经过SSL双向认证
-            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).build();
+            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).sslProvider(SslProvider.OPENSSL).build();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);

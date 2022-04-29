@@ -12,8 +12,6 @@
     <artifactId>Client</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
     </properties>
 
@@ -28,7 +26,12 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>${netty.version}</version>
-            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+            <version>${netty-tcnative-boringssl.version}</version>
         </dependency>
 
         <dependency>
