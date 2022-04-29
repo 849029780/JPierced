@@ -98,7 +98,7 @@ public class Config {
             //和本地的https连接为单向认证
             Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             //必须经过SSL双向认证
-            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).protocols(SslProtocols.TLS_v1_3).startTls(Boolean.TRUE).trustManager(caCrtInputTransmit).build();
+            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).protocols(SslProtocols.TLS_v1_3).trustManager(caCrtInputTransmit).build();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);

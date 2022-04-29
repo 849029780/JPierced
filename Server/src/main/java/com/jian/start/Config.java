@@ -227,7 +227,7 @@ public class Config {
         InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
         try {
             //必须经过SSL双向认证
-            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).startTls(Boolean.TRUE).protocols(SslProtocols.TLS_v1_3).build();
+            Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).build();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);
