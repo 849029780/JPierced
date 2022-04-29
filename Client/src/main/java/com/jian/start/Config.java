@@ -1,13 +1,11 @@
 package com.jian.start;
 
-import ch.qos.logback.core.net.ssl.SSL;
 import com.jian.commons.Constants;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProtocols;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
@@ -89,34 +87,6 @@ public class Config {
     }
 
     /***
-     * 初始化配置
-     */
-    /*public static boolean initConfig() {
-        File file = new File(propertiesPath);
-        InputStream resource = null;
-        if (!file.exists()) {
-            resource = Config.class.getClassLoader().getResourceAsStream(propertiesFileName);
-            if (Objects.isNull(resource)) {
-                log.error("配置文件不存在:{}文件，启动失败！", propertiesPath);
-                return false;
-            }
-        }
-        try {
-            if (Objects.isNull(resource)) {
-                resource = Files.newInputStream(file.toPath());
-            }
-            Constants.CONFIG.load(resource);
-            log.info("配置文件加载成功！");
-            resource.close();
-            return true;
-        } catch (IOException e) {
-            log.error("加载config.properties文件错误！", e);
-            return false;
-        }
-    }*/
-
-
-    /***
      * 传输数据端口ssl
      * @return
      */
@@ -128,7 +98,7 @@ public class Config {
             //和本地的https连接为单向认证
             Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             //必须经过SSL双向认证
-            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).protocols(SslProtocols.TLS_v1_3).trustManager(caCrtInputTransmit).build();
+            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).protocols(SslProtocols.TLS_v1_3).startTls(Boolean.TRUE).trustManager(caCrtInputTransmit).build();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);

@@ -12,6 +12,7 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
+import java.util.Optional;
 
 /**
  * 描述
@@ -49,7 +50,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
         DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
         disConnectReqPacks.setTarChannelHash(tarChannelHash);
-        Constants.REMOTE_CHANNEL.writeAndFlush(disConnectReqPacks);
+        Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> ch.writeAndFlush(disConnectReqPacks));
         log.info("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
     }
 
@@ -57,7 +58,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         super.channelWritabilityChanged(ctx);
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        Constants.REMOTE_CHANNEL.config().setAutoRead(ctx.channel().isWritable());
+        Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> ch.config().setAutoRead(ctx.channel().isWritable()));
     }
 
 

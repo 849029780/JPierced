@@ -91,9 +91,8 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         }
         //tcp处理
         pipeline.addLast(Constants.LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER);
-
         //给客户端发送客户端本地的连接信息
-        remoteChannel.writeAndFlush(connectReqPacks);
+        Optional.of(remoteChannel).ifPresent(ch->ch.writeAndFlush(connectReqPacks));
     }
 
 
