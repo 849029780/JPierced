@@ -82,14 +82,15 @@ public class Server {
                 Server server;
                 if (netAddress.getProtocol() == NetAddress.Protocol.HTTPS) {
                     server = Server.getLocalHttpsInstance();
-                }else{
+                } else {
                     server = Server.getLocalInstance();
                 }
                 server.listen(port).addListener(future -> {
+                    ChannelFuture future1 = (ChannelFuture) future;
+                    Channel channel1 = future1.channel();
                     try {
-                        ChannelFuture future1 = (ChannelFuture) future;
-                        Channel channel1 = future1.channel();
-
+                        //监听成功后暂时将该端口设置为不自动读消息，处理完之后再将其设置为自动读
+                        channel1.config().setAutoRead(Boolean.FALSE);
                         stringBuffer.append("服务端端口：");
                         stringBuffer.append(port);
                         if (future1.isSuccess()) {
@@ -111,6 +112,11 @@ public class Server {
                         stringBuffer.append(netAddress.getHost());
                         stringBuffer.append(":");
                         stringBuffer.append(netAddress.getPort());
+                        //设置为自动读
+                        channel1.config().setAutoRead(Boolean.TRUE);
+                    } catch (Exception e) {
+                        log.error("服务端监听端口:{}处理错误！", port, e);
+                        channel1.close();
                     } finally {
                         countDownLatch.countDown();
                     }
