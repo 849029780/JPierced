@@ -9,9 +9,9 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>Client</module>
-        <module>Server</module>
-        <module>Commons</module>
+        <module>PClient</module>
+        <module>PServer</module>
+        <module>PCommons</module>
     </modules>
 
     <properties>
