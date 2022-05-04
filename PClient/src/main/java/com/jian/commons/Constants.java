@@ -106,12 +106,17 @@ public class Constants {
     public static final int RECONNECT_DELAY = 30;
 
     /***
+     * 心跳间隔时间 s
+     */
+    public static final int HEART_DELAY = 30;
+
+    /***
      * 重连缓存线程
      */
     public static final ExecutorService CACHED_EXECUTOR_POOL = new ThreadPoolExecutor(0, 1, 60L, TimeUnit.SECONDS, new SynchronousQueue<>());
 
     /***
-     * 超过该阈值未接收到心跳则代表该连接已断开
+     * 超过该阈值未接收到心跳则代表该连接已断开 s
      */
     public static final int DISCONNECT_HEALTH_SECONDS = 70;
 
