@@ -82,7 +82,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 if (Objects.isNull(clientInfo)) {
                     connectAuthRespPacks.setMsg("当前key无权限连接！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
-                    log.info("客户端连接key:{},当前key无权限连接！", key);
+                    log.warn("客户端连接key:{},当前key无权限连接！", key);
                     ctx.close();
                     return;
                 }
@@ -91,7 +91,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 if (clientInfo.isOnline()) {
                     connectAuthRespPacks.setMsg("当前客户端已在线，不允许重复连接！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
-                    log.info("客户端连接key:{},当前客户端已在线，不允许重复连接！", key);
+                    log.warn("客户端连接key:{},当前客户端已在线，不允许重复连接！", key);
                     ctx.close();
                     return;
                 }
@@ -100,7 +100,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 if (!pwd.equals(connectAuthReqPacks.getPwd())) {
                     connectAuthRespPacks.setMsg("当前key密码错误！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
-                    log.info("客户端连接key:{},密码:{}错误", key, pwd);
+                    log.warn("客户端连接key:{},密码:{}错误", key, pwd);
                     ctx.close();
                     return;
                 }

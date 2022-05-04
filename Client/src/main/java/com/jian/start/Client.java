@@ -105,7 +105,7 @@ public class Client {
                 //重连
                 Constants.CACHED_EXECUTOR_POOL.execute(this::reConnct);
             } else {
-                log.info("连接服务:{}失败！", this.connectInetSocketAddress);
+                log.warn("连接服务:{}失败！", this.connectInetSocketAddress);
                 System.exit(0);
             }
         });
@@ -123,7 +123,7 @@ public class Client {
      * @return
      */
     public ChannelFuture reConnct() {
-        log.info("连接服务断开！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
+        log.warn("连接服务断开！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
         try {
             Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
         } catch (InterruptedException e) {

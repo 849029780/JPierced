@@ -195,7 +195,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             cli.setRemoteChannel(null);
             //获取该客户端监听的所有端口，并将这些端口全部取消监听
             Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
-            log.info("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());
+            log.warn("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());
             for (Map.Entry<Integer, Channel> listen : listenPortMap.entrySet()) {
                 //监听的端口通道，非连接通道
                 Channel listenChannel = listen.getValue();
@@ -224,9 +224,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         if (cause instanceof SocketException cause1) {
-            if (cause1.getMessage().startsWith("Connection reset")) {
-                return;
-            }
+            log.error("客户端通道发生错误！客户key:{},name:{},", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());
+            return;
         }
         log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
     }

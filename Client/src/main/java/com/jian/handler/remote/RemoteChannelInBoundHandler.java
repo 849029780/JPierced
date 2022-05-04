@@ -39,7 +39,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long tarChannelHash = connectReqPacks.getTarChannelHash();
 
                 InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
-                log.info("连接本地服务:{}:{}，协议类型:{}", host, port, connectReqPacks.getProtocol());
+                log.debug("连接本地服务:{}:{}，协议类型:{}", host, port, connectReqPacks.getProtocol());
                 Client client;
                 if (connectReqPacks.getProtocol() == ConnectReqPacks.Protocol.HTTPS) {
                     client = Client.getLocalHttpsInstance();
@@ -64,7 +64,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                         localChannel.config().setAutoRead(Boolean.TRUE);
                         connectRespPacks.setState(ConnectRespPacks.STATE.SUCCESS);
                         connectRespPacks.setMsg("连接本地服务成功！");
-                        log.info("连接本地服务:{}:{}成功！", host, port);
+                        log.debug("连接本地服务:{}:{}成功！", host, port);
                     } else {
                         connectRespPacks.setState(ConnectRespPacks.STATE.FAIL);
                         connectRespPacks.setMsg("连接本地服务失败！请检查地址和端口再试！");
@@ -80,7 +80,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     Channel localChannel = map.remove(tarChannelHash);
                     Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
                 });
-                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
+                log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
             case 5 -> { //认证响应
                 ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
@@ -110,7 +110,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                         //client.getRecount().set(0);
                     });
                 } else {
-                    log.info("连接服务失败！{}", msg);
+                    log.warn("连接服务失败！{}", msg);
                     channel.close();
                 }
             }
@@ -127,11 +127,10 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             case 9 -> { //心跳响应
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 Long msgId = healthRespPacks.getMsgId();
-                log.info("接收到服务端的心跳响应，msgId:{}", msgId);
+                log.debug("接收到服务端的心跳响应，msgId:{}", msgId);
             }
             case 10 -> {//断开和远程的连接
-                //DisConnectClientReqPacks disConnectClientReqPacks = (DisConnectClientReqPacks) baseTransferPacks;
-                log.info("接收到服务端要求断开和服务端的连接！");
+                log.debug("接收到服务端要求断开和服务端的连接！");
                 Client client = channel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才会将重试次数置空
                 Optional.ofNullable(client).ifPresent(cli -> {

@@ -10,6 +10,8 @@ import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -207,6 +209,12 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("远程通道发生错误!", cause);
+        Channel channel = ctx.channel();
+        SocketAddress socketAddress = channel.remoteAddress();
+        if (cause instanceof SocketException) {
+            log.error("远程通道:{},发生错误！{}", socketAddress, cause.getMessage());
+        } else {
+            log.error("远程通道:{},发生错误！", socketAddress, cause);
+        }
     }
 }

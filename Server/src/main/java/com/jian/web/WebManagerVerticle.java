@@ -632,7 +632,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                         //保存配置
                         Config.saveProperties();
                     } else {
-                        log.info("重启传输服务失败！端口:{}，即将恢复原端口:{}重启..", port, oldPort);
+                        log.warn("重启传输服务失败！端口:{}，即将恢复原端口:{}重启..", port, oldPort);
                         //设置配置
                         Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, oldPort);
                         //重启原端口

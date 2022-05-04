@@ -12,6 +12,7 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.util.Optional;
 
 /**
@@ -51,7 +52,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
         disConnectReqPacks.setTarChannelHash(tarChannelHash);
         Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> ch.writeAndFlush(disConnectReqPacks));
-        log.info("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
+        log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
     }
 
     @Override
@@ -64,6 +65,12 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("本地通道发生错误！", cause);
+        Channel channel = ctx.channel();
+        SocketAddress socketAddress = channel.remoteAddress();
+        if (cause instanceof SocketException) {
+            log.error("本地通道:{},发生错误！{}", socketAddress, cause.getMessage());
+        } else {
+            log.error("本地通道:{},发生错误！", socketAddress, cause);
+        }
     }
 }

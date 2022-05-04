@@ -69,7 +69,7 @@ public class Server {
 
     public static void listenLocal(Set<Integer> ports, ClientInfo clientInfo) {
         if (!clientInfo.isOnline()) {
-            log.info("客户端key:{},name:{}，当前不在线，暂不可监听端口！", clientInfo.getKey(), clientInfo.getName());
+            log.warn("客户端key:{},name:{}，当前不在线，暂不可监听端口！", clientInfo.getKey(), clientInfo.getName());
             return;
         }
         Constants.FIXED_THREAD_POOL.execute(() -> {
@@ -103,10 +103,10 @@ public class Server {
                         } else {
                             if (future1.cause() instanceof BindException) {
                                 stringBuffer.append("监听失败！该端口已被使用，映射的本地地址为：");
-                                log.info("客户端key：{}，name:{}，监听端口:{}失败！该端口已被占用！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
+                                log.warn("客户端key：{}，name:{}，监听端口:{}失败！该端口已被占用！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             } else {
                                 stringBuffer.append("监听失败！映射的本地地址为：");
-                                log.info("客户端key：{}，name:{}，监听端口:{}失败！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
+                                log.warn("客户端key：{}，name:{}，监听端口:{}失败！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             }
                         }
                         stringBuffer.append(netAddress.getHost());
@@ -150,7 +150,7 @@ public class Server {
                     if (closeFuture.isSuccess()) {
                         //将传输端口服务置空
                         Constants.LISTEN_REMOTE_CHANNEL = null;
-                        log.info("传输服务已停止..端口:{}", port);
+                        log.warn("传输服务已停止..端口:{}", port);
                         //将已连接的客户端重置为离线，及清空相关的数据
                         for (Map.Entry<Long, ClientInfo> clientInfoEntry : Constants.CLIENTS.entrySet()) {
                             ClientInfo clientInfo = clientInfoEntry.getValue();
@@ -172,7 +172,7 @@ public class Server {
                             });
                         }
                     } else {
-                        log.info("传输服务停止失败..端口:{}", port, closeFuture.cause());
+                        log.warn("传输服务停止失败..端口:{}", port, closeFuture.cause());
                     }
                 });
                 log.info("启动传输服务成功！端口:{}", port);
