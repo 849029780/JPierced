@@ -47,12 +47,12 @@ public class Config {
     /***
      * 证书名
      */
-    static final String crtFileName = "pierced.crt";
+    public static final String crtFileName = "pierced.crt";
 
     /***
      * 证书私钥
      */
-    static final String crtKeyFileName = "pierced.key";
+    public static final String crtKeyFileName = "pierced.key";
 
     /***
      * ca证书名
@@ -74,21 +74,44 @@ public class Config {
      * 获取文件流
      * @return
      */
-    private static InputStream getFileInputStream(String fileName, boolean isFindClsspath) {
+    public static InputStream getFileInputStream(String fileName, boolean isFindClsspath) {
         InputStream inputStream = null;
         String filePath = dirPath + File.separator + fileName;
         File file = new File(filePath);
         try {
-            if (!file.exists() && isFindClsspath) {
-                inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
+            if (!file.exists()) {
+                if(isFindClsspath){
+                    inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
+                }
             } else {
                 inputStream = Files.newInputStream(file.toPath());
             }
         } catch (IOException e) {
-            log.error("加载文件：" + fileName + "错误！");
+            log.error("读取文件：" + fileName + "错误！", e);
         }
         return inputStream;
     }
+
+    /***
+     * 获取https证书绝对路径
+     * @param
+     * @return
+     */
+    public static String getCertAbsolutePath() {
+        String certPath = dirPath + File.separator + crtFileName;
+        return certPath;
+    }
+
+    /***
+     * 获取https证书key绝对路径
+     * @param
+     * @return
+     */
+    public static String getCertKeyAbsolutePath() {
+        String certKeyPath = dirPath + File.separator + crtKeyFileName;
+        return certKeyPath;
+    }
+
 
     /***
      * 获取文件outputsream
@@ -143,7 +166,8 @@ public class Config {
     public static void initTransmitData() {
         try (InputStream dataInputStream = getFileInputStream(dataFileName, false)) {
             if (Objects.isNull(dataInputStream)) {
-                throw new FileNotFoundException();
+                log.warn("{}文件不存在！暂不加载已保存的数据！",dataFileName);
+                return;
             }
             Constants.CLIENTS = JsonUtils.JSON_PARSER.readValue(dataInputStream, new TypeReference<ConcurrentHashMap<Long, ClientInfo>>() {
             });
@@ -207,20 +231,25 @@ public class Config {
                 InputStream crtKeyInput = getFileInputStream(crtKeyFileName, true);
                 if (Objects.isNull(crtInput) || Objects.isNull(crtKeyInput)) {
                     log.warn("未找到HTTPS的SSL证书，默认停用HTTPS穿透");
+                    Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
                     return true;
                 }
                 Constants.SSL_LOCAL_PORT_CONTEXT = SslContextBuilder.forServer(crtInput, crtKeyInput).build();
                 crtInput.close();
                 crtKeyInput.close();
+                log.info("已启用HTTPS！");
                 return true;
             } catch (SSLException e) {
                 log.error("sslContext构建错误！", e);
-                Constants.IS_ENABLE_HTTPS = false;
+                Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
                 return false;
             } catch (IOException e) {
                 log.error("sslContext构建SSL错误！", e);
+                Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
                 return false;
             }
+        }else{
+            log.warn("HTTPS未启用！");
         }
         return true;
     }

@@ -18,12 +18,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.ssl.SslProtocols;
 import io.netty.util.internal.StringUtil;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.OpenSSLEngineOptions;
+import io.vertx.core.net.PemKeyCertOptions;
+import io.vertx.core.net.SSLEngineOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -31,6 +33,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.ResponseContentTypeHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
+
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -56,6 +59,9 @@ public class WebManagerVerticle extends AbstractVerticle {
      */
     private final String LOGIN_URI = "/api/login";
 
+    /***
+     * 静态页面路径
+     */
     private final String STATIC_START_WITH_URI = "/page/";
 
     /***
@@ -69,10 +75,18 @@ public class WebManagerVerticle extends AbstractVerticle {
         String webPort = Constants.CONFIG.getProperty(Constants.WEB_PORT_PROPERTY, Constants.DEF_WEB_PORT);
         Integer port = Integer.valueOf(webPort);
         Router router = routerManager();
-        httpServer = vertx.createHttpServer();
-        httpServer.requestHandler(router).listen(port).onSuccess(han -> {
-            log.info("web服务启动完成！端口:{}", port);
-        }).onFailure(han -> {
+        if (Constants.IS_ENABLE_HTTPS) {
+            HttpServerOptions httpServerOptions = new HttpServerOptions();
+            PemKeyCertOptions pemKeyCertOptions = new PemKeyCertOptions();
+            pemKeyCertOptions.setCertPath(Config.getCertAbsolutePath()).setKeyPath(Config.getCertKeyAbsolutePath());
+            httpServerOptions.setSsl(true).setPemKeyCertOptions(pemKeyCertOptions);
+            httpServerOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
+            httpServerOptions.addEnabledSecureTransportProtocol(SslProtocols.TLS_v1_3);
+            httpServer = vertx.createHttpServer(httpServerOptions);
+        } else {
+            httpServer = vertx.createHttpServer();
+        }
+        httpServer.requestHandler(router).listen(port).onSuccess(han -> log.info("web服务启动完成！端口:{}", port)).onFailure(han -> {
             Throwable cause = han.getCause();
             log.error("web服务启动失败！端口:{}，错误原因:{}", port, cause);
         });
@@ -108,7 +122,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
 
                     //跳过所有认证
-                    if(SKIP_ALL){
+                    if (SKIP_ALL) {
                         han.next();
                         return;
                     }
@@ -131,9 +145,6 @@ public class WebManagerVerticle extends AbstractVerticle {
                         }
                     }
                 });
-
-
-
 
 
         //静态页面
@@ -369,16 +380,16 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("踢出客户端失败！key为空！");
         }
         ClientInfo clientInfo = Constants.CLIENTS.get(key);
-        if(Objects.isNull(clientInfo)){
+        if (Objects.isNull(clientInfo)) {
             return Result.FAIL("踢出客户端失败！当前客户端key不存在！");
         }
 
         Channel remoteChannel = clientInfo.getRemoteChannel();
-        if(Objects.isNull(remoteChannel)){
+        if (Objects.isNull(remoteChannel)) {
             return Result.FAIL("踢出客户端失败！当前客户端key未连接！");
         }
         DisConnectClientReqPacks disConnectClientReqPacks = new DisConnectClientReqPacks();
-        disConnectClientReqPacks.setCode((byte)1);
+        disConnectClientReqPacks.setCode((byte) 1);
         remoteChannel.writeAndFlush(disConnectClientReqPacks);
         return Result.FAIL("客户端已下线！");
     }

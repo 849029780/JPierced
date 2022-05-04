@@ -59,13 +59,15 @@ public class Config {
         String filePath = dirPath + File.separator + fileName;
         File file = new File(filePath);
         try {
-            if (!file.exists() && isFindClsspath) {
-                inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
+            if (!file.exists()) {
+                if (isFindClsspath) {
+                    inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
+                }
             } else {
                 inputStream = Files.newInputStream(file.toPath());
             }
         } catch (IOException e) {
-            log.error("加载文件：" + fileName + "错误！", e);
+            log.error("读取文件：" + fileName + "错误！", e);
         }
         return inputStream;
     }
