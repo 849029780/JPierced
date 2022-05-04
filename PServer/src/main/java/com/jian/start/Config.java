@@ -32,42 +32,42 @@ public class Config {
     /***
      * 获取当前jar包所在路径
      */
-    static String dirPath = System.getProperty("user.dir");
+    static final String dirPath = System.getProperty("user.dir");
 
     /***
      * 数据文件路径，默认在该jar包下
      */
-    static String dataFileName = ".data";
+    static final String dataFileName = ".data";
 
     /***
      * 配置文件名
      */
-    static String propertiesFileName = "server.properties";
+    static final String propertiesFileName = "server.properties";
 
     /***
      * 证书名
      */
-    static String crtFileName = "pierced.crt";
+    static final String crtFileName = "pierced.crt";
 
     /***
      * 证书私钥
      */
-    static String crtKeyFileName = "pierced.key";
+    static final String crtKeyFileName = "pierced.key";
 
     /***
      * ca证书名
      */
-    static String caCrtFileNameTransmit = "certs/ca.crt";
+    static final String caCrtFileNameTransmit = "certs/ca.crt";
 
     /***
      * 证书名
      */
-    static String crtFileNameTransmit = "certs/server.crt";
+    static final String crtFileNameTransmit = "certs/server.crt";
 
     /***
      * 证书私钥
      */
-    static String crtKeyFileNameTransmit = "certs/server-pkcs8.key";
+    static final String crtKeyFileNameTransmit = "certs/server-pkcs8.key";
 
 
     /***
@@ -202,14 +202,23 @@ public class Config {
         String enableHttps = Constants.CONFIG.getProperty(Constants.ENABLE_HTTPS_PROPERTY_NAME, "false");
         Constants.IS_ENABLE_HTTPS = Boolean.parseBoolean(enableHttps);
         if (Constants.IS_ENABLE_HTTPS) {
-            InputStream crtInput = getFileInputStream(crtFileName, true);
-            InputStream crtKeyInput = getFileInputStream(crtKeyFileName, true);
             try {
+                InputStream crtInput = getFileInputStream(crtFileName, true);
+                InputStream crtKeyInput = getFileInputStream(crtKeyFileName, true);
+                if (Objects.isNull(crtInput) || Objects.isNull(crtKeyInput)) {
+                    log.warn("未找到HTTPS的SSL证书，默认停用HTTPS穿透");
+                    return true;
+                }
                 Constants.SSL_LOCAL_PORT_CONTEXT = SslContextBuilder.forServer(crtInput, crtKeyInput).build();
+                crtInput.close();
+                crtKeyInput.close();
                 return true;
             } catch (SSLException e) {
                 log.error("sslContext构建错误！", e);
                 Constants.IS_ENABLE_HTTPS = false;
+                return false;
+            } catch (IOException e) {
+                log.error("sslContext构建SSL错误！", e);
                 return false;
             }
         }
@@ -220,16 +229,20 @@ public class Config {
      * 传输数据端口ssl
      */
     public static boolean initTransmitPortSSL() {
-        System.out.println("Openssl是否支持:" + OpenSsl.isAvailable());
-        InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
-        InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
-        InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
         try {
+            InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
+            InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
+            InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
             //必须经过SSL双向认证
             Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).sslProvider(SslProvider.OPENSSL).build();
+            caCrtInputTransmit.close();
+            crtInputTransmit.close();
+            crtKeyInputTransmit.close();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);
+        } catch (IOException e) {
+            log.error("传输端口构建SSLContext失败，ssl证书错误！", e);
         }
         return false;
     }

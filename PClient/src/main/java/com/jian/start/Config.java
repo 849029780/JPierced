@@ -1,7 +1,6 @@
 package com.jian.start;
 
 import com.jian.commons.Constants;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProtocols;
 import io.netty.handler.ssl.SslProvider;
@@ -27,27 +26,27 @@ public class Config {
     /***
      * 获取当前jar包所在路径
      */
-    static String dirPath = System.getProperty("user.dir");
+    static final String dirPath = System.getProperty("user.dir");
 
     /***
      * 配置文件
      */
-    static String propertiesFileName = "client.properties";
+    static final String propertiesFileName = "client.properties";
 
     /***
      * ca证书名
      */
-    static String caCrtFileNameTransmit = "certs/ca.crt";
+    static final String caCrtFileNameTransmit = "certs/ca.crt";
 
     /***
      * 证书名
      */
-    static String crtFileNameTransmit = "certs/client.crt";
+    static final String crtFileNameTransmit = "certs/client.crt";
 
     /***
      * 证书私钥
      */
-    static String crtKeyFileNameTransmit = "certs/client-pkcs8.key";
+    static final String crtKeyFileNameTransmit = "certs/client-pkcs8.key";
 
 
     /***
@@ -93,17 +92,22 @@ public class Config {
      * @return
      */
     public static boolean initTransmitPortSSL() {
-        InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
-        InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
-        InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
         try {
+            InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
+            InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
+            InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
             //和本地的https连接为单向认证
             Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             //必须经过SSL双向认证
             Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).startTls(true).build();
+            caCrtInputTransmit.close();
+            crtInputTransmit.close();
+            crtKeyInputTransmit.close();
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);
+        } catch (IOException e) {
+            log.error("传输端口构建SSLContext失败，ssl证书错误！", e);
         }
         return false;
     }
