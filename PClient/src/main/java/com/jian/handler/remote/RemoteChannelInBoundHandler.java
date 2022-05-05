@@ -68,7 +68,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     } else {
                         connectRespPacks.setState(ConnectRespPacks.STATE.FAIL);
                         connectRespPacks.setMsg("连接本地服务失败！请检查地址和端口再试！");
-                        log.warn("连接本地服务:{}:{}失败！", host, port, channelFuture.cause());
+                        String causeMsg = "";
+                        if(Objects.nonNull(channelFuture.cause())){
+                            causeMsg = channelFuture.cause().getMessage();
+                        }
+                        log.warn("连接本地服务:{}:{}失败！{}", host, port, causeMsg);
                     }
                     Constants.REMOTE_CHANNEL.writeAndFlush(connectRespPacks);
                 });
@@ -148,7 +152,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
         if (evt instanceof IdleStateEvent event) {
             switch (event.state()) {
                 case READER_IDLE: //读空闲
-                    //不处理
+                    // 不处理
                     break;
                 case WRITER_IDLE: //写空闲
                     long msgId = System.nanoTime();

@@ -37,11 +37,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         transferDataPacks.setDatas(buffer);
 
         try {
-            Constants.REMOTE_CHANNEL.writeAndFlush(transferDataPacks).addListener(future -> {
-                if (!future.isSuccess()) {
-                    ReferenceCountUtil.release(buffer);
-                }
-            });
+            Constants.REMOTE_CHANNEL.writeAndFlush(transferDataPacks);
         } catch (NullPointerException e) {
             ReferenceCountUtil.release(buffer);
         }
