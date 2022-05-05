@@ -127,7 +127,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             case 9 -> { //心跳响应
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 Long msgId = healthRespPacks.getMsgId();
-                log.debug("接收到服务端的心跳响应，msgId:{}", msgId);
+                log.info("接收到服务端的心跳响应，msgId:{}", msgId);
             }
             case 10 -> {//断开和远程的连接
                 log.debug("接收到服务端要求断开和服务端的连接！");
