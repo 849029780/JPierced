@@ -1,6 +1,6 @@
 package com.jian.transmit.handler.local;
 
-import com.jian.transmit.handler.local.http.HeaderHostIndex;
+import com.jian.transmit.handler.local.http.HeaderItemPosition;
 import com.jian.transmit.handler.local.http.HttpParser;
 import com.jian.transmit.handler.local.http.ParseAppendableCharSequence;
 import io.netty.buffer.ByteBuf;
@@ -10,18 +10,27 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.AppendableCharSequence;
 import io.netty.util.internal.StringUtil;
+import lombok.extern.slf4j.Slf4j;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /***
  * http协议处理器
  * @author Jian
  * @date 2022/04/04
  */
+@Slf4j
 public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
 
@@ -70,7 +79,7 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
         CONTENT_READ
     }
 
-    HeaderHostIndex headerHostIndex;
+    List<HeaderItemPosition> headerItems;
 
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) {
@@ -97,8 +106,8 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
                 state = STATE.HEADER_START;
             }
             case HEADER_START: {
-                headerHostIndex = new HeaderHostIndex();
-                headers = readHeaders(byteBuf, headerHostIndex);
+                headerItems = new LinkedList<>();
+                headers = readHeaders(byteBuf, headerItems);
                 if (Objects.isNull(headers)) {
                     return;
                 }
@@ -107,39 +116,30 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
                 state = STATE.HEADER_END;
             }
             case HEADER_END: {
-                String hostHeader = headers.get(HttpHeaderNames.HOST);
-                //获取到host的header后,替换原Host
-                if (!StringUtil.isNullOrEmpty(hostHeader)) {
-                    //重置读入位置
-                    byteBuf.resetReaderIndex();
-                    //从0开始到host:结束位置
-                    int hostIpEndIdx = headerHostIndex.getStartIndex() + 6;
-                    ByteBuf byteBuf1 = byteBuf.readBytes(hostIpEndIdx);
-                    buffer.writeBytes(byteBuf1);
+                //重置读入位置
+                byteBuf.resetReaderIndex();
+                if (Objects.nonNull(headerItems) && headerItems.size() > 0) {
+                    int thisReadIdx = 0;
+                    for (HeaderItemPosition headerItem : headerItems) {
+                        AsciiString headerName = headerItem.getHeaderName();
+                        if (HttpHeaderNames.HOST.equals(headerName)) {
+                            thisReadIdx = replaceHost(buffer, byteBuf, headerItem, thisReadIdx);
+                        } else if (HttpHeaderNames.REFERER.equals(headerName)) {
+                            String host = headers.get(HttpHeaderNames.HOST);
+                            thisReadIdx = replaceReferer(buffer, byteBuf, headerItem, thisReadIdx, host);
+                        }
+                    }
 
-                    //-------------------获取通道上绑定的C端连接的ip和端口,用于替换原Host中的地址
-                    String remoteLocalHost = this.host + ":" + this.port;
-                    byte[] bytes = remoteLocalHost.getBytes(StandardCharsets.UTF_8);
-                    buffer.writeBytes(bytes);
-                    buffer.writeByte(HttpConstants.CR);
-                    buffer.writeByte(HttpConstants.LF);
-                    //------------------获取通道上绑定的C端连接的ip和端口,用于替换原Host中的地址
-
-                    //0开头到host结束位置-从0开始到host:结束位置 就为ip:端口长度 如 192.168.0.1:80
-                    int hostIpLen = headerHostIndex.getEndIndex() - hostIpEndIdx;
-                    //从原来读取中需要跳过该段位置
-                    byteBuf.skipBytes(hostIpLen);
-
-                    //当前读取到的位置
-                    int thisReadIdx = byteBuf.readerIndex();
                     //header总结束位置-当前读取到的位置=剩余header的字节数
                     int lastHeaderLen = headerEndIdx - thisReadIdx;
                     //读取出剩余header
                     ByteBuf lastHeaderByteBuf = byteBuf.readBytes(lastHeaderLen);
                     //写入剩余header
                     buffer.writeBytes(lastHeaderByteBuf);
-                }
 
+                } else {
+                    buffer.writeBytes(byteBuf);
+                }
                 //获取是否包含Content-length,如果包含,则需要标记读取位置
                 String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
                 if (!StringUtil.isNullOrEmpty(contentLengthStr)) {
@@ -159,6 +159,8 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
                     resetNow();
                     break;
                 }
+                String headersStr = buffer.copy().toString(StandardCharsets.UTF_8);
+                System.out.println(headersStr);
             }
             case CONTENT_READ: {
                 //读取内容位置标记
@@ -180,13 +182,105 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
         list.add(buffer);
     }
 
+    /***
+     * 替换host
+     * @param buffer 替换后新的buffer
+     * @param byteBuf 原buffer
+     * @param hostHeaderItem host所在header中的位置信息
+     * @param thisReadIdx 当前读取到的位置
+     */
+    public int replaceHost(ByteBuf buffer, ByteBuf byteBuf, HeaderItemPosition hostHeaderItem, int thisReadIdx) {
+        //获取到host的header后,替换原Host
+        if (Objects.nonNull(hostHeaderItem)) {
+            int startIdx = hostHeaderItem.getStartIndex() - thisReadIdx;
+            //从0开始到host: 结束位置
+            int hostIpEndIdx = startIdx + 6;
+            ByteBuf byteBuf1 = byteBuf.readBytes(hostIpEndIdx);
+            buffer.writeBytes(byteBuf1);
+
+            //-------------------获取通道上绑定的C端连接的ip和端口,用于替换原Host中的地址
+            String remoteLocalHost = this.host + ":" + this.port;
+            byte[] bytes = remoteLocalHost.getBytes(StandardCharsets.UTF_8);
+            buffer.writeBytes(bytes);
+            buffer.writeByte(HttpConstants.CR);
+            buffer.writeByte(HttpConstants.LF);
+            //------------------获取通道上绑定的C端连接的ip和端口,用于替换原Host中的地址
+
+            //0开头到host结束位置-从0开始到host:结束位置 就为ip:端口长度 如 192.168.0.1:80
+            int hostIpLen = hostHeaderItem.getEndIndex() - hostIpEndIdx;
+            //从原来读取中需要跳过该段位置
+            byteBuf.skipBytes(hostIpLen);
+
+            //当前读取到的位置
+            thisReadIdx = byteBuf.readerIndex();
+
+        }
+        return thisReadIdx;
+    }
+
+    /***
+     * 替换referer
+     * @param buffer 替换后新的buffer
+     * @param byteBuf 原buffer
+     * @param refererHeaderItem host所在header中的位置信息
+     * @param thisReadIdx 当前读取到的位置
+     */
+    public int replaceReferer(ByteBuf buffer, ByteBuf byteBuf, HeaderItemPosition refererHeaderItem, int thisReadIdx, String oldHost) {
+        //获取到host的header后,替换原Host
+        if (Objects.nonNull(refererHeaderItem)) {
+            int startIdx = refererHeaderItem.getStartIndex() - thisReadIdx;
+            //从0开始到referer: 结束位置
+            int hostIpEndIdx = startIdx + 9;
+            ByteBuf byteBuf1 = byteBuf.readBytes(hostIpEndIdx);
+            buffer.writeBytes(byteBuf1);
+
+            //0开头到host结束位置-从0开始到host:结束位置 就为ip:端口长度 如 192.168.0.1:80
+            int refContentLen = refererHeaderItem.getEndIndex() - hostIpEndIdx;
+            //从原来读取中需要跳过该段位置
+            ByteBuf refContentBuf = byteBuf.readBytes(refContentLen);
+            String refContent = refContentBuf.toString(StandardCharsets.UTF_8);
+            try {
+
+                //如果host和原host一致，则替换掉host为被穿透地址的host
+                if (false) {
+                    URI uri = new URI(refContent);
+                    String path = uri.getRawPath();
+                    String query = uri.getRawQuery();
+
+                    StringBuilder urlBuilfer = new StringBuilder();
+                    urlBuilfer.append(uri.getScheme());
+                    urlBuilfer.append("://");
+                    urlBuilfer.append(this.host);
+                    urlBuilfer.append(this.port);
+                    if (!StringUtil.isNullOrEmpty(path)) {
+                        urlBuilfer.append(path);
+                    }
+                    if (!StringUtil.isNullOrEmpty(query)) {
+                        urlBuilfer.append("?");
+                        urlBuilfer.append(query);
+                    }
+                    byte[] urlBytes = urlBuilfer.toString().getBytes(StandardCharsets.UTF_8);
+                    buffer.writeBytes(urlBytes);
+                } else {
+                    byte[] bytes = refContent.getBytes(StandardCharsets.UTF_8);
+                    buffer.writeBytes(bytes);
+                }
+            } catch (URISyntaxException e) {
+                log.error("Referer URL处理错误！", e);
+            }
+            //当前读取到的位置
+            thisReadIdx = byteBuf.readerIndex();
+        }
+        return thisReadIdx;
+    }
+
 
     /***
      * 重置该次参数
      */
     public void resetNow() {
         headers = null;
-        headerHostIndex = null;
+        headerItems = null;
         headerEndIdx = -1;
         contentLen = 0;
         contentReadedLen = 0;
@@ -259,7 +353,7 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
     private String name;
     private String value;
 
-    private HttpHeaders readHeaders(ByteBuf buffer, HeaderHostIndex headerHostIndex) {
+    private HttpHeaders readHeaders(ByteBuf buffer, List<HeaderItemPosition> headerItems) {
         final HttpHeaders headers = new DefaultHttpHeaders();
 
         while (true) {
@@ -277,8 +371,18 @@ public class LocalHttpByteToMessageDecoder extends MessageToMessageDecoder<ByteB
             splitHeader(line);
             if (Objects.nonNull(name)) {
                 if (name.toLowerCase().equals(HttpHeaderNames.HOST.toString())) {
-                    headerHostIndex.setStartIndex(parseAppendableCharSequence.getStartIndex());
-                    headerHostIndex.setEndIndex(parseAppendableCharSequence.getEndIndex());
+                    HeaderItemPosition headerItemPosition = new HeaderItemPosition();
+                    headerItemPosition.setStartIndex(parseAppendableCharSequence.getStartIndex());
+                    headerItemPosition.setEndIndex(parseAppendableCharSequence.getEndIndex());
+                    headerItemPosition.setHeaderName(HttpHeaderNames.HOST);
+                    headerItems.add(headerItemPosition);
+                }
+                if (name.toLowerCase().equals(HttpHeaderNames.REFERER.toString())) {
+                    HeaderItemPosition headerItemPosition = new HeaderItemPosition();
+                    headerItemPosition.setStartIndex(parseAppendableCharSequence.getStartIndex());
+                    headerItemPosition.setEndIndex(parseAppendableCharSequence.getEndIndex());
+                    headerItemPosition.setHeaderName(HttpHeaderNames.REFERER);
+                    headerItems.add(headerItemPosition);
                 }
                 headers.add(name, value);
             }

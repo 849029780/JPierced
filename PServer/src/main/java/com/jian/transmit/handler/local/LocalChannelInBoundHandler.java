@@ -75,6 +75,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         switch (netAddress.getProtocol()) {
             case HTTPS -> {
                 pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
+
                 //是否启用https
                 if (Constants.IS_ENABLE_HTTPS) {
                     connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTPS);

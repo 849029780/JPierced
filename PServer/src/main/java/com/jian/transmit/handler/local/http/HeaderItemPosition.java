@@ -1,5 +1,6 @@
 package com.jian.transmit.handler.local.http;
 
+import io.netty.util.AsciiString;
 import lombok.Data;
 
 /***
@@ -8,7 +9,12 @@ import lombok.Data;
  * @date 2022/1/20
  */
 @Data
-public class HeaderHostIndex {
+public class HeaderItemPosition {
+
+    /***
+     * header名
+     */
+    private AsciiString headerName;
 
     /***
      * 开始位置
