@@ -74,7 +74,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         //http协议时需要额外添加handler处理
         switch (netAddress.getProtocol()) {
             case HTTPS -> {
-                pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
+                pipeline.addLast(new LocalHttpByteToMessageCodec(netAddress.getHost(), netAddress.getPort()));
 
                 //是否启用https
                 if (Constants.IS_ENABLE_HTTPS) {
@@ -85,7 +85,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
                 }
             }
             case HTTP -> {
-                pipeline.addLast(new LocalHttpByteToMessageDecoder(netAddress.getHost(), netAddress.getPort()));
+                pipeline.addLast(new LocalHttpByteToMessageCodec(netAddress.getHost(), netAddress.getPort()));
                 connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTP);
             }
             case TCP -> connectReqPacks.setProtocol(ConnectReqPacks.Protocol.TCP);
@@ -124,10 +124,8 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
-        int readableBytes = byteBuf.readableBytes();
-        ByteBuf buffer = channelHandlerContext.alloc().buffer(readableBytes);
-        buffer.writeBytes(byteBuf);
-        channelHandlerContext.fireChannelRead(buffer);
+        byteBuf.retain();
+        channelHandlerContext.fireChannelRead(byteBuf);
     }
 
     @Override

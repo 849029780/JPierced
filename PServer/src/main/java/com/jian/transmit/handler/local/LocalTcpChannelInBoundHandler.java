@@ -28,15 +28,14 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         //获取该通道上绑定的远程通道
         Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
 
-        ByteBuf buffer = channelHandlerContext.alloc().buffer(byteBuf.readableBytes());
-        buffer.writeBytes(byteBuf);
+        byteBuf.retain();
         TransferDataPacks transferDataPacks = new TransferDataPacks();
         transferDataPacks.setTargetChannelHash(tarChannelHash);
-        transferDataPacks.setDatas(buffer);
+        transferDataPacks.setDatas(byteBuf);
         try {
             remoteChannel.writeAndFlush(transferDataPacks);
         } catch (NullPointerException e) {
-            ReferenceCountUtil.release(buffer);
+            ReferenceCountUtil.release(byteBuf);
         }
     }
 

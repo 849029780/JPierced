@@ -4,6 +4,7 @@ import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageCodec;
@@ -48,6 +49,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (hostLen > 0) {
                     buffer.writeBytes(hostBytes);
                 }
+                out.add(buffer);
             }
             case 3 -> { //服务发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
@@ -55,6 +57,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(disConnectReqPacks.getTarChannelHash());
+                out.add(buffer);
             }
             case 5 -> { //认证结果响应
                 ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
@@ -73,6 +76,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (msgLen > 0) {
                     buffer.writeBytes(msgBytes);
                 }
+                out.add(buffer);
             }
             case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
@@ -84,7 +88,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(transferDataPacks.getTargetChannelHash());
-                buffer.writeBytes(datas);
+                out.add(buffer);
+                out.add(datas);
             }
             case 9 -> { //响应心跳
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
@@ -93,6 +98,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(healthRespPacks.getMsgId());
+                out.add(buffer);
             }
             case 10 -> { //要求客户端断开连接
                 DisConnectClientReqPacks disConnectClientReqPacks = (DisConnectClientReqPacks) baseTransferPacks;
@@ -101,9 +107,10 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeByte(disConnectClientReqPacks.getCode());
+                out.add(buffer);
             }
         }
-        out.add(buffer);
+
     }
 
     @Override
@@ -122,10 +129,9 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 connectRespPacks.setState(state);
                 connectRespPacks.setMsgLen(msgLen);
                 if (msgLen > 0) {
-                    ByteBuf msgBuf = byteBuf.readBytes(msgLen);
+                    ByteBuf msgBuf = byteBuf.readSlice(msgLen);
                     String msg = msgBuf.toString(StandardCharsets.UTF_8);
                     connectRespPacks.setMsg(msg);
-                    ReferenceCountUtil.release(msgBuf);
                 }
                 list.add(connectRespPacks);
             }
@@ -140,9 +146,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 long key = byteBuf.readLong();
                 int pwdLen = byteBuf.readInt();
                 if (pwdLen > 0) {
-                    ByteBuf pwdBuff = byteBuf.readBytes(pwdLen);
+                    ByteBuf pwdBuff = byteBuf.readSlice(pwdLen);
                     String pwd = pwdBuff.toString(StandardCharsets.UTF_8);
-                    ReferenceCountUtil.release(pwdBuff);
                     connectAuthReqPacks.setPwd(pwd);
                 }
                 connectAuthReqPacks.setPackSize(packSize);
@@ -154,8 +159,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 TransferDataPacks transferDataPacks = new TransferDataPacks();
                 long targetChannelHash = byteBuf.readLong();
                 int readableBytes = byteBuf.readableBytes();
-                ByteBuf buffer = channelHandlerContext.alloc().buffer(readableBytes);
-                buffer.writeBytes(byteBuf);
+                ByteBuf buffer = byteBuf.readRetainedSlice(readableBytes);
                 transferDataPacks.setTargetChannelHash(targetChannelHash);
                 transferDataPacks.setDatas(buffer);
                 list.add(transferDataPacks);

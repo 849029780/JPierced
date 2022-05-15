@@ -29,17 +29,14 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         Channel channel = ctx.channel();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-        ByteBuf buffer = ctx.alloc().buffer(byteBuf.readableBytes());
-        buffer.writeBytes(byteBuf);
-
+        byteBuf.retain();
         TransferDataPacks transferDataPacks = new TransferDataPacks();
         transferDataPacks.setTargetChannelHash(tarChannelHash);
-        transferDataPacks.setDatas(buffer);
-
+        transferDataPacks.setDatas(byteBuf);
         try {
             Constants.REMOTE_CHANNEL.writeAndFlush(transferDataPacks);
         } catch (NullPointerException e) {
-            ReferenceCountUtil.release(buffer);
+            ReferenceCountUtil.release(byteBuf);
         }
     }
 

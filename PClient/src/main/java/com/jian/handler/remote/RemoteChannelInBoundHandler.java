@@ -3,6 +3,7 @@ package com.jian.handler.remote;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.start.Client;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -122,10 +123,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 TransferDataPacks transferDataPacks = ((TransferDataPacks) baseTransferPacks);
                 Long targetChannelHash = transferDataPacks.getTargetChannelHash();
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(targetChannelHash);
+                ByteBuf datas = transferDataPacks.getDatas();
                 try {
-                    localChannel.writeAndFlush(transferDataPacks.getDatas());
+                    localChannel.writeAndFlush(datas);
                 } catch (NullPointerException e) {
-                    ReferenceCountUtil.release(transferDataPacks.getDatas());
+                    ReferenceCountUtil.release(datas);
                 }
             }
             case 9 -> { //心跳响应
