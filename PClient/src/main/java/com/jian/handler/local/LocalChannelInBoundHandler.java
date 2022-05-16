@@ -86,5 +86,6 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         } else {
             log.error("本地通道:{},发生错误！", socketAddress, cause);
         }
+        ctx.close();
     }
 }

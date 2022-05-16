@@ -48,7 +48,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
         //生成通道码
         Long thisChannelHash = System.nanoTime();
-        Long tarChannelHash = System.nanoTime();
+        Long tarChannelHash = thisChannelHash >> 2;
 
         channel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
         channel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
@@ -170,5 +170,6 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
             }
         }
         log.error("本地通道发生错误！本地地址及端口:{}，远程连接：{}", socketAddress, socketAddress1, cause);
+        ctx.close();
     }
 }
