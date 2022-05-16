@@ -52,6 +52,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     ChannelFuture channelFuture = (ChannelFuture) future;
                     ConnectRespPacks connectRespPacks = new ConnectRespPacks();
                     connectRespPacks.setThisChannelHash(tarChannelHash);
+                    connectRespPacks.setTarChannelHash(thisChannelHash);
                     if (channelFuture.isSuccess()) {
                         Channel localChannel = channelFuture.channel();
                         //暂设置本地连接为不可读

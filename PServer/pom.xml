@@ -47,7 +47,7 @@
 
         <dependency>
             <groupId>com.jian</groupId>
-            <artifactId>Commons</artifactId>
+            <artifactId>PCommons</artifactId>
             <version>${jian.commons.version}</version>
         </dependency>
 

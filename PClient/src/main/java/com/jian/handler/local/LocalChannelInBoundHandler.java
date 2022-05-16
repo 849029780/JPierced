@@ -4,15 +4,13 @@ import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.beans.transfer.TransferDataPacks;
 import com.jian.commons.Constants;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -53,10 +51,29 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     }
 
     @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        Channel channel = ctx.channel();
+        //------这里一定要注意，如果本地通道被写满的同时并且通道被关闭，一定要将设置为不自动读的远程通道重新设置为可读，否则将会出现数据不流通的严重问题！！！
+        //
+        if (Objects.nonNull(Constants.REMOTE_CHANNEL)) {
+            ChannelId id = channel.id();
+            ChannelId channelId = Constants.REMOTE_CHANNEL.attr(Constants.LOCK_CHANNEL_ID_KEY).get();
+            if (id.equals(channelId) && !Constants.REMOTE_CHANNEL.config().isAutoRead()) {
+                Constants.REMOTE_CHANNEL.config().setAutoRead(Boolean.TRUE);
+            }
+        }
+    }
+
+    @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         super.channelWritabilityChanged(ctx);
+        Channel channel = ctx.channel();
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> ch.config().setAutoRead(ctx.channel().isWritable()));
+        Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> {
+            ch.config().setAutoRead(channel.isWritable());
+            ch.attr(Constants.LOCK_CHANNEL_ID_KEY).set(channel.id());
+        });
     }
 
 

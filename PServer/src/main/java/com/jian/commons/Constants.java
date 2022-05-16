@@ -8,14 +8,16 @@ import com.jian.transmit.handler.local.LocalChannelInitializer;
 import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
 import com.jian.transmit.handler.remote.RemoteChannelInitializer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.vertx.core.Vertx;
@@ -43,6 +45,11 @@ public class Constants {
     public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : KQueue.isAvailable() ? new KQueueEventLoopGroup() : new NioEventLoopGroup();
 
     /***
+     * 服务端通道类型
+     */
+    public static final Class<? extends ServerSocketChannel> SERVER_SOCKET_CHANNEL_CLASS = Epoll.isAvailable() ? EpollServerSocketChannel.class : KQueue.isAvailable() ? KQueueServerSocketChannel.class : NioServerSocketChannel.class;
+
+    /***
      * 绑定在本地通道上的 当前通道hash
      */
     public static final AttributeKey<Long> THIS_CHANNEL_HASH_KEY = AttributeKey.valueOf("THIS_CHANNEL_HASH");
@@ -56,6 +63,11 @@ public class Constants {
      * 绑定在本地通道上的 传输数据通道hash
      */
     public static final AttributeKey<Channel> REMOTE_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_CHANNEL");
+
+    /***
+     * 将远程通道设置为不自动读的本地通道id，用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
+     */
+    public static final AttributeKey<ChannelId> LOCK_CHANNEL_ID_KEY = AttributeKey.valueOf("LOCK_CHANNEL_ID");
 
     /***
      * 绑定在远程通道上的 本地连接信息 map key为本地连接通道的hash，val为通道

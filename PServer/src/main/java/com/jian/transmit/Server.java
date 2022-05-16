@@ -3,15 +3,7 @@ package com.jian.transmit;
 import com.jian.beans.transfer.ConnectAuthRespPacks;
 import com.jian.commons.Constants;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueServerSocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.BindException;
@@ -39,7 +31,7 @@ public class Server {
         serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, Boolean.TRUE);
         //关闭小包组装成大包，如果都是小流量 则可以关闭，以减少延迟，减少延迟后将会多发送tcp包头，会占用一定带宽
         //serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-        serverBootstrap.channel(Epoll.isAvailable() ? EpollServerSocketChannel.class : KQueue.isAvailable() ? KQueueServerSocketChannel.class : NioServerSocketChannel.class);
+        serverBootstrap.channel(Constants.SERVER_SOCKET_CHANNEL_CLASS);
     }
 
     public static Server getInstance() {

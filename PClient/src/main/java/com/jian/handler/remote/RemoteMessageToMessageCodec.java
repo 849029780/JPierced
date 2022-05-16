@@ -34,7 +34,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         switch (type) {
             case 2 -> { //连接请求响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
-                packSize += 8 + 1 + 4;
+                packSize += 8 + 8 + 1 + 4;
                 String msg = connectRespPacks.getMsg();
                 byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
                 int msgLen = msgBytes.length;
@@ -43,6 +43,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(connectRespPacks.getThisChannelHash());
+                buffer.writeLong(connectRespPacks.getTarChannelHash());
                 buffer.writeByte(connectRespPacks.getState());
                 buffer.writeInt(msgLen);
                 if (msgLen > 0) {

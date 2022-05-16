@@ -93,7 +93,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         //tcp处理
         pipeline.addLast(Constants.LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER);
         //给客户端发送客户端本地的连接信息
-        Optional.of(remoteChannel).ifPresent(ch->ch.writeAndFlush(connectReqPacks));
+        Optional.of(remoteChannel).ifPresent(ch -> ch.writeAndFlush(connectReqPacks));
     }
 
 
@@ -123,6 +123,23 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     }
 
     @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        Channel channel = ctx.channel();
+        Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
+        if (Objects.isNull(remoteChannel)) {
+            return;
+        }
+        ChannelId id = channel.id();
+        ChannelId channelId = remoteChannel.attr(Constants.LOCK_CHANNEL_ID_KEY).get();
+        //------这里一定要注意，如果本地通道被写满的同时并且通道被关闭，一定要将设置为不自动读的远程通道重新设置为可读，否则将会出现数据不流通的严重问题！！！
+        //用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
+        if (id.equals(channelId) && !remoteChannel.config().isAutoRead()) {
+            remoteChannel.config().setAutoRead(Boolean.TRUE);
+        }
+    }
+
+    @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
         byteBuf.retain();
         channelHandlerContext.fireChannelRead(byteBuf);
@@ -135,7 +152,10 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         //获取该通道上绑定的远程通道
         Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        Optional.ofNullable(remoteChannel).ifPresent(rch -> rch.config().setAutoRead(channel.isWritable()));
+        Optional.ofNullable(remoteChannel).ifPresent(rch -> {
+            rch.config().setAutoRead(channel.isWritable());
+            rch.attr(Constants.LOCK_CHANNEL_ID_KEY).set(channel.id());
+        });
     }
 
     @Override

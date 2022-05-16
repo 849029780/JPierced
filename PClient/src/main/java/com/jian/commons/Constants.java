@@ -6,13 +6,18 @@ import com.jian.handler.local.LocalHttpsChannelInitializer;
 import com.jian.handler.remote.RemoteChannelInitializer;
 import com.jian.start.Client;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 
@@ -31,9 +36,14 @@ import java.util.concurrent.TimeUnit;
 public class Constants {
 
     /***
-     * 服务端编解码工作线程组
+     * 编解码工作线程组
      */
     public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : KQueue.isAvailable() ? new KQueueEventLoopGroup() : new NioEventLoopGroup();
+
+    /***
+     * 通道类型
+     */
+    public static final Class<? extends SocketChannel> SOCKET_CHANNEL_CLASS = Epoll.isAvailable() ? EpollSocketChannel.class : KQueue.isAvailable() ? KQueueSocketChannel.class : NioSocketChannel.class;
 
     /***
      * 绑定在本地通道上的 当前通道hash
@@ -54,6 +64,11 @@ public class Constants {
      * 通道上绑定的连接信息
      */
     public static final AttributeKey<Client> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
+
+    /***
+     * 将远程通道设置为不自动读的本地通道id，用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
+     */
+    public static final AttributeKey<ChannelId> LOCK_CHANNEL_ID_KEY = AttributeKey.valueOf("LOCK_CHANNEL_ID");
 
     /***
      * 远程通道是否已开启心跳

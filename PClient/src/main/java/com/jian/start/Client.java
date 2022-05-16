@@ -49,7 +49,7 @@ public class Client {
         this.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
-        this.bootstrap.channel(Epoll.isAvailable() ? EpollSocketChannel.class : KQueue.isAvailable() ? KQueueSocketChannel.class : NioSocketChannel.class);
+        this.bootstrap.channel(Constants.SOCKET_CHANNEL_CLASS);
     }
 
     public boolean isCanReconnect() {

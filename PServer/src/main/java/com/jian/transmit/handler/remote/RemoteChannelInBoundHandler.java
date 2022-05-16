@@ -44,7 +44,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Channel localChannel = localChannelMap.get(connectRespPacks.getThisChannelHash());
 
                 if (Objects.isNull(localChannel)) {
-                    log.warn("连接响应本地连接通道已不存在！");
+                    log.warn("连接响应本地连接通道已不存在！已告知被穿透的客户端断开已连接的服务！");
+                    //本地通道不存在时，则需要关闭被穿透机器连接的客户端
+                    DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
+                    disConnectReqPacks.setTarChannelHash(connectRespPacks.getTarChannelHash());
+                    ctx.writeAndFlush(disConnectReqPacks);
                     return;
                 }
 

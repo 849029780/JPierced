@@ -121,11 +121,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = new ConnectRespPacks();
                 long thisChannelHash = byteBuf.readLong();
+                long tarChannelHash = byteBuf.readLong();
                 byte state = byteBuf.readByte();
                 int msgLen = byteBuf.readInt();
 
                 connectRespPacks.setPackSize(packSize);
                 connectRespPacks.setThisChannelHash(thisChannelHash);
+                connectRespPacks.setTarChannelHash(tarChannelHash);
                 connectRespPacks.setState(state);
                 connectRespPacks.setMsgLen(msgLen);
                 if (msgLen > 0) {
@@ -228,7 +230,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         if (cause instanceof SocketException cause1) {
-            log.error("客户端通道发生错误！客户key:{},name:{},", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());
+            log.error("客户端通道发生错误！客户key:{},name:{},{}", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());
             return;
         }
         log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
