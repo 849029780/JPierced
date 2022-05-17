@@ -13,17 +13,17 @@ public class ConnectReqPacks extends BaseTransferPacks {
     /***
      * 当前通道hash
      */
-    private Long thisChannelHash;
+    private long thisChannelHash;
 
     /***
      * 目标通道has
      */
-    private Long tarChannelHash;
+    private long tarChannelHash;
 
     /***
      * 连接的端口
      */
-    private Integer port;
+    private int port;
 
     /***
      * 协议类型
@@ -31,12 +31,12 @@ public class ConnectReqPacks extends BaseTransferPacks {
      * 2--http
      * 3--https
      */
-    private Byte protocol;
+    private byte protocol;
 
     /***
      * 连接的地址长度
      */
-    private Integer hostLen;
+    private int hostLen;
 
     /***
      * 连接的地址

@@ -13,7 +13,7 @@ public class DisConnectReqPacks extends BaseTransferPacks {
     /**
      * 目标通道hash
      */
-    private Long tarChannelHash;
+    private long tarChannelHash;
 
     public DisConnectReqPacks() {
         setType(TYPE.DIS_CONNECT_REQ);

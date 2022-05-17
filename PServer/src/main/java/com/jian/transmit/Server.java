@@ -91,6 +91,7 @@ public class Server {
                         stringBuffer.append("服务端端口：");
                         stringBuffer.append(port);
                         if (future1.isSuccess()) {
+                            netAddress.setListen(true);
                             stringBuffer.append("监听成功，映射的本地地址为:");
                             log.info("客户端key：{}，name:{}，监听端口:{}成功！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             clientInfo.getListenPortMap().put(port, channel1);
@@ -128,7 +129,7 @@ public class Server {
             connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
             connectAuthRespPacks.setKey(clientInfo.getKey());
             String listenInfo = stringBuffer.toString();
-            log.info("客户端key:{},name:{}已连接！{}", clientInfo.getKey(), clientInfo.getName(), listenInfo);
+            log.info("客户端key:{},name:{}，{}", clientInfo.getKey(), clientInfo.getName(), listenInfo);
             connectAuthRespPacks.setMsg(listenInfo);
             clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
         });

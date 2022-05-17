@@ -12,23 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2022/4/2
  */
 @Data
-public class ClientInfo {
-
-    /***
-     * 客户标识
-     */
-    private Long key;
-
-    /***
-     * 密码
-     */
-    private String pwd;
-
-    /***
-     * 客户名
-     */
-    private String name;
-
+public class ClientInfo extends ClientInfoBase {
     /***
      * 客户端连接通道
      */

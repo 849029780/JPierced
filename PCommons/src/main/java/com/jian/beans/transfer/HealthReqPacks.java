@@ -14,7 +14,7 @@ public class HealthReqPacks extends BaseTransferPacks {
     /***
      * 消息Id
      */
-    private Long msgId;
+    private long msgId;
 
     public HealthReqPacks() {
         setType(TYPE.HEALTH_REQ);

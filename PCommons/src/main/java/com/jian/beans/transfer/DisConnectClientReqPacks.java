@@ -13,7 +13,7 @@ public class DisConnectClientReqPacks extends BaseTransferPacks {
     /***
      * 1--是
      */
-    private Byte code;
+    private byte code;
 
 
     public DisConnectClientReqPacks() {

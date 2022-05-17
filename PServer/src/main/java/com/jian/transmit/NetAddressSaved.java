@@ -15,17 +15,11 @@ import java.net.SocketAddress;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-public class NetAddress extends NetAddressBase {
+public class NetAddressSaved extends NetAddressBase {
 
-    /***
-     * 是否监听中
-     */
-    private boolean isListen;
-
-    public NetAddress(String host, Integer port, Protocol protocol) {
-        setHost(host);
-        setPort(port);
-        setProtocol(protocol);
+    public NetAddressSaved(NetAddress netAddress) {
+        setHost(netAddress.getHost());
+        setPort(netAddress.getPort());
+        setProtocol(netAddress.getProtocol());
     }
 }

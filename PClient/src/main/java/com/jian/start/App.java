@@ -44,7 +44,7 @@ public class App {
             Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, Integer.parseInt(portProperty)), (Consumer<ChannelFuture>) future -> {
                 Channel channel = future.channel();
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
-                connectAuthReqPacks.setKey(Long.valueOf(keyProperty));
+                connectAuthReqPacks.setKey(Long.parseLong(keyProperty));
                 connectAuthReqPacks.setPwd(pwdProperty);
                 channel.writeAndFlush(connectAuthReqPacks);
             });

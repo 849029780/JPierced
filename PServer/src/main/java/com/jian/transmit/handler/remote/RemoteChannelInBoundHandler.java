@@ -70,7 +70,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Channel localChannel = localChannelMap.remove(tarChannelHash);
                 //关闭本地连接的通道
                 Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
-                log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
+                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
             case 4 -> {//客户端认证请求
                 ConnectAuthReqPacks connectAuthReqPacks = (ConnectAuthReqPacks) baseTransferPacks;
@@ -157,6 +157,16 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 healthRespPacks.setMsgId(msgId);
                 ctx.writeAndFlush(healthRespPacks);
             }
+            case 11 -> {
+                if (checkIsAuth(channel)) {
+                    return;
+                }
+                ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+                MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
+                int msgLen = messageReqPacks.getMsgLen();
+                String msg = messageReqPacks.getMsg();
+                log.info("接收到客户端key:{}，name:{}的消息，消息长度：{}，内容:{}", clientInfo.getKey(), clientInfo.getName(), msgLen, msg);
+            }
             default -> throw new IllegalStateException("Unexpected value: " + type);
         }
     }
@@ -178,7 +188,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if(evt instanceof IdleStateEvent event){
+        if (evt instanceof IdleStateEvent event) {
             Channel channel = ctx.channel();
             ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
             switch (event.state()) {

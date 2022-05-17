@@ -14,7 +14,7 @@ public class HealthRespPacks extends BaseTransferPacks {
     /***
      * 心跳包id
      */
-    private Long msgId;
+    private long msgId;
 
     public HealthRespPacks() {
         setType(TYPE.HEALTH_RESP);

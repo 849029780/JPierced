@@ -13,12 +13,12 @@ public class ConnectAuthReqPacks extends BaseTransferPacks {
     /***
      * 客户标识
      */
-    private Long key;
+    private long key;
 
     /***
      * 密码字符长度
      */
-    private Integer pwdLen;
+    private int pwdLen;
 
     /***
      * 密码内容

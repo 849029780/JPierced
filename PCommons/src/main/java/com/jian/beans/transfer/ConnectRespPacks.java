@@ -13,24 +13,24 @@ public class ConnectRespPacks extends BaseTransferPacks {
     /***
      * 服务端当前的通道hash
      */
-    private Long thisChannelHash;
+    private long thisChannelHash;
 
     /***
      * 服务端目标的通道hash
      */
-    private Long tarChannelHash;
+    private long tarChannelHash;
 
     /***
      * 连接状态
      * 1--连接成功
      * 2--连接失败
      */
-    private Byte state;
+    private byte state;
 
     /***
      * 消息长度
      */
-    private Integer msgLen;
+    private int msgLen;
 
     /***
      * 消息内容

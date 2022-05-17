@@ -6,6 +6,7 @@ import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.jian.beans.transfer.DisConnectClientReqPacks;
 import com.jian.beans.transfer.DisConnectReqPacks;
+import com.jian.beans.transfer.MessageReqPacks;
 import com.jian.commons.Constants;
 import com.jian.start.Config;
 import com.jian.transmit.ClientInfo;
@@ -207,6 +208,18 @@ public class WebManagerVerticle extends AbstractVerticle {
             Result result = setWebPort(params);
             han.response().end(JsonUtils.toJson(result));
         });
+
+        router.route(HttpMethod.POST, "/api/listenPort").handler(han -> {
+            JsonObject params = getBodyAsJson(han);
+            Result result = listenPort(params);
+            han.response().end(JsonUtils.toJson(result));
+        });
+
+        router.route(HttpMethod.POST, "/api/closePort").handler(han -> {
+            JsonObject params = getBodyAsJson(han);
+            Result result = closePort(params);
+            han.response().end(JsonUtils.toJson(result));
+        });
         return router;
     }
 
@@ -279,29 +292,17 @@ public class WebManagerVerticle extends AbstractVerticle {
         List<ClientInfo> collectClient = values.stream().filter(cli -> {
             boolean isEq = true;
             if (Objects.nonNull(key)) {
-                if (cli.getKey().equals(key)) {
-                    isEq = true;
-                } else {
-                    isEq = false;
-                }
+                isEq = cli.getKey().equals(key);
             }
 
             if (isEq && !StringUtil.isNullOrEmpty(name)) {
-                if (cli.getName().equals(name)) {
-                    isEq = true;
-                } else {
-                    isEq = false;
-                }
+                isEq = cli.getName().equals(name);
             }
 
             if (isEq && Objects.nonNull(serverPort)) {
                 Map<Integer, NetAddress> portMappingAddress = cli.getPortMappingAddress();
                 NetAddress netAddress = portMappingAddress.get(serverPort);
-                if (Objects.nonNull(netAddress)) {
-                    isEq = true;
-                } else {
-                    isEq = false;
-                }
+                isEq = Objects.nonNull(netAddress);
             }
             return isEq;
         }).collect(Collectors.toList());
@@ -428,16 +429,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         if (Objects.isNull(protocolType)) {
             return Result.FAIL("映射端口失败！映射端口协议类型为空！");
         }
-        NetAddress.Protocol protocol = null;
-
-        //协议类型，1--tcp，2--http
-        int ptype = protocolType;
-        switch (ptype) {
-            case 1 -> protocol = NetAddress.Protocol.TCP;
-            case 2 -> protocol = NetAddress.Protocol.HTTP;
-            case 3 -> protocol = NetAddress.Protocol.HTTPS;
-        }
-
+        NetAddress.Protocol protocol = getProtocolByType(protocolType);
         //
         NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
         if (Objects.nonNull(netAddress)) {
@@ -459,7 +451,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
 
     /***
-     * 添加映射
+     * 移除映射
      * @param params {"key":"数字去掉双引号", "oldServerPort":"数字去掉双引号", "newServerPort":"数字去掉双引号", "host":"", "port":"数字去掉双引号", "protocol":"1或2 数字去掉双引号"}
      * @return
      */
@@ -501,48 +493,136 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("修改映射端口失败！客户端映射的地址或端口为空！");
         }
 
-        NetAddress netAddress = clientInfo.getPortMappingAddress().get(newServerPort);
-
-        if (Objects.nonNull(netAddress)) {
-            return Result.FAIL("修改映射端口失败！服务端映射的新端口号已存在！请更换别的端口！");
-        }
-
         if (Objects.isNull(protocolType)) {
             return Result.FAIL("修改映射端口失败！映射端口协议类型为空！");
         }
-        NetAddress.Protocol protocol = null;
+        NetAddress.Protocol protocol = getProtocolByType(protocolType);
 
-        //协议类型，1--tcp，2--http
-        int ptype = protocolType;
-        switch (ptype) {
-            case 1 -> protocol = NetAddress.Protocol.TCP;
-            case 2 -> protocol = NetAddress.Protocol.HTTP;
-            case 3 -> protocol = NetAddress.Protocol.HTTPS;
+        //判断是否在线，在线则需要关闭端口重新监听新端口
+        if (clientInfo.isOnline()) {
+            //监听端口的通道
+            Channel channel = clientInfo.getListenPortMap().get(oldServerPort);
+
+            //关闭本地端口
+            ChannelFuture channelFuture = closeLocalPort(clientInfo, channel, oldServerPort);
+            if (Objects.nonNull(channelFuture)) {
+                channelFuture.addListener(closeFuture -> {
+                    //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
+                    if (closeFuture.isSuccess()) {
+                        clientInfo.getPortMappingAddress().remove(oldServerPort);
+                        clientInfo.getListenPortMap().remove(oldServerPort);
+                        //添加新端口信息
+                        clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol));
+                        //判断当前客户端是否在线，在线的话则需要监听新添加的端口
+                        if (clientInfo.isOnline()) {
+                            Server.listenLocal(Set.of(newServerPort), clientInfo);
+                        }
+                    }
+                });
+            }
+        } else {
+            clientInfo.getPortMappingAddress().remove(oldServerPort);
+            //添加新端口信息
+            clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol));
+        }
+        //重新保存数据
+        Config.saveTransmitData();
+        return Result.SUCCESS("修改映射端口完成！修改后如无法访问，请继续使用原端口！");
+    }
+
+    /***
+     * 关闭端口
+     * @param params {"key":"数字去掉双引号","port":""}
+     * @return
+     */
+    private Result closePort(JsonObject params) {
+        Long key = params.getLong("key");
+        Integer port = params.getInteger("port");
+        if (Objects.isNull(key)) {
+            return Result.FAIL("关闭监听的端口失败！客户端key为空！");
+        }
+        if (Objects.isNull(port)) {
+            return Result.FAIL("关闭监听的端口失败！端口号为空！");
         }
 
-        //监听端口的通道
-        Channel channel = clientInfo.getListenPortMap().get(oldServerPort);
+        ClientInfo clientInfo = Constants.CLIENTS.get(key);
+        if (Objects.isNull(clientInfo)) {
+            return Result.FAIL("当前客户端key不存在！关闭端口失败！");
+        }
+        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
+        if (Objects.isNull(netAddress)) {
+            return Result.FAIL("当前客户端未添加映射该端口！关闭端口失败！");
+        }
+        Channel channel = clientInfo.getListenPortMap().get(port);
+        if (Objects.isNull(channel)) {
+            return Result.FAIL("当前客户端未映射该端口！关闭端口失败！");
+        }
 
-        //关闭本地端口
-        ChannelFuture channelFuture = closeLocalPort(clientInfo, channel, oldServerPort);
+
+        //关闭端口
+        ChannelFuture channelFuture = closeLocalPort(clientInfo, channel, port);
         if (Objects.nonNull(channelFuture)) {
-            NetAddress.Protocol finalProtocol = protocol;
             channelFuture.addListener(closeFuture -> {
                 //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
                 if (closeFuture.isSuccess()) {
-                    clientInfo.getPortMappingAddress().remove(oldServerPort);
-                    //添加新端口信息
-                    clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, finalProtocol));
-                    //判断当前客户端是否在线，在线的话则需要监听新添加的端口
-                    if (clientInfo.isOnline()) {
-                        Server.listenLocal(Collections.singleton(newServerPort), clientInfo);
-                    }
-                    //重新保存数据
-                    Config.saveTransmitData();
+                    clientInfo.getListenPortMap().remove(port);
                 }
             });
         }
-        return Result.SUCCESS("修改映射端口完成！修改后如无法访问，请继续使用原端口！");
+
+        return Result.SUCCESS("当前客户端映射的端口已关闭！");
+    }
+
+    /***
+     * 监听端口
+     * @param params {"key":"数字去掉双引号","port":""}
+     * @return
+     */
+    private Result listenPort(JsonObject params) {
+        Long key = params.getLong("key");
+        Integer port = params.getInteger("port");
+        if (Objects.isNull(key)) {
+            return Result.FAIL("监听端口失败！客户端key为空！");
+        }
+        if (Objects.isNull(port)) {
+            return Result.FAIL("监听端口失败！端口号为空！");
+        }
+
+        ClientInfo clientInfo = Constants.CLIENTS.get(key);
+        if (Objects.isNull(clientInfo)) {
+            return Result.FAIL("当前客户端key不存在！监听端口失败！");
+        }
+        if (!clientInfo.isOnline()) {
+            return Result.FAIL("当前客户端不在线！不允许监听端口！");
+        }
+        NetAddress netAddress = clientInfo.getPortMappingAddress().get(port);
+        if (Objects.isNull(netAddress)) {
+            return Result.FAIL("当前客户端未添加映射该端口！监听端口失败！");
+        }
+        Channel channel = clientInfo.getListenPortMap().get(port);
+        if (Objects.nonNull(channel)) {
+            return Result.FAIL("当前客户端已监听该端口！不可重复监听！");
+        }
+
+        //监听端口
+        Server.listenLocal(Set.of(port), clientInfo);
+
+        return Result.SUCCESS("当前客户端已监听该端口！");
+    }
+
+    /***
+     *
+     * @param protocolType 1--tcp 2--http 3--https
+     * @return
+     */
+    private NetAddress.Protocol getProtocolByType(int protocolType) {
+        NetAddress.Protocol protocol;
+        switch (protocolType) {
+            case 2 -> protocol = NetAddress.Protocol.HTTP;
+            case 3 -> protocol = NetAddress.Protocol.HTTPS;
+            default -> protocol = NetAddress.Protocol.TCP;
+        }
+        return protocol;
     }
 
     /***
@@ -586,7 +666,6 @@ public class WebManagerVerticle extends AbstractVerticle {
      * @param serverPort
      */
     public ChannelFuture closeLocalPort(ClientInfo clientInfo, Channel serverPortChannel, Integer serverPort) {
-        AtomicReference<ChannelFuture> channelFuture = new AtomicReference<>();
         //获取该客户端的远程连接，如果连接为空，则该客户端不在线
         Channel remoteChannel = clientInfo.getRemoteChannel();
         Optional.ofNullable(remoteChannel).ifPresent(remoteCh -> {
@@ -610,10 +689,24 @@ public class WebManagerVerticle extends AbstractVerticle {
             }
         });
         //如果不为空，则将channel关闭
-        Optional.ofNullable(serverPortChannel).ifPresent(ch -> {
-            channelFuture.set(ch.close());
-        });
-        return channelFuture.get();
+        ChannelFuture close = null;
+        if (Objects.nonNull(serverPortChannel)) {
+            close = serverPortChannel.close();
+            close.addListener(future -> {
+                if (future.isSuccess()) {
+                    log.info("管理员操作关闭端口:{}完成！", serverPort);
+                    clientInfo.getPortMappingAddress().get(serverPort).setListen(false);
+                    if (Objects.nonNull(remoteChannel)) {
+                        MessageReqPacks messageReqPacks = new MessageReqPacks();
+                        messageReqPacks.setMsg("服务端已关闭端口:" + serverPort + "的监听！");
+                        remoteChannel.writeAndFlush(messageReqPacks);
+                    }
+                }else{
+                    log.warn("管理员操作关闭端口:{}失败！", serverPort);
+                }
+            });
+        }
+        return close;
     }
 
 

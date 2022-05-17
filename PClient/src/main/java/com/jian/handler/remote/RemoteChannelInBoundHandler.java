@@ -71,7 +71,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                         connectRespPacks.setState(ConnectRespPacks.STATE.FAIL);
                         connectRespPacks.setMsg("连接本地服务失败！请检查地址和端口再试！");
                         String causeMsg = "";
-                        if(Objects.nonNull(channelFuture.cause())){
+                        if (Objects.nonNull(channelFuture.cause())) {
                             causeMsg = channelFuture.cause().getMessage();
                         }
                         log.warn("连接本地服务:{}:{}失败！{}", host, port, causeMsg);
@@ -145,6 +145,12 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     client.setCanReconnect(false);
                 });
                 channel.close();
+            }
+            case 11 -> {
+                MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
+                int msgLen = messageReqPacks.getMsgLen();
+                String msg = messageReqPacks.getMsg();
+                log.info("接收到服务端消息，消息长度：{}，内容:{}", msgLen, msg);
             }
         }
     }

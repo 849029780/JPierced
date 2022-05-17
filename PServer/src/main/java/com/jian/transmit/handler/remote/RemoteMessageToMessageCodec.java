@@ -107,6 +107,19 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(disConnectClientReqPacks.getCode());
                 out.add(buffer);
             }
+            case 11 -> { //发送消息
+                MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
+                packSize += 4;
+                String msg = messageReqPacks.getMsg();
+                byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+                int msgLen = msgBytes.length;
+                packSize += msgLen;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeInt(msgLen);
+                buffer.writeBytes(msgBytes);
+                out.add(buffer);
+            }
         }
 
     }
@@ -169,6 +182,16 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 long msgId = byteBuf.readLong();
                 healthReqPacks.setMsgId(msgId);
                 list.add(healthReqPacks);
+            }
+            case 11 -> { //解消息
+                MessageReqPacks messageReqPacks = new MessageReqPacks();
+                int msgLen = byteBuf.readInt();
+                if(msgLen > 0){
+                    String msg = byteBuf.readSlice(msgLen).toString(StandardCharsets.UTF_8);
+                    messageReqPacks.setMsg(msg);
+                }
+                messageReqPacks.setMsgLen(msgLen);
+                list.add(messageReqPacks);
             }
         }
     }

@@ -13,19 +13,19 @@ public class ConnectAuthRespPacks extends BaseTransferPacks {
     /***
      * 客户标识
      */
-    private Long key;
+    private long key;
 
     /***
      * 状态
      * 1--成功
      * 2--失败
      */
-    private Byte state;
+    private byte state;
 
     /***
      * 消息长度
      */
-    private Integer msgLen;
+    private int msgLen;
 
     /***
      * 消息

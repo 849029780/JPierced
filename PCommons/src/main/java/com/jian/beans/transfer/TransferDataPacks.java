@@ -14,7 +14,7 @@ public class TransferDataPacks extends BaseTransferPacks {
     /***
      * 目标通道hash
      */
-    private Long targetChannelHash;
+    private long targetChannelHash;
 
     /***
      * 数据包
