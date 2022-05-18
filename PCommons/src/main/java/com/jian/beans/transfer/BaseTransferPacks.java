@@ -64,6 +64,29 @@ public class BaseTransferPacks {
          * 发送消息请求
          */
         byte MESSAGE_REQ = 11;
+
+        /***
+         * 活动通道连接请求
+         */
+        byte ACTIVE_CHANNEL_REQ = 12;
+
+        /***
+         * 活动通道连接响应
+         */
+        byte ACTIVE_CHANNEL_RESP = 13;
+    }
+
+
+    public interface STATE{
+        /***
+         * 成功
+         */
+        byte SUCCESS = 1;
+
+        /***
+         * 失败
+         */
+        byte FAIL = 2;
     }
 
 }

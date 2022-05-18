@@ -111,6 +111,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeBytes(msgBytes);
                 out.add(buffer);
             }
+            case 12 -> { //ack连接请求
+                ConnectAckChannelReqPacks connectAckChannelReqPacks = (ConnectAckChannelReqPacks) baseTransferPacks;
+                packSize += 8;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(connectAckChannelReqPacks.getKey());
+                out.add(buffer);
+            }
         }
 
     }
@@ -193,6 +201,17 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 messageReqPacks.setMsgLen(msgLen);
                 list.add(messageReqPacks);
             }
+            case 13 -> { //ack连接响应
+                ConnectAckChannelRespPacks connectAckChannelRespPacks = new ConnectAckChannelRespPacks();
+                byte state = byteBuf.readByte();
+                connectAckChannelRespPacks.setState(state);
+                int msgLen = byteBuf.readInt();
+                if (msgLen > 0) {
+                    String msg = byteBuf.readSlice(msgLen).toString(StandardCharsets.UTF_8);
+                    connectAckChannelRespPacks.setMsg(msg);
+                }
+                list.add(connectAckChannelRespPacks);
+            }
         }
     }
 
@@ -200,6 +219,27 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
         Channel channel = ctx.channel();
+        Boolean isAck = channel.attr(Constants.IS_ACK_CHANNEL_KEY).get();
+
+        //如果不知通道类型，则跳过后续操作
+        if(Objects.isNull(isAck)){
+            return;
+        }
+
+        //如果是ack通道，则需要关闭传输通道
+        if(isAck){
+            if(Objects.nonNull(Constants.REMOTE_TRANSIMIT_CHANNEL)){
+                Constants.REMOTE_TRANSIMIT_CHANNEL.close();
+            }
+            //ack连接置空
+            Constants.REMOTE_ACK_CHANNEL = null;
+            return;
+        }
+
+        //如果关闭的是传输通道，则判断ack通道是否还连接，连接则需关闭
+        if(Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)){
+            Constants.REMOTE_ACK_CHANNEL.close();
+        }
 
         if (Objects.nonNull(Constants.LOCAL_CHANNEL_MAP)) {
             //和服务端的连接断开，关闭本地所有的连接
@@ -209,8 +249,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             //本地连接关闭后置空
             Constants.LOCAL_CHANNEL_MAP = null;
         }
-        //将连接置空
-        Constants.REMOTE_CHANNEL = null;
         Client client = channel.attr(Constants.CLIENT_KEY).get();
         Optional.ofNullable(client).ifPresent(cli -> {
             if (client.isCanReconnect()) {
@@ -220,6 +258,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 System.exit(0);
             }
         });
+        //将连接置空
+        Constants.REMOTE_TRANSIMIT_CHANNEL = null;
     }
 
 

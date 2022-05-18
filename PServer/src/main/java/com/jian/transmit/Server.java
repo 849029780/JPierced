@@ -1,6 +1,7 @@
 package com.jian.transmit;
 
 import com.jian.beans.transfer.ConnectAuthRespPacks;
+import com.jian.beans.transfer.MessageReqPacks;
 import com.jian.commons.Constants;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -125,13 +126,12 @@ public class Server {
             } catch (InterruptedException e) {
                 log.error("客户端信息:{}，监听端口时CountDownLatch错误！", clientInfo, e);
             }
-            ConnectAuthRespPacks connectAuthRespPacks = new ConnectAuthRespPacks();
-            connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
-            connectAuthRespPacks.setKey(clientInfo.getKey());
+
+            MessageReqPacks messageReqPacks = new MessageReqPacks();
             String listenInfo = stringBuffer.toString();
             log.info("客户端key:{},name:{}，{}", clientInfo.getKey(), clientInfo.getName(), listenInfo);
-            connectAuthRespPacks.setMsg(listenInfo);
-            clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
+            messageReqPacks.setMsg(listenInfo);
+            clientInfo.getRemoteChannel().writeAndFlush(messageReqPacks);
         });
     }
 

@@ -11,6 +11,7 @@ import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
@@ -79,11 +80,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
 
                 //构建失败响应
                 ConnectAuthRespPacks connectAuthRespPacks = new ConnectAuthRespPacks();
-                connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.FAIL);
                 connectAuthRespPacks.setKey(key);
 
                 //无权限
                 if (Objects.isNull(clientInfo)) {
+                    connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.FAIL);
                     connectAuthRespPacks.setMsg("当前key无权限连接！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     log.warn("客户端连接key:{},当前key无权限连接！", key);
@@ -93,6 +94,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
 
                 //当前客户端已在线
                 if (clientInfo.isOnline()) {
+                    connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.FAIL);
                     connectAuthRespPacks.setMsg("当前客户端已在线，不允许重复连接！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     log.warn("客户端连接key:{},当前客户端已在线，不允许重复连接！", key);
@@ -102,6 +104,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 String pwd = clientInfo.getPwd();
                 //密码错误
                 if (!pwd.equals(connectAuthReqPacks.getPwd())) {
+                    connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.FAIL);
                     connectAuthRespPacks.setMsg("当前key密码错误！");
                     ctx.writeAndFlush(connectAuthRespPacks).addListener(ChannelFutureListener.CLOSE);
                     log.warn("客户端连接key:{},密码:{}错误", key, pwd);
@@ -114,26 +117,26 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 clientInfo.setRemoteChannel(channel);
                 channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).set(new ConcurrentHashMap<>());
                 channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).set(clientInfo);
+                channel.attr(Constants.IS_ACK_CHANNEL_KEY).set(Boolean.FALSE);
 
-
-                Map<Integer, NetAddress> portMappingAddress = clientInfo.getPortMappingAddress();
-                Set<Integer> ports = portMappingAddress.keySet();
-
-                //开启心跳检测
-                channel.pipeline().addFirst(new IdleStateHandler(0, 0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
-
+                //发送认证响应
                 connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
                 connectAuthRespPacks.setKey(clientInfo.getKey());
-                log.info("客户端key:{},name:{}已连接！", clientInfo.getKey(), clientInfo.getName());
-                if (ports.size() == 0) {
-                    connectAuthRespPacks.setMsg("客户端暂未配置映射端口！");
-                    clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
-                } else {
-                    connectAuthRespPacks.setMsg("客户端配置的服务端映射端口为：" + JsonUtils.toJson(ports));
-                    clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
-                    //异步启动该客户端需要监听的端口
-                    Server.listenLocal(ports, clientInfo);
-                }
+                connectAuthRespPacks.setMsg("客户端已完成认证！");
+                clientInfo.getRemoteChannel().writeAndFlush(connectAuthRespPacks);
+
+                String name = clientInfo.getName();
+                log.info("客户端key:{},name:{}，已完成认证！如果ack连接未在{}秒内完成，则认证连接将被关闭！", key, name, Constants.ACK_AUTH_TIME_OUT);
+
+                //认证完成后，若ack连接未在指定时间内完成，则需要踢出连接
+                ScheduledFuture<?> schedule = ctx.executor().schedule(() -> {
+                    log.info("客户端key:{},name:{}未在:{}秒内完成ack连接，该连接认证已被关闭！", key, name, Constants.ACK_AUTH_TIME_OUT);
+                    channel.close();
+                }, Constants.ACK_AUTH_TIME_OUT, TimeUnit.SECONDS);
+
+                //设置认证超时器
+                channel.attr(Constants.AUTH_SCHEDULED_KEY).set(schedule);
+
             }
             case 7 -> { //传输数据
                 TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
@@ -151,13 +154,13 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 }
                 ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
-                Long msgId = healthReqPacks.getMsgId();
+                long msgId = healthReqPacks.getMsgId();
                 log.info("接收到客户端key:{}，name:{}，的心跳请求，msgId:{}", clientInfo.getKey(), clientInfo.getName(), msgId);
                 HealthRespPacks healthRespPacks = new HealthRespPacks();
                 healthRespPacks.setMsgId(msgId);
                 ctx.writeAndFlush(healthRespPacks);
             }
-            case 11 -> {
+            case 11 -> { //消息
                 if (checkIsAuth(channel)) {
                     return;
                 }
@@ -166,6 +169,69 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 int msgLen = messageReqPacks.getMsgLen();
                 String msg = messageReqPacks.getMsg();
                 log.info("接收到客户端key:{}，name:{}的消息，消息长度：{}，内容:{}", clientInfo.getKey(), clientInfo.getName(), msgLen, msg);
+            }
+            case 12 -> { //ack通道连接
+                ConnectAckChannelReqPacks connectAckChannelReqPacks = (ConnectAckChannelReqPacks) baseTransferPacks;
+                long key = connectAckChannelReqPacks.getKey();
+                if (key != 0) {
+                    ClientInfo clientInfo = Constants.CLIENTS.get(key);
+                    ConnectAckChannelRespPacks connectAckChannelRespPacks = new ConnectAckChannelRespPacks();
+                    Channel remoteChannel;
+                    //如果为空或不在线，则活动通道连接失败
+                    if (Objects.isNull(clientInfo) || Objects.isNull(remoteChannel = clientInfo.getRemoteChannel()) || !clientInfo.isOnline()) {
+                        connectAckChannelRespPacks.setState(BaseTransferPacks.STATE.FAIL);
+                        connectAckChannelRespPacks.setMsg("该客户端不在线！或该客户端不存在！ack通道连接失败！");
+                        //发送完成后关闭通道
+                        ctx.writeAndFlush(connectAckChannelRespPacks).addListener(ChannelFutureListener.CLOSE);
+                        return;
+                    }
+
+                    //认证超时器
+                    ScheduledFuture<?> scheduledFuture = remoteChannel.attr(Constants.AUTH_SCHEDULED_KEY).get();
+                    if (Objects.nonNull(scheduledFuture)) {
+                        if (scheduledFuture.isDone()) {
+                            connectAckChannelRespPacks.setState(BaseTransferPacks.STATE.FAIL);
+                            connectAckChannelRespPacks.setMsg("该客户端ack连接超时！已被关闭连接");
+                            //发送完成后关闭通道
+                            ctx.writeAndFlush(connectAckChannelRespPacks).addListener(ChannelFutureListener.CLOSE);
+                            return;
+                        }
+                        //取消该认证定时器
+                        scheduledFuture.cancel(true);
+                    }
+
+
+                    //---------------------传输通道后续设置------------------
+                    Map<Integer, NetAddress> portMappingAddress = clientInfo.getPortMappingAddress();
+                    Set<Integer> ports = portMappingAddress.keySet();
+
+                    log.info("客户端key:{},name:{}，ack已连接，已开启心跳检测！", clientInfo.getKey(), clientInfo.getName());
+                    //开启心跳检测
+                    remoteChannel.pipeline().addFirst(new IdleStateHandler(0, 0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
+
+                    MessageReqPacks messageReqPacks = new MessageReqPacks();
+                    if (ports.size() == 0) {
+                        messageReqPacks.setMsg("客户端暂未配置映射端口！");
+                        clientInfo.getRemoteChannel().writeAndFlush(messageReqPacks);
+                    } else {
+                        messageReqPacks.setMsg("客户端配置的服务端映射端口为：" + JsonUtils.toJson(ports));
+                        clientInfo.getRemoteChannel().writeAndFlush(messageReqPacks);
+                        //异步启动该客户端需要监听的端口
+                        Server.listenLocal(ports, clientInfo);
+                    }
+                    //---------------------传输通道后续设置------------------
+
+
+                    //设置通道属性为ack
+                    channel.attr(Constants.IS_ACK_CHANNEL_KEY).set(Boolean.TRUE);
+                    //绑定ack通道在传输通道上
+                    remoteChannel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(channel);
+                    //绑定远程传输通道到ack通道上
+                    channel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).set(remoteChannel);
+                    connectAckChannelRespPacks.setState(BaseTransferPacks.STATE.SUCCESS);
+                    connectAckChannelRespPacks.setMsg("ack绑定在客户端通道上成功！");
+                    ctx.writeAndFlush(connectAckChannelRespPacks);
+                }
             }
             default -> throw new IllegalStateException("Unexpected value: " + type);
         }

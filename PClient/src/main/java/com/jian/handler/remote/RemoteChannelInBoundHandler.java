@@ -13,10 +13,12 @@ import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /***
  *
@@ -76,7 +78,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                         }
                         log.warn("连接本地服务:{}:{}失败！{}", host, port, causeMsg);
                     }
-                    Constants.REMOTE_CHANNEL.writeAndFlush(connectRespPacks);
+                    Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(connectRespPacks);
                 });
             }
             case 3 -> {//断开连接
@@ -90,33 +92,27 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             }
             case 5 -> { //认证响应
                 ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
-                Byte state = connectAuthRespPacks.getState();
+                byte state = connectAuthRespPacks.getState();
                 String msg = connectAuthRespPacks.getMsg();
                 if (state == ConnectRespPacks.STATE.SUCCESS) {
-                    //是否已开启心跳
-                    Boolean isOpenHealth = channel.attr(Constants.HEALTH_IS_OPEN_KEY).get();
-                    if (Objects.isNull(isOpenHealth)) {
-                        log.info("客户端已连接，{}心跳已开启..", msg);
-                        channel.pipeline().addFirst(new IdleStateHandler(0, Constants.HEART_DELAY, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
-                        channel.attr(Constants.HEALTH_IS_OPEN_KEY).set(Boolean.TRUE);
-                    } else {
-                        log.info("{}", msg);
-                    }
-
                     //连接成功后保存通道，并重置该连接的重试次数为0，只要连接上后都断连都将重试
-                    if (Objects.isNull(Constants.REMOTE_CHANNEL)) {
-                        Constants.REMOTE_CHANNEL = channel;
+                    if (Objects.isNull(Constants.REMOTE_TRANSIMIT_CHANNEL)) {
+                        Constants.REMOTE_TRANSIMIT_CHANNEL = channel;
                     }
-                    Client client = channel.attr(Constants.CLIENT_KEY).get();
-                    //连接成功后才会将重试次数置空
-                    Optional.ofNullable(client).ifPresent(cli -> {
-                        //可进行重连
-                        client.setCanReconnect(true);
-                        //重连次数置空
-                        //client.getRecount().set(0);
+                    log.info("连接服务已认证，发起ack连接..");
+                    //ack连接
+                    //服务端地址
+                    InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+                    Client.getRemoteInstance().connect(remoteAddress, (Consumer<ChannelFuture>) future -> {
+                        Channel ackChannel = future.channel();
+                        ackChannel.attr(Constants.IS_ACK_CHANNEL_KEY).set(Boolean.TRUE);
+                        String keyStr = Constants.CONFIG.getProperty(Constants.KEY_PROPERTY_NAME);
+                        ConnectAckChannelReqPacks connectAckChannelReqPacks = new ConnectAckChannelReqPacks();
+                        connectAckChannelReqPacks.setKey(Long.parseLong(keyStr));
+                        ackChannel.writeAndFlush(connectAckChannelReqPacks);
                     });
                 } else {
-                    log.warn("连接服务失败！{}", msg);
+                    log.warn("连接服务认证失败！{}", msg);
                     channel.close();
                 }
             }
@@ -151,6 +147,44 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 int msgLen = messageReqPacks.getMsgLen();
                 String msg = messageReqPacks.getMsg();
                 log.info("接收到服务端消息，消息长度：{}，内容:{}", msgLen, msg);
+            }
+            case 13 -> { //ack连接响应
+                ConnectAckChannelRespPacks connectAckChannelRespPacks = (ConnectAckChannelRespPacks) baseTransferPacks;
+                byte state = connectAckChannelRespPacks.getState();
+                String msg = connectAckChannelRespPacks.getMsg();
+                if (state == BaseTransferPacks.STATE.FAIL) {
+                    log.info("ack连接失败！{}", msg);
+                    channel.close();
+                    //关闭传输通道，重新发起连接
+                    Constants.REMOTE_TRANSIMIT_CHANNEL.close();
+                    return;
+                }
+                //连接成功
+                Constants.REMOTE_ACK_CHANNEL = channel;
+
+
+                //传输通道相关设置
+                Channel transimitChannel = Constants.REMOTE_TRANSIMIT_CHANNEL;
+                //是否已开启心跳
+                Boolean isOpenHealth = transimitChannel.attr(Constants.HEALTH_IS_OPEN_KEY).get();
+                if (Objects.isNull(isOpenHealth)) {
+                    log.info("ack连接完成！{}心跳已开启..", msg);
+                    transimitChannel.pipeline().addFirst(new IdleStateHandler(0, Constants.HEART_DELAY, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
+                    transimitChannel.attr(Constants.HEALTH_IS_OPEN_KEY).set(Boolean.TRUE);
+                } else {
+                    log.info("ack连接完成！{}", msg);
+                }
+
+
+                Client client = transimitChannel.attr(Constants.CLIENT_KEY).get();
+                //连接成功后才允许断开重连
+                Optional.ofNullable(client).ifPresent(cli -> {
+                    //可进行重连
+                    client.setCanReconnect(true);
+                    //重连次数置空
+                    //client.getRecount().set(0);
+                });
+
             }
         }
     }

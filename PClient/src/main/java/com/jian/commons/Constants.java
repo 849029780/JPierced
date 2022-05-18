@@ -76,9 +76,19 @@ public class Constants {
     public static final AttributeKey<Boolean> HEALTH_IS_OPEN_KEY = AttributeKey.valueOf("HEALTH_IS_OPEN");
 
     /***
-     * 服务通道
+     * 是否为ack通道
      */
-    public static Channel REMOTE_CHANNEL;
+    public static final AttributeKey<Boolean> IS_ACK_CHANNEL_KEY = AttributeKey.valueOf("IS_ACK_CHANNEL");
+
+    /***
+     * 和远程的数据传输通道
+     */
+    public static Channel REMOTE_TRANSIMIT_CHANNEL;
+
+    /***
+     * 和远程的ack通道
+     */
+    public static Channel REMOTE_ACK_CHANNEL;
 
     /***
      * 基础包头大小

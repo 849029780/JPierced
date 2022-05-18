@@ -7,6 +7,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketException;
@@ -111,13 +112,39 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
                 packSize += 4;
                 String msg = messageReqPacks.getMsg();
-                byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-                int msgLen = msgBytes.length;
-                packSize += msgLen;
+                byte[] msgBytes = null;
+                int msgLen = 0;
+                if (!StringUtil.isNullOrEmpty(msg)) {
+                    msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+                    msgLen = msgBytes.length;
+                    packSize += msgLen;
+                }
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeInt(msgLen);
-                buffer.writeBytes(msgBytes);
+                if (Objects.nonNull(msgBytes)) {
+                    buffer.writeBytes(msgBytes);
+                }
+                out.add(buffer);
+            }
+            case 13 -> { //ack通道连接响应
+                ConnectAckChannelRespPacks connectAckChannelRespPacks = (ConnectAckChannelRespPacks) baseTransferPacks;
+                packSize += 1 + 4;
+                String msg = connectAckChannelRespPacks.getMsg();
+                byte[] msgBytes = null;
+                int msgLen = 0;
+                if (!StringUtil.isNullOrEmpty(msg)) {
+                    msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+                    msgLen = msgBytes.length;
+                    packSize += msgLen;
+                }
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeByte(connectAckChannelRespPacks.getState());
+                buffer.writeInt(msgLen);
+                if (Objects.nonNull(msgBytes)) {
+                    buffer.writeBytes(msgBytes);
+                }
                 out.add(buffer);
             }
         }
@@ -186,12 +213,18 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             case 11 -> { //解消息
                 MessageReqPacks messageReqPacks = new MessageReqPacks();
                 int msgLen = byteBuf.readInt();
-                if(msgLen > 0){
+                if (msgLen > 0) {
                     String msg = byteBuf.readSlice(msgLen).toString(StandardCharsets.UTF_8);
                     messageReqPacks.setMsg(msg);
                 }
                 messageReqPacks.setMsgLen(msgLen);
                 list.add(messageReqPacks);
+            }
+            case 12 -> { //活动通道连接
+                ConnectAckChannelReqPacks connectAckChannelReqPacks = new ConnectAckChannelReqPacks();
+                long key = byteBuf.readLong();
+                connectAckChannelReqPacks.setKey(key);
+                list.add(connectAckChannelReqPacks);
             }
         }
     }
@@ -202,7 +235,31 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
 
-        //本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
+        //如果是不知名通道，则直接不允许后面的操作
+        Boolean isAck = channel.attr(Constants.IS_ACK_CHANNEL_KEY).get();
+        if (Objects.isNull(isAck)) {
+            return;
+        }
+
+        //如果关闭的是ack通道，则需要同时关闭传输通道
+        if (isAck) {
+            Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).get();
+            if (Objects.nonNull(remoteChannel)) {
+                channel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).set(null);
+                remoteChannel.close();
+            }
+            return;
+        }
+
+        //如果远程通道上有ack通道，则需要关闭ack通道
+        Channel ackChannel = channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).get();
+        if (Objects.nonNull(ackChannel)) {
+            ackChannel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).set(null);
+            channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(null);
+            ackChannel.close();
+        }
+
+        //如果是关闭的传输通道，则本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         Optional.ofNullable(localChannelMap).ifPresent(map -> {
             if (map.size() > 0) {
@@ -250,10 +307,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        if (cause instanceof SocketException cause1) {
-            log.error("客户端通道发生错误！客户key:{},name:{},{}", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());
+        if (Objects.nonNull(clientInfo)) {
+            if (cause instanceof SocketException cause1) {
+                log.error("客户端通道发生错误！客户key:{},name:{},{}", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());
+                return;
+            }
+            log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
             return;
         }
-        log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
+        log.error("客户端通道发生错误！", cause);
     }
 }

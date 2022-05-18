@@ -20,6 +20,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.vertx.core.Vertx;
 
 import java.util.Map;
@@ -63,6 +64,15 @@ public class Constants {
      * 绑定在本地通道上的 传输数据通道hash
      */
     public static final AttributeKey<Channel> REMOTE_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_CHANNEL");
+    /***
+     * 绑定在数据传输通道上的ack通道属性
+     */
+    public static final AttributeKey<Channel> REMOTE_ACK_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_ACK_CHANNEL");
+
+    /***
+     * 绑定在ack通道上的远程传输通道
+     */
+    public static final AttributeKey<Channel> REMOTE_CHANNEL_IN_ACK_KEY = AttributeKey.valueOf("REMOTE_CHANNEL_IN_ACK");
 
     /***
      * 将远程通道设置为不自动读的本地通道id，用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
@@ -78,6 +88,22 @@ public class Constants {
      * 绑定在远程通道上的 当前客户端连接信息
      */
     public static final AttributeKey<ClientInfo> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
+
+    /***
+     * 是否为ack通道
+     */
+    public static final AttributeKey<Boolean> IS_ACK_CHANNEL_KEY = AttributeKey.valueOf("IS_ACK_CHANNEL");
+
+    /***
+     * 认证超时器属性
+     */
+    public static final AttributeKey<ScheduledFuture<?>> AUTH_SCHEDULED_KEY = AttributeKey.valueOf("AUTH_SCHEDULED");
+
+
+    /***
+     * 认证后未在该时间内进行ack连接，则踢出该认证及连接
+     */
+    public static final int ACK_AUTH_TIME_OUT = 5;
 
     /***
      * 基础包头大小

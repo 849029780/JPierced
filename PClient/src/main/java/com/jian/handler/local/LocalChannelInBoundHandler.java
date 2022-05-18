@@ -32,7 +32,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         transferDataPacks.setTargetChannelHash(tarChannelHash);
         transferDataPacks.setDatas(byteBuf);
         try {
-            Constants.REMOTE_CHANNEL.writeAndFlush(transferDataPacks);
+            Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(transferDataPacks);
         } catch (NullPointerException e) {
             ReferenceCountUtil.release(byteBuf);
         }
@@ -46,7 +46,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
         DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
         disConnectReqPacks.setTarChannelHash(tarChannelHash);
-        Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> ch.writeAndFlush(disConnectReqPacks));
+        Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> ch.writeAndFlush(disConnectReqPacks));
         log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
     }
 
@@ -56,11 +56,11 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         Channel channel = ctx.channel();
         //------这里一定要注意，如果本地通道被写满的同时并且通道被关闭，一定要将设置为不自动读的远程通道重新设置为可读，否则将会出现数据不流通的严重问题！！！
         //
-        if (Objects.nonNull(Constants.REMOTE_CHANNEL)) {
+        if (Objects.nonNull(Constants.REMOTE_TRANSIMIT_CHANNEL)) {
             ChannelId id = channel.id();
-            ChannelId channelId = Constants.REMOTE_CHANNEL.attr(Constants.LOCK_CHANNEL_ID_KEY).get();
-            if (id.equals(channelId) && !Constants.REMOTE_CHANNEL.config().isAutoRead()) {
-                Constants.REMOTE_CHANNEL.config().setAutoRead(Boolean.TRUE);
+            ChannelId channelId = Constants.REMOTE_TRANSIMIT_CHANNEL.attr(Constants.LOCK_CHANNEL_ID_KEY).get();
+            if (id.equals(channelId) && !Constants.REMOTE_TRANSIMIT_CHANNEL.config().isAutoRead()) {
+                Constants.REMOTE_TRANSIMIT_CHANNEL.config().setAutoRead(Boolean.TRUE);
             }
         }
     }
@@ -70,7 +70,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        Optional.ofNullable(Constants.REMOTE_CHANNEL).ifPresent(ch -> {
+        Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> {
             ch.config().setAutoRead(channel.isWritable());
             ch.attr(Constants.LOCK_CHANNEL_ID_KEY).set(channel.id());
         });

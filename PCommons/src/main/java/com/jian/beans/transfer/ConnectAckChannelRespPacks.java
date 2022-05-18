@@ -2,18 +2,8 @@ package com.jian.beans.transfer;
 
 import lombok.Data;
 
-/***
- *
- * @author Jian
- * @date 2022/4/2
- */
 @Data
-public class ConnectAuthRespPacks extends BaseTransferPacks {
-
-    /***
-     * 客户标识
-     */
-    private long key;
+public class ConnectAckChannelRespPacks extends BaseTransferPacks {
 
     /***
      * 状态
@@ -28,12 +18,11 @@ public class ConnectAuthRespPacks extends BaseTransferPacks {
     private int msgLen;
 
     /***
-     * 消息
+     * 消息内容
      */
     private String msg;
 
-
-    public ConnectAuthRespPacks() {
-        setType(TYPE.CONNECT_AUTH_RESP);
+    public ConnectAckChannelRespPacks() {
+        setType(TYPE.ACTIVE_CHANNEL_RESP);
     }
 }
