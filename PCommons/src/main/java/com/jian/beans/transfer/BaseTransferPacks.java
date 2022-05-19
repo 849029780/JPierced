@@ -10,8 +10,14 @@ import lombok.Data;
 @Data
 public class BaseTransferPacks {
 
+    /***
+     * 数据包大小
+     */
     private int packSize;
 
+    /***
+     * 数据包类型
+     */
     private byte type;
 
     public interface TYPE {
