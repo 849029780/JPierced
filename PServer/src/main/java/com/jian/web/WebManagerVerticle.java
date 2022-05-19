@@ -706,10 +706,11 @@ public class WebManagerVerticle extends AbstractVerticle {
                 if (future.isSuccess()) {
                     log.info("管理员操作关闭端口:{}完成！", serverPort);
                     clientInfo.getPortMappingAddress().get(serverPort).setListen(false);
-                    if (Objects.nonNull(remoteChannel)) {
+                    Channel ackChannel = clientInfo.getAckChannel();
+                    if (Objects.nonNull(ackChannel)) {
                         MessageReqPacks messageReqPacks = new MessageReqPacks();
                         messageReqPacks.setMsg("服务端已关闭端口:" + serverPort + "的监听！");
-                        remoteChannel.writeAndFlush(messageReqPacks);
+                        ackChannel.writeAndFlush(messageReqPacks);
                     }
                 } else {
                     log.warn("管理员操作关闭端口:{}失败！", serverPort);

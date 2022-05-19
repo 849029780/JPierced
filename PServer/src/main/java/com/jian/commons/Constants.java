@@ -7,7 +7,8 @@ import com.jian.transmit.handler.local.LocalChannelInBoundHandler;
 import com.jian.transmit.handler.local.LocalChannelInitializer;
 import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
-import com.jian.transmit.handler.remote.RemoteChannelInitializer;
+import com.jian.transmit.handler.remote.ack.AckChannelInitializer;
+import com.jian.transmit.handler.remote.transfer.RemoteChannelInitializer;
 import io.netty.channel.*;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -67,17 +68,17 @@ public class Constants {
     /***
      * 绑定在数据传输通道上的ack通道属性
      */
-    public static final AttributeKey<Channel> REMOTE_ACK_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_ACK_CHANNEL");
+    //public static final AttributeKey<Channel> REMOTE_ACK_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_ACK_CHANNEL");
 
     /***
      * 绑定在ack通道上的远程传输通道
      */
-    public static final AttributeKey<Channel> REMOTE_CHANNEL_IN_ACK_KEY = AttributeKey.valueOf("REMOTE_CHANNEL_IN_ACK");
+    //public static final AttributeKey<Channel> REMOTE_CHANNEL_IN_ACK_KEY = AttributeKey.valueOf("REMOTE_CHANNEL_IN_ACK");
 
     /***
      * 将远程通道设置为不自动读的本地通道id，用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
      */
-    public static final AttributeKey<ChannelId> LOCK_CHANNEL_ID_KEY = AttributeKey.valueOf("LOCK_CHANNEL_ID");
+    //public static final AttributeKey<ChannelId> LOCK_CHANNEL_ID_KEY = AttributeKey.valueOf("LOCK_CHANNEL_ID");
 
     /***
      * 绑定在远程通道上的 本地连接信息 map key为本地连接通道的hash，val为通道
@@ -88,11 +89,6 @@ public class Constants {
      * 绑定在远程通道上的 当前客户端连接信息
      */
     public static final AttributeKey<ClientInfo> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
-
-    /***
-     * 是否为ack通道
-     */
-    public static final AttributeKey<Boolean> IS_ACK_CHANNEL_KEY = AttributeKey.valueOf("IS_ACK_CHANNEL");
 
     /***
      * 认证超时器属性
@@ -143,18 +139,28 @@ public class Constants {
     /***
      * 本地通道初始化handler
      */
-    public static final ChannelInitializer LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
+    public static final ChannelInitializer<Channel> LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
 
     /***
      * 本地https通道初始化handler
      */
-    public static final ChannelInitializer LOCAL_HTTPS_CHANNEL_INITIALIZER = new LocalHttpsChannelInitializer();
+    public static final ChannelInitializer<Channel> LOCAL_HTTPS_CHANNEL_INITIALIZER = new LocalHttpsChannelInitializer();
 
 
     /***
      * 远程通道初始化Handler
      */
-    public static final ChannelInitializer REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+    public static final ChannelInitializer<Channel> REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+
+    /***
+     * ack端口
+     */
+    public static int ACK_PORT;
+
+    /***
+     * 远程通道ack初始化handler
+     */
+    public static final ChannelInitializer<Channel> REMOTE_ACK_CHANNEL_INITIALIZER = new AckChannelInitializer();
 
     /***
      *

@@ -15,6 +15,6 @@ public class ConnectAckChannelReqPacks extends BaseTransferPacks {
 
 
     public ConnectAckChannelReqPacks() {
-        setType(TYPE.ACTIVE_CHANNEL_REQ);
+        setType(TYPE.ACK_CHANNEL_CONNECT_REQ);
     }
 }

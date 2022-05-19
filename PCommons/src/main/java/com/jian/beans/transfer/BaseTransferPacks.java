@@ -71,20 +71,24 @@ public class BaseTransferPacks {
          */
         byte MESSAGE_REQ = 11;
 
+
+
+
+
         /***
          * 活动通道连接请求
          */
-        byte ACTIVE_CHANNEL_REQ = 12;
+        byte ACK_CHANNEL_CONNECT_REQ = 12;
 
         /***
          * 活动通道连接响应
          */
-        byte ACTIVE_CHANNEL_RESP = 13;
+        byte ACK_CHANNEL_CONNECT_RESP = 13;
 
         /***
          * 自动读消息请求
          */
-        byte AUTO_READ_REQ = 14;
+        byte ACK_AUTO_READ_REQ = 14;
 
     }
 

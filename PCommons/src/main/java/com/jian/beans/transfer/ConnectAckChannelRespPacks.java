@@ -23,6 +23,6 @@ public class ConnectAckChannelRespPacks extends BaseTransferPacks {
     private String msg;
 
     public ConnectAckChannelRespPacks() {
-        setType(TYPE.ACTIVE_CHANNEL_RESP);
+        setType(TYPE.ACK_CHANNEL_CONNECT_RESP);
     }
 }

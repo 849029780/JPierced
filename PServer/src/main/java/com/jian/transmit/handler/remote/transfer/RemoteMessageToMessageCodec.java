@@ -1,4 +1,4 @@
-package com.jian.transmit.handler.remote;
+package com.jian.transmit.handler.remote.transfer;
 
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
@@ -33,24 +33,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         byte type = baseTransferPacks.getType();
         ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
-            case 1 -> { //服务发起连接请求
-                ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
-                packSize += 8 + 8 + 4 + 1 + 4;
-                byte[] hostBytes = connectReqPacks.getHost().getBytes(StandardCharsets.UTF_8);
-                int hostLen = hostBytes.length;
-                packSize += hostLen;
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeLong(connectReqPacks.getThisChannelHash());
-                buffer.writeLong(connectReqPacks.getTarChannelHash());
-                buffer.writeInt(connectReqPacks.getPort());
-                buffer.writeByte(connectReqPacks.getProtocol());
-                buffer.writeInt(hostLen);
-                if (hostLen > 0) {
-                    buffer.writeBytes(hostBytes);
-                }
-                out.add(buffer);
-            }
             case 3 -> { //服务发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 packSize += 8;
@@ -61,7 +43,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             }
             case 5 -> { //认证结果响应
                 ConnectAuthRespPacks connectAuthRespPacks = (ConnectAuthRespPacks) baseTransferPacks;
-                packSize += 8 + 1 + 4;
+                packSize += 8 + 1 + 4 + 4;
                 String msg = connectAuthRespPacks.getMsg();
                 byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
                 int msgLen = msgBytes.length;
@@ -72,6 +54,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(type);
                 buffer.writeLong(connectAuthRespPacks.getKey());
                 buffer.writeByte(connectAuthRespPacks.getState());
+                buffer.writeInt(connectAuthRespPacks.getAckPort());
                 buffer.writeInt(msgLen);
                 if (msgLen > 0) {
                     buffer.writeBytes(msgBytes);
@@ -109,54 +92,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(disConnectClientReqPacks.getCode());
                 out.add(buffer);
             }
-            case 11 -> { //发送消息
-                MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
-                packSize += 4;
-                String msg = messageReqPacks.getMsg();
-                byte[] msgBytes = null;
-                int msgLen = 0;
-                if (!StringUtil.isNullOrEmpty(msg)) {
-                    msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-                    msgLen = msgBytes.length;
-                    packSize += msgLen;
-                }
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeInt(msgLen);
-                if (Objects.nonNull(msgBytes)) {
-                    buffer.writeBytes(msgBytes);
-                }
-                out.add(buffer);
-            }
-            case 13 -> { //ack通道连接响应
-                ConnectAckChannelRespPacks connectAckChannelRespPacks = (ConnectAckChannelRespPacks) baseTransferPacks;
-                packSize += 1 + 4;
-                String msg = connectAckChannelRespPacks.getMsg();
-                byte[] msgBytes = null;
-                int msgLen = 0;
-                if (!StringUtil.isNullOrEmpty(msg)) {
-                    msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-                    msgLen = msgBytes.length;
-                    packSize += msgLen;
-                }
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeByte(connectAckChannelRespPacks.getState());
-                buffer.writeInt(msgLen);
-                if (Objects.nonNull(msgBytes)) {
-                    buffer.writeBytes(msgBytes);
-                }
-                out.add(buffer);
-            }
-            case 14 -> { //ack通道-设置自动读
-                AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
-                packSize += 1 + 8;
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeLong(autoreadReqPacks.getTarChannelHash());
-                buffer.writeBoolean(autoreadReqPacks.isAutoRead());
-                out.add(buffer);
-            }
         }
 
     }
@@ -166,25 +101,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
         switch (type) {
-            case 2 -> {//连接响应
-                ConnectRespPacks connectRespPacks = new ConnectRespPacks();
-                long thisChannelHash = byteBuf.readLong();
-                long tarChannelHash = byteBuf.readLong();
-                byte state = byteBuf.readByte();
-                int msgLen = byteBuf.readInt();
-
-                connectRespPacks.setPackSize(packSize);
-                connectRespPacks.setThisChannelHash(thisChannelHash);
-                connectRespPacks.setTarChannelHash(tarChannelHash);
-                connectRespPacks.setState(state);
-                connectRespPacks.setMsgLen(msgLen);
-                if (msgLen > 0) {
-                    ByteBuf msgBuf = byteBuf.readSlice(msgLen);
-                    String msg = msgBuf.toString(StandardCharsets.UTF_8);
-                    connectRespPacks.setMsg(msg);
-                }
-                list.add(connectRespPacks);
-            }
             case 3 -> {//客户发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
                 long tarChannelHash = byteBuf.readLong();
@@ -220,30 +136,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 healthReqPacks.setMsgId(msgId);
                 list.add(healthReqPacks);
             }
-            case 11 -> { //解消息
-                MessageReqPacks messageReqPacks = new MessageReqPacks();
-                int msgLen = byteBuf.readInt();
-                if (msgLen > 0) {
-                    String msg = byteBuf.readSlice(msgLen).toString(StandardCharsets.UTF_8);
-                    messageReqPacks.setMsg(msg);
-                }
-                messageReqPacks.setMsgLen(msgLen);
-                list.add(messageReqPacks);
-            }
-            case 12 -> { //活动通道连接
-                ConnectAckChannelReqPacks connectAckChannelReqPacks = new ConnectAckChannelReqPacks();
-                long key = byteBuf.readLong();
-                connectAckChannelReqPacks.setKey(key);
-                list.add(connectAckChannelReqPacks);
-            }
-            case 14 -> { //ack通道-设置自动读
-                AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
-                long tarChannelHash = byteBuf.readLong();
-                boolean isAutoRead = byteBuf.readBoolean();
-                autoreadReqPacks.setTarChannelHash(tarChannelHash);
-                autoreadReqPacks.setAutoRead(isAutoRead);
-                list.add(autoreadReqPacks);
-            }
         }
     }
 
@@ -252,30 +144,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
-
-        //如果是不知名通道，则直接不允许后面的操作
-        Boolean isAck = channel.attr(Constants.IS_ACK_CHANNEL_KEY).get();
-        if (Objects.isNull(isAck)) {
-            return;
-        }
-
-        //如果关闭的是ack通道，则需要同时关闭传输通道
-        if (isAck) {
-            Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).get();
-            if (Objects.nonNull(remoteChannel)) {
-                channel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).set(null);
-                remoteChannel.close();
-            }
-            return;
-        }
-
-        //如果远程通道上有ack通道，则需要关闭ack通道
-        Channel ackChannel = channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).get();
-        if (Objects.nonNull(ackChannel)) {
-            ackChannel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).set(null);
-            channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(null);
-            ackChannel.close();
-        }
 
         //如果是关闭的传输通道，则本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
@@ -295,6 +163,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Optional.ofNullable(clientInfo).ifPresent(cli -> {
             cli.setOnline(false);
             cli.setRemoteChannel(null);
+
+            //如果远程通道上有ack通道，则需要关闭ack通道
+            Channel ackChannel = clientInfo.getAckChannel();
+            if (Objects.nonNull(ackChannel)) {
+                ackChannel.close();
+            }
+
             //获取该客户端监听的所有端口，并将这些端口全部取消监听
             Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
             log.warn("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());

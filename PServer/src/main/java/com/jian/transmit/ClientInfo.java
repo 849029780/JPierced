@@ -20,6 +20,12 @@ public class ClientInfo extends ClientInfoBase {
     private Channel remoteChannel;
 
     /***
+     * ack通道
+     */
+    @JsonIgnore
+    private Channel ackChannel;
+
+    /***
      * 是否在线 默认false
      */
     private boolean isOnline = false;

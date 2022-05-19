@@ -10,7 +10,7 @@ import io.netty.channel.ChannelPipeline;
  * @author Jian
  * @date 2022/4/2
  */
-public class LocalHttpsChannelInitializer extends ChannelInitializer {
+public class LocalHttpsChannelInitializer extends ChannelInitializer<Channel> {
     @Override
     protected void initChannel(Channel channel) {
         ChannelPipeline pipeline = channel.pipeline();

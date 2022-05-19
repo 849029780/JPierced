@@ -65,6 +65,11 @@ public class Client {
         return client;
     }
 
+    public <T> Client option(ChannelOption<T> option, T value) {
+        bootstrap.option(option, value);
+        return this;
+    }
+
     public static Client getLocalInstance() {
         return getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
     }
@@ -76,6 +81,10 @@ public class Client {
 
     public static Client getRemoteInstance() {
         return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
+    }
+
+    public static Client getRemoteAckInstance() {
+        return getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
     }
 
     public ChannelFuture connect(InetSocketAddress socketAddress) {

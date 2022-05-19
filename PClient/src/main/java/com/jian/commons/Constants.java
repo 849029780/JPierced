@@ -3,7 +3,8 @@ package com.jian.commons;
 import com.jian.handler.local.LocalChannelInBoundHandler;
 import com.jian.handler.local.LocalChannelInitializer;
 import com.jian.handler.local.LocalHttpsChannelInitializer;
-import com.jian.handler.remote.RemoteChannelInitializer;
+import com.jian.handler.remote.ack.AckChannelInitializer;
+import com.jian.handler.remote.transfer.RemoteChannelInitializer;
 import com.jian.start.Client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
@@ -76,11 +77,6 @@ public class Constants {
     public static final AttributeKey<Boolean> HEALTH_IS_OPEN_KEY = AttributeKey.valueOf("HEALTH_IS_OPEN");
 
     /***
-     * 是否为ack通道
-     */
-    public static final AttributeKey<Boolean> IS_ACK_CHANNEL_KEY = AttributeKey.valueOf("IS_ACK_CHANNEL");
-
-    /***
      * 和远程的数据传输通道
      */
     public static Channel REMOTE_TRANSIMIT_CHANNEL;
@@ -98,12 +94,12 @@ public class Constants {
     /***
      * 本地通道初始化handler
      */
-    public static final ChannelInitializer LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
+    public static final ChannelInitializer<Channel> LOCAL_CHANNEL_INITIALIZER = new LocalChannelInitializer();
 
     /***
      * 本地通道https初始化器
      */
-    public static final ChannelInitializer LOCAL_HTTPS_CHANNEL_INITIALIZER = new LocalHttpsChannelInitializer();
+    public static final ChannelInitializer<Channel> LOCAL_HTTPS_CHANNEL_INITIALIZER = new LocalHttpsChannelInitializer();
 
     /***
      * 本地通道第一个处理器
@@ -113,7 +109,12 @@ public class Constants {
     /***
      * 远程通道初始化Handler
      */
-    public static final ChannelInitializer REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+    public static final ChannelInitializer<Channel> REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+
+    /***
+     * 远程ack通道初始化handler
+     */
+    public static final ChannelInitializer<Channel> REMOTE_ACK_CHANNEL_INITIALIZER = new AckChannelInitializer();
 
     /***
      * 本地ssl context

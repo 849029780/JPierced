@@ -16,6 +16,6 @@ public class AutoreadReqPacks extends BaseTransferPacks {
     private boolean isAutoRead;
 
     public AutoreadReqPacks() {
-        setType(TYPE.AUTO_READ_REQ);
+        setType(TYPE.ACK_AUTO_READ_REQ);
     }
 }

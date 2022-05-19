@@ -11,6 +11,8 @@ import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -39,11 +41,10 @@ public class Server {
     }
 
     public static Server getInstance() {
-        Server server = new Server();
-        return server;
+        return new Server();
     }
 
-    public static Server getInstance(ChannelInitializer channelInitializer) {
+    public static Server getInstance(ChannelInitializer<Channel> channelInitializer) {
         Server server = getInstance();
         server.serverBootstrap.childHandler(channelInitializer);
         return server;
@@ -61,8 +62,18 @@ public class Server {
         return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
     }
 
+    public static Server getRemoteAckInstance() {
+        return getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
+    }
+
     public ChannelFuture listen(Integer port) {
         return serverBootstrap.bind(port);
+    }
+
+
+    public <T> Server childOption(ChannelOption<T> childOption, T value) {
+        this.serverBootstrap.childOption(childOption, value);
+        return this;
     }
 
     public static void listenLocal(Set<Integer> ports, ClientInfo clientInfo) {
@@ -131,7 +142,7 @@ public class Server {
             String listenInfo = stringBuffer.toString();
             log.info("客户端key:{},name:{}，{}", clientInfo.getKey(), clientInfo.getName(), listenInfo);
             messageReqPacks.setMsg(listenInfo);
-            clientInfo.getRemoteChannel().writeAndFlush(messageReqPacks);
+            clientInfo.getAckChannel().writeAndFlush(messageReqPacks);
         });
     }
 
@@ -178,6 +189,26 @@ public class Server {
                 log.info("启动传输服务成功！端口:{}", port);
             } else {
                 log.error("启动传输服务失败！端口:{}", port, future.cause());
+            }
+        });
+        return channelFuture;
+    }
+
+
+    public static ChannelFuture listenRemoteAck() {
+        //
+        ChannelFuture channelFuture = Server.getRemoteAckInstance().childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE).listen(0);
+        channelFuture.addListener(future -> {
+            ChannelFuture channelFuture1 = (ChannelFuture) future;
+            if (channelFuture1.isSuccess()) {
+                Channel channel = channelFuture1.channel();
+                InetSocketAddress socketAddress = (InetSocketAddress) channel.localAddress();
+                int port = socketAddress.getPort();
+                Constants.ACK_PORT = port;
+                log.info("启动ack服务成功！端口:{}", port);
+            } else {
+                log.error("启动ack服务失败！", future.cause());
+                throw new IllegalStateException();
             }
         });
         return channelFuture;

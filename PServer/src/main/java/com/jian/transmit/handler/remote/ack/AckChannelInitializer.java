@@ -1,4 +1,4 @@
-package com.jian.transmit.handler.remote;
+package com.jian.transmit.handler.remote.ack;
 
 import com.jian.commons.Constants;
 import io.netty.channel.Channel;
@@ -11,14 +11,14 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
  * @author Jian
  * @date 2022/4/2
  */
-public class RemoteChannelInitializer extends ChannelInitializer {
+public class AckChannelInitializer extends ChannelInitializer<Channel> {
 
-    RemoteMessageToMessageCodec remoteMessageToMessageCodec;
-    RemoteChannelInBoundHandler remoteChannelInBoundHandler;
+    AckMessageToMessageCodec ackMessageToMessageCodec;
+    AckChannelInBoundHandler ackChannelInBoundHandler;
 
-    public RemoteChannelInitializer() {
-        remoteMessageToMessageCodec = new RemoteMessageToMessageCodec();
-        remoteChannelInBoundHandler = new RemoteChannelInBoundHandler();
+    public AckChannelInitializer() {
+        ackMessageToMessageCodec = new AckMessageToMessageCodec();
+        ackChannelInBoundHandler = new AckChannelInBoundHandler();
     }
 
     @Override
@@ -26,7 +26,7 @@ public class RemoteChannelInitializer extends ChannelInitializer {
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addFirst(Constants.SSL_TRANSMIT_PORT_CONTEXT.newHandler(channel.alloc()));
         pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
-        pipeline.addLast(remoteMessageToMessageCodec);
-        pipeline.addLast(remoteChannelInBoundHandler);
+        pipeline.addLast(ackMessageToMessageCodec);
+        pipeline.addLast(ackChannelInBoundHandler);
     }
 }

@@ -23,6 +23,11 @@ public class ConnectAuthRespPacks extends BaseTransferPacks {
     private byte state;
 
     /***
+     * ack端口号
+     */
+    private int ackPort;
+
+    /***
      * 消息长度
      */
     private int msgLen;
