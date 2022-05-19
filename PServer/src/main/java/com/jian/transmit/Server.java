@@ -165,6 +165,8 @@ public class Server {
                                 for (Map.Entry<Integer, Channel> listenEntry : map.entrySet()) {
                                     //关闭该客户端监听的端口
                                     listenEntry.getValue().close();
+                                    NetAddress netAddress = clientInfo.getPortMappingAddress().get(listenEntry.getKey());
+                                    Optional.ofNullable(netAddress).ifPresent(addr -> addr.setListen(false));
                                 }
                                 clientInfo.setListenPortMap(new ConcurrentHashMap<>());
                             });

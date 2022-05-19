@@ -3,6 +3,7 @@ package com.jian.transmit.handler.remote;
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
+import com.jian.transmit.NetAddress;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
@@ -302,6 +303,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 Channel listenChannel = listen.getValue();
                 //关闭监听的端口
                 Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
+                NetAddress netAddress = clientInfo.getPortMappingAddress().get(listen.getKey());
+                Optional.ofNullable(netAddress).ifPresent(addr -> addr.setListen(false));
             }
             clientInfo.setListenPortMap(new ConcurrentHashMap<>());
         });
@@ -330,8 +333,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 return;
             }
             log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
-            return;
         }
-        log.error("客户端通道发生错误！", cause);
     }
 }

@@ -13,7 +13,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +38,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 String host = connectReqPacks.getHost();
                 Integer port = connectReqPacks.getPort();
                 Long thisChannelHash = connectReqPacks.getThisChannelHash();
-                Long tarChannelHash = connectReqPacks.getTarChannelHash();
+                long tarChannelHash = connectReqPacks.getTarChannelHash();
 
                 InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
                 log.debug("连接本地服务:{}:{}，协议类型:{}", host, port, connectReqPacks.getProtocol());
@@ -133,7 +132,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 log.info("接收到服务端的心跳响应，msgId:{}", msgId);
             }
             case 10 -> {//断开和远程的连接
-                log.debug("接收到服务端要求断开和服务端的连接！");
+                log.info("接收到服务端要求断开和服务端的连接！");
                 Client client = channel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才会将重试次数置空
                 Optional.ofNullable(client).ifPresent(cli -> {
