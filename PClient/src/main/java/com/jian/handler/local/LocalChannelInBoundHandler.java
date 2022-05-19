@@ -56,13 +56,14 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
 
-
-        //向ack通道发送对远程端设置是否可读
-        Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-        AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
-        autoreadReqPacks.setTarChannelHash(tarChannelHash);
-        autoreadReqPacks.setAutoRead(channel.isWritable());
-        Constants.REMOTE_ACK_CHANNEL.writeAndFlush(autoreadReqPacks);
+        if(Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)){
+            //向ack通道发送对远程端设置是否可读
+            Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
+            AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
+            autoreadReqPacks.setTarChannelHash(tarChannelHash);
+            autoreadReqPacks.setAutoRead(channel.isWritable());
+            Constants.REMOTE_ACK_CHANNEL.writeAndFlush(autoreadReqPacks);
+        }
 
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
         /*Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> {

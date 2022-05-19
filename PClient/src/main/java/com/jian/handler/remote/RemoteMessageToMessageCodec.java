@@ -245,6 +245,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
 
         //如果是ack通道，则需要关闭传输通道
         if (isAck) {
+            log.info("ack连接关闭...");
             if (Objects.nonNull(Constants.REMOTE_TRANSIMIT_CHANNEL)) {
                 Constants.REMOTE_TRANSIMIT_CHANNEL.close();
             }
@@ -253,6 +254,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             return;
         }
 
+
+        log.info("传输连接关闭...");
         //如果关闭的是传输通道，则判断ack通道是否还连接，连接则需关闭
         if (Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)) {
             Constants.REMOTE_ACK_CHANNEL.close();

@@ -333,6 +333,8 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 return;
             }
             log.error("客户端通道发生错误！客户key:{},name:{}", clientInfo.getKey(), clientInfo.getName(), cause);
+            return;
         }
+        log.error("客户端通道发生错误！", cause);
     }
 }
