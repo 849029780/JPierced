@@ -147,6 +147,15 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 }
                 out.add(buffer);
             }
+            case 14 -> { //ack通道-设置自动读
+                AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
+                packSize += 1 + 8;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(autoreadReqPacks.getTarChannelHash());
+                buffer.writeBoolean(autoreadReqPacks.isAutoRead());
+                out.add(buffer);
+            }
         }
 
     }
@@ -225,6 +234,14 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 long key = byteBuf.readLong();
                 connectAckChannelReqPacks.setKey(key);
                 list.add(connectAckChannelReqPacks);
+            }
+            case 14 -> { //ack通道-设置自动读
+                AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
+                long tarChannelHash = byteBuf.readLong();
+                boolean isAutoRead = byteBuf.readBoolean();
+                autoreadReqPacks.setTarChannelHash(tarChannelHash);
+                autoreadReqPacks.setAutoRead(isAutoRead);
+                list.add(autoreadReqPacks);
             }
         }
     }

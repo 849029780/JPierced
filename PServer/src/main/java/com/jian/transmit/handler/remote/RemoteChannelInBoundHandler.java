@@ -71,7 +71,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Channel localChannel = localChannelMap.remove(tarChannelHash);
                 //关闭本地连接的通道
                 Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
-                log.info("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
+                log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
             case 4 -> {//客户端认证请求
                 ConnectAuthReqPacks connectAuthReqPacks = (ConnectAuthReqPacks) baseTransferPacks;
@@ -231,6 +231,16 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     connectAckChannelRespPacks.setState(BaseTransferPacks.STATE.SUCCESS);
                     connectAckChannelRespPacks.setMsg("ack绑定在客户端通道上成功！");
                     ctx.writeAndFlush(connectAckChannelRespPacks);
+                }
+            }
+            case 14 -> { //ack通道消息-设置是否自动读
+                AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
+                //从ack通道上获取传输通道
+                Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_IN_ACK_KEY).get();
+                if (Objects.nonNull(remoteChannel)) {
+                    localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
+                    Channel localChannel = localChannelMap.get(autoreadReqPacks.getTarChannelHash());
+                    Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
                 }
             }
             default -> throw new IllegalStateException("Unexpected value: " + type);

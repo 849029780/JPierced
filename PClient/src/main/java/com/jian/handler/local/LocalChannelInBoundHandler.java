@@ -1,5 +1,6 @@
 package com.jian.handler.local;
 
+import com.jian.beans.transfer.AutoreadReqPacks;
 import com.jian.beans.transfer.DisConnectReqPacks;
 import com.jian.beans.transfer.TransferDataPacks;
 import com.jian.commons.Constants;
@@ -69,11 +70,20 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
+
+
+        //向ack通道发送对远程端设置是否可读
+        Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
+        AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
+        autoreadReqPacks.setTarChannelHash(tarChannelHash);
+        autoreadReqPacks.setAutoRead(channel.isWritable());
+        Constants.REMOTE_ACK_CHANNEL.writeAndFlush(autoreadReqPacks);
+
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> {
+        /*Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> {
             ch.config().setAutoRead(channel.isWritable());
             ch.attr(Constants.LOCK_CHANNEL_ID_KEY).set(channel.id());
-        });
+        });*/
     }
 
 

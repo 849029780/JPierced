@@ -163,7 +163,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Constants.REMOTE_ACK_CHANNEL = channel;
 
 
-                //传输通道相关设置
+                //---------------------传输通道后续设置------------------
                 Channel transimitChannel = Constants.REMOTE_TRANSIMIT_CHANNEL;
                 //是否已开启心跳
                 Boolean isOpenHealth = transimitChannel.attr(Constants.HEALTH_IS_OPEN_KEY).get();
@@ -175,7 +175,6 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     log.info("ack连接完成！{}", msg);
                 }
 
-
                 Client client = transimitChannel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才允许断开重连
                 Optional.ofNullable(client).ifPresent(cli -> {
@@ -184,7 +183,12 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     //重连次数置空
                     //client.getRecount().set(0);
                 });
-
+                //---------------------传输通道后续设置------------------
+            }
+            case 14 -> { //ack通道消息-设置是否自动读
+                AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
+                Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(autoreadReqPacks.getTarChannelHash());
+                Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
             }
         }
     }

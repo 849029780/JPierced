@@ -74,6 +74,12 @@ public class BaseTransferPacks {
          * 活动通道连接响应
          */
         byte ACTIVE_CHANNEL_RESP = 13;
+
+        /***
+         * 自动读消息请求
+         */
+        byte AUTO_READ_REQ = 14;
+
     }
 
 
