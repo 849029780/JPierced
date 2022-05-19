@@ -519,11 +519,21 @@ public class WebManagerVerticle extends AbstractVerticle {
                         }
                     }
                 });
+            } else {
+                clientInfo.getPortMappingAddress().remove(oldServerPort);
+                oldNetAddress.setHost(host);
+                oldNetAddress.setPort(port);
+                oldNetAddress.setProtocol(protocol);
+                //添加新端口信息
+                clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
             }
         } else {
             clientInfo.getPortMappingAddress().remove(oldServerPort);
+            oldNetAddress.setHost(host);
+            oldNetAddress.setPort(port);
+            oldNetAddress.setProtocol(protocol);
             //添加新端口信息
-            clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol));
+            clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
         }
         //重新保存数据
         Config.saveTransmitData();
@@ -701,7 +711,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                         messageReqPacks.setMsg("服务端已关闭端口:" + serverPort + "的监听！");
                         remoteChannel.writeAndFlush(messageReqPacks);
                     }
-                }else{
+                } else {
                     log.warn("管理员操作关闭端口:{}失败！", serverPort);
                 }
             });
