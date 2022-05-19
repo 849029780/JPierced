@@ -52,21 +52,6 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
-        Channel channel = ctx.channel();
-        //------这里一定要注意，如果本地通道被写满的同时并且通道被关闭，一定要将设置为不自动读的远程通道重新设置为可读，否则将会出现数据不流通的严重问题！！！
-        //
-        if (Objects.nonNull(Constants.REMOTE_TRANSIMIT_CHANNEL)) {
-            ChannelId id = channel.id();
-            ChannelId channelId = Constants.REMOTE_TRANSIMIT_CHANNEL.attr(Constants.LOCK_CHANNEL_ID_KEY).get();
-            if (id.equals(channelId) && !Constants.REMOTE_TRANSIMIT_CHANNEL.config().isAutoRead()) {
-                Constants.REMOTE_TRANSIMIT_CHANNEL.config().setAutoRead(Boolean.TRUE);
-            }
-        }
-    }
-
-    @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
