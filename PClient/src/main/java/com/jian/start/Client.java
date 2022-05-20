@@ -58,9 +58,8 @@ public class Client {
         return new Client();
     }
 
-    public static Client getInstance(ChannelInitializer initializer) {
+    public static Client getInstance(ChannelInitializer<Channel> initializer) {
         Client client = getInstance();
-        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
         client.bootstrap.handler(initializer);
         return client;
     }
