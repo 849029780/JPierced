@@ -91,7 +91,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
                 int msgLen = messageReqPacks.getMsgLen();
                 String msg = messageReqPacks.getMsg();
-                log.info("接收到服务端消息，消息长度：{}，内容:{}", msgLen, msg);
+                log.info("接收到服务端消息，消息长度：{}，内容:【{}】", msgLen, msg);
             }
             case 13 -> { //ack连接响应
                 ConnectAckChannelRespPacks connectAckChannelRespPacks = (ConnectAckChannelRespPacks) baseTransferPacks;
