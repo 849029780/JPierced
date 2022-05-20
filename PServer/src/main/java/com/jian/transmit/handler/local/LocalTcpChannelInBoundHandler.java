@@ -10,6 +10,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
+
 /***
  *
  * @author Jian
@@ -31,8 +33,12 @@ public class LocalTcpChannelInBoundHandler extends SimpleChannelInboundHandler<B
         transferDataPacks.setTargetChannelHash(tarChannelHash);
         transferDataPacks.setDatas(byteBuf);
         try {
-            remoteChannel.writeAndFlush(transferDataPacks);
-        } catch (NullPointerException e) {
+            if (Objects.nonNull(remoteChannel)) {
+                remoteChannel.writeAndFlush(transferDataPacks);
+            } else {
+                ReferenceCountUtil.release(byteBuf);
+            }
+        } catch (Exception e) {
             ReferenceCountUtil.release(byteBuf);
         }
     }

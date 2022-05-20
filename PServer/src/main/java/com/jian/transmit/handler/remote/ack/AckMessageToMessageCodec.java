@@ -159,7 +159,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
-
+        log.info("ack通道断开...");
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         if (Objects.nonNull(clientInfo)) {
             Channel remoteChannel = clientInfo.getRemoteChannel();

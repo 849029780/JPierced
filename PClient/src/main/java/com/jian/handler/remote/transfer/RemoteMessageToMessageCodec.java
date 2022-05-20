@@ -142,6 +142,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         super.channelInactive(ctx);
         Channel channel = ctx.channel();
 
+        log.info("传输通道断开...");
         //如果关闭的是传输通道，则判断ack通道是否还连接，连接则需关闭
         if (Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)) {
             Constants.REMOTE_ACK_CHANNEL.close();

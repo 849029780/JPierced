@@ -68,7 +68,7 @@ public class Constants {
     /***
      * 绑定在数据传输通道上的ack通道属性
      */
-    //public static final AttributeKey<Channel> REMOTE_ACK_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_ACK_CHANNEL");
+    public static final AttributeKey<Channel> REMOTE_ACK_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_ACK_CHANNEL");
 
     /***
      * 绑定在ack通道上的远程传输通道
@@ -99,7 +99,7 @@ public class Constants {
     /***
      * 认证后未在该时间内进行ack连接，则踢出该认证及连接
      */
-    public static final int ACK_AUTH_TIME_OUT = 5;
+    public static final int ACK_AUTH_TIME_OUT = 10;
 
     /***
      * 基础包头大小
@@ -195,6 +195,11 @@ public class Constants {
      * 传输端口配置文件属性名
      */
     public static final String TRANSMIT_PORT_PROPERTY = "transmit.port";
+
+    /***
+     * ACK port
+     */
+    public static final String ACK_PORT_PROPERTY = "ack.port";
     /***
      * web端口配置文件属性名
      */
@@ -239,6 +244,7 @@ public class Constants {
      * 默认传输端口
      */
     public static final String DEF_TRANSMIT_PORT = "9999";
+    public static final String DEF_ACK_PORT = "6210";
 
     /***
      * 默认web端口

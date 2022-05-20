@@ -55,7 +55,9 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         channel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
         //该通道绑定好客户端通道
         Channel remoteChannel = clientInfo.getRemoteChannel();
+        Channel ackChannel = clientInfo.getAckChannel();
         channel.attr(Constants.REMOTE_CHANNEL_KEY).set(remoteChannel);
+        channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(ackChannel);
 
         //当前hash对应本地连接通道
         Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
@@ -94,7 +96,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         //tcp处理
         pipeline.addLast(Constants.LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER);
         //给客户端发送客户端本地的连接信息
-        Optional.of(remoteChannel).ifPresent(ch -> ch.writeAndFlush(connectReqPacks));
+        Optional.of(ackChannel).ifPresent(ch -> ch.writeAndFlush(connectReqPacks));
     }
 
 
@@ -134,19 +136,15 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
         //获取该通道上绑定的远程通道
-        Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
+        Channel ackChannel = channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).get();
 
-        if(Objects.nonNull(remoteChannel)){
-            //ack通道
-            Channel ackChannel = remoteChannel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).get();
-            Optional.ofNullable(ackChannel).ifPresent(ch -> {
-                //向ack通道发送设置是否自动读消息
-                Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-                AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
-                autoreadReqPacks.setAutoRead(channel.isWritable());
-                autoreadReqPacks.setTarChannelHash(tarChannelHash);
-                ch.writeAndFlush(autoreadReqPacks);
-            });
+        if (Objects.nonNull(ackChannel)) {
+            //向ack通道发送设置是否自动读消息
+            Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
+            AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
+            autoreadReqPacks.setAutoRead(channel.isWritable());
+            autoreadReqPacks.setTarChannelHash(tarChannelHash);
+            ackChannel.writeAndFlush(autoreadReqPacks);
         }
 
         //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读

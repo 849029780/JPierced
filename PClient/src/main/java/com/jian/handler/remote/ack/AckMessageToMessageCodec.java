@@ -146,6 +146,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
+        log.info("ack连接断开...");
         if (Objects.nonNull(Constants.REMOTE_TRANSIMIT_CHANNEL)) {
             Constants.REMOTE_TRANSIMIT_CHANNEL.close();
         }

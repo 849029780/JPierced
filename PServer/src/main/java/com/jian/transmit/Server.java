@@ -1,6 +1,5 @@
 package com.jian.transmit;
 
-import com.jian.beans.transfer.ConnectAuthRespPacks;
 import com.jian.beans.transfer.MessageReqPacks;
 import com.jian.commons.Constants;
 import io.netty.bootstrap.ServerBootstrap;
@@ -12,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -195,9 +193,10 @@ public class Server {
     }
 
 
-    public static ChannelFuture listenRemoteAck() {
+    public static void listenRemoteAck() {
+        String ackPort = Constants.CONFIG.getProperty(Constants.ACK_PORT_PROPERTY, Constants.DEF_ACK_PORT);
         //
-        ChannelFuture channelFuture = Server.getRemoteAckInstance().childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE).listen(0);
+        ChannelFuture channelFuture = Server.getRemoteAckInstance().childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE).listen(Integer.parseInt(ackPort));
         channelFuture.addListener(future -> {
             ChannelFuture channelFuture1 = (ChannelFuture) future;
             if (channelFuture1.isSuccess()) {
@@ -211,7 +210,6 @@ public class Server {
                 throw new IllegalStateException();
             }
         });
-        return channelFuture;
     }
 
 }

@@ -18,6 +18,7 @@ import com.jian.web.result.Result;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundInvoker;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.ssl.SslProtocols;
 import io.netty.util.internal.StringUtil;
@@ -698,6 +699,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                 }
             }
         });
+
         //如果不为空，则将channel关闭
         ChannelFuture close = null;
         if (Objects.nonNull(serverPortChannel)) {
@@ -705,7 +707,10 @@ public class WebManagerVerticle extends AbstractVerticle {
             close.addListener(future -> {
                 if (future.isSuccess()) {
                     log.info("管理员操作关闭端口:{}完成！", serverPort);
-                    clientInfo.getPortMappingAddress().get(serverPort).setListen(false);
+                    NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
+                    if (Objects.nonNull(netAddress)) {
+                        netAddress.setListen(false);
+                    }
                     Channel ackChannel = clientInfo.getAckChannel();
                     if (Objects.nonNull(ackChannel)) {
                         MessageReqPacks messageReqPacks = new MessageReqPacks();

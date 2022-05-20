@@ -78,7 +78,8 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                         }
                         log.warn("连接本地服务:{}:{}失败！{}", host, port, causeMsg);
                     }
-                    Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(connectRespPacks);
+                    //连接响应
+                    ctx.writeAndFlush(connectRespPacks);
                 });
             }
             case 11 -> { //消息处理
