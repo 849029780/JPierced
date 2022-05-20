@@ -37,9 +37,13 @@ import java.util.concurrent.TimeUnit;
 public class Constants {
 
     /***
+     * 线程数
+     */
+    public static final int THREAD_NUM = 16;
+    /***
      * 编解码工作线程组
      */
-    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : KQueue.isAvailable() ? new KQueueEventLoopGroup() : new NioEventLoopGroup();
+    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(THREAD_NUM) : new NioEventLoopGroup(THREAD_NUM);
 
     /***
      * 通道类型

@@ -53,6 +53,14 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 }
                 out.add(buffer);
             }
+            case 8 -> {//心跳请求
+                HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
+                packSize += 8;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(healthReqPacks.getMsgId());
+                out.add(buffer);
+            }
             case 11 -> { //发送消息
                 MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
                 packSize += 4;
@@ -110,6 +118,12 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 connectRespPacks.setPort(port);
                 connectRespPacks.setProtocol(protocol);
                 list.add(connectRespPacks);
+            }
+            case 9 -> {//心跳响应
+                HealthRespPacks healthRespPacks = new HealthRespPacks();
+                long msgId = byteBuf.readLong();
+                healthRespPacks.setMsgId(msgId);
+                list.add(healthRespPacks);
             }
             case 11 -> { //解消息
                 MessageReqPacks messageReqPacks = new MessageReqPacks();

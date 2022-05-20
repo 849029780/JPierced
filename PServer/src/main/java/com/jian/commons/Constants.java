@@ -38,13 +38,22 @@ import java.util.concurrent.Executors;
 public class Constants {
 
     /***
+     * 线程数
+     */
+    public static final int THREAD_NUM = 16;
+
+    /***
+     * boss线程数
+     */
+    public static final int BOSS_THREAD_NUM = THREAD_NUM >> 1;
+    /***
      * 服务端接受连接处理线程组
      */
-    public static final EventLoopGroup BOSS_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : KQueue.isAvailable() ? new KQueueEventLoopGroup() : new NioEventLoopGroup();
+    public static final EventLoopGroup BOSS_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(BOSS_THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(BOSS_THREAD_NUM) : new NioEventLoopGroup(BOSS_THREAD_NUM);
     /***
      * 服务端编解码工作线程组
      */
-    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : KQueue.isAvailable() ? new KQueueEventLoopGroup() : new NioEventLoopGroup();
+    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(THREAD_NUM) : new NioEventLoopGroup(THREAD_NUM);
 
     /***
      * 服务端通道类型

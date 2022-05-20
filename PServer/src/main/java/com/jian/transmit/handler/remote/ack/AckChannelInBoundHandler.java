@@ -54,6 +54,14 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                     localChannel.close();
                 }
             }
+            case 8 -> { //接收心跳请求
+                HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
+                long msgId = healthReqPacks.getMsgId();
+                log.info("接收到客户端key:{}，name:{}，的ack心跳请求，msgId:{}", clientInfo.getKey(), clientInfo.getName(), msgId);
+                HealthRespPacks healthRespPacks = new HealthRespPacks();
+                healthRespPacks.setMsgId(msgId);
+                ctx.writeAndFlush(healthRespPacks);
+            }
             case 11 -> { //消息
                 MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
                 int msgLen = messageReqPacks.getMsgLen();

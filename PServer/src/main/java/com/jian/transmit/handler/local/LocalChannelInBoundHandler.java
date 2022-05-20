@@ -49,7 +49,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
 
         //生成通道码
         long thisChannelHash = System.nanoTime();
-        long tarChannelHash = thisChannelHash >> 2;
+        long tarChannelHash = thisChannelHash >> 1;
 
         channel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
         channel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);

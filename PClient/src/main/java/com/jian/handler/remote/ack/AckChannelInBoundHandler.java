@@ -82,6 +82,11 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                     ctx.writeAndFlush(connectRespPacks);
                 });
             }
+            case 9 -> { //心跳响应
+                HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
+                Long msgId = healthRespPacks.getMsgId();
+                log.info("接收到服务端的ack心跳响应，msgId:{}", msgId);
+            }
             case 11 -> { //消息处理
                 MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
                 int msgLen = messageReqPacks.getMsgLen();
@@ -109,6 +114,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 if (Objects.isNull(isOpenHealth)) {
                     log.info("ack连接完成！{}心跳已开启..", msg);
                     transimitChannel.pipeline().addFirst(new IdleStateHandler(0, Constants.HEART_DELAY, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
+                    channel.pipeline().addFirst(new IdleStateHandler(0, Constants.HEART_DELAY, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
                     transimitChannel.attr(Constants.HEALTH_IS_OPEN_KEY).set(Boolean.TRUE);
                 } else {
                     log.info("ack连接完成！{}", msg);
@@ -127,8 +133,36 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
             case 14 -> { //ack通道消息-设置是否自动读
                 AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(autoreadReqPacks.getTarChannelHash());
-                Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
+                Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(false));
             }
         }
     }
+
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        super.userEventTriggered(ctx, evt);
+        if (evt instanceof IdleStateEvent event) {
+            switch (event.state()) {
+                case READER_IDLE: //读空闲
+                    // 不处理
+                    break;
+                case WRITER_IDLE: //写空闲
+                    long msgId = System.nanoTime();
+                    log.info("发送ack心跳请求，msgId:{}", msgId);
+                    HealthReqPacks healthReqPacks = new HealthReqPacks();
+                    healthReqPacks.setMsgId(msgId);
+                    ctx.writeAndFlush(healthReqPacks);
+                    // 不处理
+                    break;
+                case ALL_IDLE: //读写空闲
+                    // 记录上一次接收到心跳的时间，如果时间超过规定阈值则该连接已经断开
+                    log.warn("接收服务端响应的ack心跳超时！已自动认为该连接已断开，准备关闭本地连接...");
+                    //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
+                    ctx.close();
+                    break;
+            }
+        }
+    }
+
 }

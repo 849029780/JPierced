@@ -30,6 +30,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
         ByteBuf buffer = ctx.alloc().buffer();
+        log.info("ack发送消息type:{}", type);
         switch (type) {
             case 1 -> { //服务发起连接请求
                 ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
@@ -47,6 +48,14 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 if (hostLen > 0) {
                     buffer.writeBytes(hostBytes);
                 }
+                out.add(buffer);
+            }
+            case 9 -> { //响应心跳
+                HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
+                packSize += 8;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeLong(healthRespPacks.getMsgId());
                 out.add(buffer);
             }
             case 11 -> { //发送消息
@@ -105,6 +114,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) {
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
+        log.info("ack接收消息type:{}", type);
         switch (type) {
             case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = new ConnectRespPacks();
@@ -124,6 +134,12 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                     connectRespPacks.setMsg(msg);
                 }
                 list.add(connectRespPacks);
+            }
+            case 8 -> { //接收心跳请求
+                HealthReqPacks healthReqPacks = new HealthReqPacks();
+                long msgId = byteBuf.readLong();
+                healthReqPacks.setMsgId(msgId);
+                list.add(healthReqPacks);
             }
             case 11 -> { //解消息
                 MessageReqPacks messageReqPacks = new MessageReqPacks();
