@@ -85,7 +85,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
             case 9 -> { //心跳响应
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 Long msgId = healthRespPacks.getMsgId();
-                log.info("接收到服务端的ack心跳响应，msgId:{}", msgId);
+                log.debug("接收到服务端的ack心跳响应，msgId:{}", msgId);
             }
             case 11 -> { //消息处理
                 MessageReqPacks messageReqPacks = (MessageReqPacks) baseTransferPacks;
@@ -133,7 +133,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
             case 14 -> { //ack通道消息-设置是否自动读
                 AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(autoreadReqPacks.getTarChannelHash());
-                Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(false));
+                Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
             }
         }
     }
@@ -149,7 +149,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                     break;
                 case WRITER_IDLE: //写空闲
                     long msgId = System.nanoTime();
-                    log.info("发送ack心跳请求，msgId:{}", msgId);
+                    log.debug("发送ack心跳请求，msgId:{}", msgId);
                     HealthReqPacks healthReqPacks = new HealthReqPacks();
                     healthReqPacks.setMsgId(msgId);
                     ctx.writeAndFlush(healthReqPacks);

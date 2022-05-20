@@ -30,7 +30,6 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
         ByteBuf buffer = ctx.alloc().buffer();
-        log.info("ack发送消息type:{}", type);
         switch (type) {
             case 1 -> { //服务发起连接请求
                 ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
@@ -114,7 +113,6 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) {
         int packSize = byteBuf.readInt();
         byte type = byteBuf.readByte();
-        log.info("ack接收消息type:{}", type);
         switch (type) {
             case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = new ConnectRespPacks();
@@ -175,7 +173,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
-        log.info("ack通道断开...");
+        log.debug("ack通道关闭...");
         ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
         if (Objects.nonNull(clientInfo)) {
             Channel remoteChannel = clientInfo.getRemoteChannel();

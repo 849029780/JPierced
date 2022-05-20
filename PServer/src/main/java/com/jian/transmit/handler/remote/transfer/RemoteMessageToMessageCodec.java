@@ -144,9 +144,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         super.channelInactive(ctx);
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
-
-        log.info("传输通道断开...");
-
+        log.debug("传输通道关闭...");
         //如果是关闭的传输通道，则本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         Optional.ofNullable(localChannelMap).ifPresent(map -> {
