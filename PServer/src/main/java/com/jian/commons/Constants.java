@@ -40,7 +40,7 @@ public class Constants {
     /***
      * 线程数
      */
-    public static final int THREAD_NUM = 16;
+    public static final int THREAD_NUM = 20;
 
     /***
      * boss线程数
