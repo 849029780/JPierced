@@ -3,10 +3,7 @@ package com.jian.transmit;
 import com.jian.beans.transfer.MessageReqPacks;
 import com.jian.commons.Constants;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.BindException;
@@ -29,7 +26,6 @@ public class Server {
 
     private Server() {
         serverBootstrap = new ServerBootstrap();
-        serverBootstrap.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
         serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         serverBootstrap.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
         serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, Boolean.TRUE);
@@ -49,19 +45,27 @@ public class Server {
     }
 
     public static Server getLocalInstance() {
-        return getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
+        Server server = getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
+        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
+        return server;
     }
 
     public static Server getLocalHttpsInstance() {
-        return getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+        Server server = getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
+        return server;
     }
 
     public static Server getRemoteInstance() {
-        return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
+        Server server = getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
+        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
+        return server;
     }
 
     public static Server getRemoteAckInstance() {
-        return getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
+        Server server = getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
+        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.ACK_WORK_EVENT_LOOP_GROUP);
+        return server;
     }
 
     public ChannelFuture listen(Integer port) {
@@ -71,6 +75,11 @@ public class Server {
 
     public <T> Server childOption(ChannelOption<T> childOption, T value) {
         this.serverBootstrap.childOption(childOption, value);
+        return this;
+    }
+
+    public Server group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+        this.serverBootstrap.group(parentGroup, childGroup);
         return this;
     }
 

@@ -46,6 +46,16 @@ public class Constants {
     public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(THREAD_NUM) : new NioEventLoopGroup(THREAD_NUM);
 
     /***
+     * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
+     */
+    public static final int ACK_WORK_THREAD_NUM = 4;
+
+    /***
+     * ack通道工作线程
+     */
+    public static final EventLoopGroup ACK_WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(ACK_WORK_THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(ACK_WORK_THREAD_NUM) : new NioEventLoopGroup(ACK_WORK_THREAD_NUM);
+
+    /***
      * 通道类型
      */
     public static final Class<? extends SocketChannel> SOCKET_CHANNEL_CLASS = Epoll.isAvailable() ? EpollSocketChannel.class : KQueue.isAvailable() ? KQueueSocketChannel.class : NioSocketChannel.class;
@@ -69,11 +79,6 @@ public class Constants {
      * 通道上绑定的连接信息
      */
     public static final AttributeKey<Client> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
-
-    /***
-     * 将远程通道设置为不自动读的本地通道id，用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
-     */
-    public static final AttributeKey<ChannelId> LOCK_CHANNEL_ID_KEY = AttributeKey.valueOf("LOCK_CHANNEL_ID");
 
     /***
      * 远程通道是否已开启心跳

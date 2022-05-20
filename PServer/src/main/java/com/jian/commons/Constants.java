@@ -40,7 +40,7 @@ public class Constants {
     /***
      * 线程数
      */
-    public static final int THREAD_NUM = 20;
+    public static final int THREAD_NUM = 16;
 
     /***
      * boss线程数
@@ -54,6 +54,16 @@ public class Constants {
      * 服务端编解码工作线程组
      */
     public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(THREAD_NUM) : new NioEventLoopGroup(THREAD_NUM);
+
+    /***
+     * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
+     */
+    public static final int ACK_WORK_THREAD_NUM = 4;
+
+    /***
+     * ack通道工作线程
+     */
+    public static final EventLoopGroup ACK_WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(ACK_WORK_THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(ACK_WORK_THREAD_NUM) : new NioEventLoopGroup(ACK_WORK_THREAD_NUM);
 
     /***
      * 服务端通道类型

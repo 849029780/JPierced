@@ -41,7 +41,6 @@ public class Client {
 
     private Client() {
         this.bootstrap = new Bootstrap();
-        this.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
         this.bootstrap.channel(Constants.SOCKET_CHANNEL_CLASS);
@@ -61,6 +60,7 @@ public class Client {
 
     public static Client getInstance(ChannelInitializer initializer) {
         Client client = getInstance();
+        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
         client.bootstrap.handler(initializer);
         return client;
     }
@@ -71,20 +71,28 @@ public class Client {
     }
 
     public static Client getLocalInstance() {
-        return getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
+        Client client = getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
+        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
+        return client;
     }
 
     public static Client getLocalHttpsInstance() {
-        return getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+        Client client = getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
+        return client;
     }
 
 
     public static Client getRemoteInstance() {
-        return getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
+        Client client = getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
+        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
+        return client;
     }
 
     public static Client getRemoteAckInstance() {
-        return getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
+        Client client = getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
+        client.bootstrap.group(Constants.ACK_WORK_EVENT_LOOP_GROUP);
+        return client;
     }
 
     public ChannelFuture connect(InetSocketAddress socketAddress) {
