@@ -452,7 +452,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
 
     /***
-     * 移除映射
+     * 修改映射
      * @param params {"key":"数字去掉双引号", "oldServerPort":"数字去掉双引号", "newServerPort":"数字去掉双引号", "host":"", "port":"数字去掉双引号", "protocol":"1或2 数字去掉双引号"}
      * @return
      */
