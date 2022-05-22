@@ -13,7 +13,7 @@
 
     <properties>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
-        <vertx.version>4.2.7</vertx.version>
+        <vertx.version>4.3.0</vertx.version>
         <jackson.version>2.13.3</jackson.version>
         <jwt.version>3.19.2</jwt.version>
     </properties>

@@ -4,10 +4,11 @@
 1、支持TCP,HTTP,HTTPS协议,(暂不支持UDP，后续将会支持)，类似Frp，但在对比Frp上，提供了http接口（由于前端好久没写了，所以未写前端页面，只有接口，后续可能会增加），  
 在客户端的管理上比Frp更方便，增加删除修改端口映射，关闭指定端口监听，及启用指定端口及踢出客户端下线等都可使用接口操作，客户端无需做别的操作，也无需重启；  
 2、使用多路通道复用，减少客户端及请求端发起连接时每次都创建新的连接导致连接延迟缓慢，比起Frp连接响应更快；  
-3、穿透的客户端和服务端采用TLSv1.3/SSL双向认证加密，保证数据传输的安全及性能；  
+3、穿透的客户端和服务端采用TLSv1.3/SSL双向认证加密通信保证数据传输的安全，加密套件使用Openssl的分支Google Boring实现，比起JdkSSL性能上更好；  
 4、在别的穿透应用所谓支持HTTP及HTTPS协议，实际上都只是做了TCP报文转发，而未对HTTP协议中Header的Host及Referer,Location中的host及端口进行修改，  
-导致请求部分较严格的HTTP服务时服务器验证Host后发起请求的Host和Header中的host不一致，导致请求被拒绝，以及HTTP服务响应3xx重定向时地址未进行处理跳转到错误页面，对此服务端对host，referer，location等http
-header中的host及端口会进行替换，和Nginx的代理功能类似，更好的支持HTTP及HTTPS。
+导致请求部分较严格的HTTP服务时服务验证Host与发起请求的地址不一致，导致请求被拒绝，以及HTTP服务响应3xx重定向时地址未进行处理跳转到真实地址的页面导致出现跨域等错误，对此服务端对host，referer，location等http
+header中的host及端口会进行替换，和Nginx的代理功能类似，更好的支持HTTP及HTTPS。  
+5、不同操作系统采用不同的Channel实现以使在该操作系统上达到最佳性能，Linux默认使用Epoll，Mac使用Kqueue，Windows采用Selector
 
 ## PServer配置
 
@@ -49,7 +50,7 @@ pwd=xxx
 1、将PServer.jar上传到有公网的服务器上，并同时上传server.properties配置文件(配置说明如上)  
 然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```java -jar PServer-1.0-SNAPSHOT.jar > /dev/null &2>1```  
 2、将PClient.jar放到被穿透的机器上，在同目录下放置client.properties配置文件(配置说明如上)  
-然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```java -jar PServer-1.0-SNAPSHOT.jar > /dev/null &2>1```  
+然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```java -jar PClient-1.0-SNAPSHOT.jar > /dev/null &2>1```  
 注意：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后，就穿透了。
 
 ## api接口及参数说明

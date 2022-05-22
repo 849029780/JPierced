@@ -161,15 +161,16 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
             switch (event.state()) {
                 case READER_IDLE:
+                    //读空闲时，则认为客户端已失去连接
+                    log.warn("客户端心跳接收已超过{}s，已默认为失去连接，准备关闭该客户端key:{},name:{}监听的所有端口...", Constants.DISCONNECT_HEALTH_SECONDS, clientInfo.getKey(), clientInfo.getName());
+                    //这里close后会自动出发channelInactive事件，然后执行关闭本地相关端口连接
+                    ctx.close();
                     break;
                 case WRITER_IDLE:
                     // 写空闲，不处理
                     break;
                 case ALL_IDLE:
                     //所有空闲
-                    log.warn("客户端心跳接收已超过{}s，已默认为失去连接，准备关闭该客户端key:{},name:{}监听的所有端口...", Constants.DISCONNECT_HEALTH_SECONDS, clientInfo.getKey(), clientInfo.getName());
-                    //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
-                    ctx.close();
                     break;
             }
         }
