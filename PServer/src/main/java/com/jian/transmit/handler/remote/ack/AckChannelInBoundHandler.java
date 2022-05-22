@@ -118,8 +118,8 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
 
                 log.info("客户端key:{}，name:{}，ack已连接，已开启心跳检测！", clientInfo.getKey(), clientInfo.getName());
                 //开启心跳检测
-                remoteChannel.pipeline().addFirst(new IdleStateHandler(0, 0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
-
+                remoteChannel.pipeline().addFirst(new IdleStateHandler(Constants.DISCONNECT_HEALTH_SECONDS, 0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
+                channel.pipeline().addFirst(new IdleStateHandler(Constants.DISCONNECT_HEALTH_SECONDS, 0, Constants.DISCONNECT_HEALTH_SECONDS, TimeUnit.SECONDS));
                 MessageReqPacks messageReqPacks = new MessageReqPacks();
                 if (ports.size() == 0) {
                     messageReqPacks.setMsg("客户端暂未配置映射端口！");
