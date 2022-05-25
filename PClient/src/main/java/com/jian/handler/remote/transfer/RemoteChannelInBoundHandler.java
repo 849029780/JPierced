@@ -52,7 +52,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     //服务端地址
                     InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
                     InetSocketAddress inetSocketAddress = new InetSocketAddress(remoteAddress.getAddress(), connectAuthRespPacks.getAckPort());
-                    Client.getRemoteAckInstance().option(ChannelOption.TCP_NODELAY, Boolean.TRUE).connect(inetSocketAddress, (Consumer<ChannelFuture>) future -> {
+                    Client.getRemoteAckInstance().connect(inetSocketAddress, (Consumer<ChannelFuture>) future -> {
                         Channel ackChannel = future.channel();
                         if (future.isSuccess()) {
                             String keyStr = Constants.CONFIG.getProperty(Constants.KEY_PROPERTY_NAME);

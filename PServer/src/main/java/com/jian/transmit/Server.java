@@ -29,6 +29,7 @@ public class Server {
         serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         serverBootstrap.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
         serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, Boolean.TRUE);
+        serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
         //关闭小包组装成大包，如果都是小流量 则可以关闭，以减少延迟，减少延迟后将会多发送tcp包头，会占用一定带宽
         //serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
         serverBootstrap.channel(Constants.SERVER_SOCKET_CHANNEL_CLASS);
@@ -205,7 +206,7 @@ public class Server {
     public static void listenRemoteAck() {
         String ackPort = Constants.CONFIG.getProperty(Constants.ACK_PORT_PROPERTY, Constants.DEF_ACK_PORT);
         //
-        ChannelFuture channelFuture = Server.getRemoteAckInstance().childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE).listen(Integer.parseInt(ackPort));
+        ChannelFuture channelFuture = Server.getRemoteAckInstance().listen(Integer.parseInt(ackPort));
         channelFuture.addListener(future -> {
             ChannelFuture channelFuture1 = (ChannelFuture) future;
             if (channelFuture1.isSuccess()) {

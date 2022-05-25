@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 @Slf4j
 public class Client {
 
-    private Bootstrap bootstrap;
+    private final Bootstrap bootstrap;
 
     /***
      * 保存
@@ -44,6 +44,7 @@ public class Client {
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
         this.bootstrap.channel(Constants.SOCKET_CHANNEL_CLASS);
+        this.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
     }
 
     public boolean isCanReconnect() {
@@ -107,9 +108,9 @@ public class Client {
         return channelFuture;
     }
 
-    public ChannelFuture connect(InetSocketAddress socketAddress, Consumer<ChannelFuture> successFuture) {
+    public void connect(InetSocketAddress socketAddress, Consumer<ChannelFuture> successFuture) {
         this.successFuture = successFuture;
-        return connect(socketAddress).addListener(future -> {
+        connect(socketAddress).addListener(future -> {
             if (future.isSuccess()) {
                 successFuture.accept((ChannelFuture) future);
             } else if (canReconnect) {
@@ -123,7 +124,7 @@ public class Client {
     }
 
 
-    public ChannelFuture connect(InetSocketAddress socketAddress, GenericFutureListener futureOnSuccess) {
+    public ChannelFuture connect(InetSocketAddress socketAddress, GenericFutureListener<ChannelFuture> futureOnSuccess) {
         ChannelFuture channelFuture = connect(socketAddress);
         Optional.ofNullable(futureOnSuccess).ifPresent(fs -> channelFuture.addListener(futureOnSuccess));
         return channelFuture;
@@ -131,16 +132,15 @@ public class Client {
 
     /***
      * 重连
-     * @return
      */
-    public ChannelFuture reConnct() {
+    public void reConnct() {
         log.warn("连接服务断开！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
         try {
             Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
         } catch (InterruptedException e) {
             log.error("重连延迟错误..", e);
         }
-        return connect(this.connectInetSocketAddress, this.successFuture);
+        connect(this.connectInetSocketAddress, this.successFuture);
     }
 
 }

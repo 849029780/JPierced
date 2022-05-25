@@ -178,6 +178,12 @@ public class WebManagerVerticle extends AbstractVerticle {
             han.response().end(JsonUtils.toJson(result));
         });
 
+        router.route(HttpMethod.POST, "/api/modifyClient").handler(han -> {
+            JsonObject params = getBodyAsJson(han);
+            Result result = modifyClient(params);
+            han.response().end(JsonUtils.toJson(result));
+        });
+
         router.route(HttpMethod.POST, "/api/shotClient").handler(han -> {
             JsonObject params = getBodyAsJson(han);
             Result result = shotClient(params);
@@ -223,6 +229,8 @@ public class WebManagerVerticle extends AbstractVerticle {
         });
         return router;
     }
+
+
 
 
     /***
@@ -350,6 +358,45 @@ public class WebManagerVerticle extends AbstractVerticle {
     }
 
     /***
+     * 修改客户端
+     * @param params {"key":"数字去掉双引号","newKey":新的key, "pwd":"xxx", "name":""}
+     * @return
+     */
+    private Result modifyClient(JsonObject params) {
+        Long key = params.getLong("key");
+        Long newKey = params.getLong("newKey");
+        String pwd = params.getString("pwd");
+        String name = params.getString("name");
+
+        if (Objects.isNull(key)) {
+            return Result.FAIL("修改客户端失败！key为空！");
+        }
+        if (Objects.isNull(newKey)) {
+            return Result.FAIL("修改客户端失败！newKey为空！");
+        }
+        if (StringUtil.isNullOrEmpty(pwd)) {
+            return Result.FAIL("修改客户端失败！pwd为空！");
+        }
+        if (StringUtil.isNullOrEmpty(name)) {
+            return Result.FAIL("修改客户端失败！客户端名称为空！");
+        }
+
+        ClientInfo clientInfo = Constants.CLIENTS.get(key);
+
+        if (Objects.isNull(clientInfo)) {
+            return Result.FAIL("修改客户端失败！客户端key不存在！");
+        }
+
+        clientInfo.setKey(newKey);
+        clientInfo.setPwd(pwd);
+        clientInfo.setName(name);
+
+        //重新保存数据
+        Config.saveTransmitData();
+        return Result.SUCCESS("修改客户端信息成功！");
+    }
+
+    /***
      * 移除客户端
      * @param params {"key":"数字去掉双引号"}
      * @return
@@ -370,6 +417,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         Config.saveTransmitData();
         return Result.SUCCESS("移除客户端成功！");
     }
+
 
     /***
      * 踢出客户端
