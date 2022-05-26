@@ -231,8 +231,6 @@ public class WebManagerVerticle extends AbstractVerticle {
     }
 
 
-
-
     /***
      * 校验token
      * @param token
@@ -371,15 +369,6 @@ public class WebManagerVerticle extends AbstractVerticle {
         if (Objects.isNull(key)) {
             return Result.FAIL("修改客户端失败！key为空！");
         }
-        if (Objects.isNull(newKey)) {
-            return Result.FAIL("修改客户端失败！newKey为空！");
-        }
-        if (StringUtil.isNullOrEmpty(pwd)) {
-            return Result.FAIL("修改客户端失败！pwd为空！");
-        }
-        if (StringUtil.isNullOrEmpty(name)) {
-            return Result.FAIL("修改客户端失败！客户端名称为空！");
-        }
 
         ClientInfo clientInfo = Constants.CLIENTS.get(key);
 
@@ -387,9 +376,15 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("修改客户端失败！客户端key不存在！");
         }
 
-        clientInfo.setKey(newKey);
-        clientInfo.setPwd(pwd);
-        clientInfo.setName(name);
+        if (Objects.nonNull(newKey)) {
+            clientInfo.setKey(newKey);
+        }
+        if (!StringUtil.isNullOrEmpty(pwd)) {
+            clientInfo.setPwd(pwd);
+        }
+        if (!StringUtil.isNullOrEmpty(name)) {
+            clientInfo.setName(name);
+        }
 
         //重新保存数据
         Config.saveTransmitData();
