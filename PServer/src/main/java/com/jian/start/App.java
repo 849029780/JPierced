@@ -19,7 +19,7 @@ public class App {
             Server.listenRemote();
             Server.listenRemoteAck();
             Constants.VERTX = Vertx.vertx();
-            Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId->Constants.VERTX_WEB_DEPLOY_ID = deployId);
+            Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> Constants.VERTX_WEB_DEPLOY_ID = deployId);
         }
     }
 
