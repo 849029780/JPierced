@@ -46,9 +46,9 @@ pwd=xxx
 由于项目中默认放置了我自己生成的CA证书及密钥，可以直接使用，如需要自行生成，生成后替换掉resources/certs中相应的证书文件即可，注意生成的客户端及服务端证书都必须是统一CA签名的。  
 使用Maven命令mvn package编译打包成可运行的jar包(打包后在项目目录的target目录下)；  
 1、将PServer.jar上传到有公网的服务器上，并同时上传server.properties配置文件(配置说明如上)  
-然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```java -jar PServer-1.0-SNAPSHOT.jar > /dev/null &2>1```  
+然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PServer-1.0-SNAPSHOT.jar > /dev/null &2>1```  
 2、将PClient.jar放到被穿透的机器上，在同目录下放置client.properties配置文件(配置说明如上)  
-然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```java -jar PClient-1.0-SNAPSHOT.jar > /dev/null &2>1```  
+然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null &2>1```  
 【注意】：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后才可使用，根据使用场景设置Jvm的内存大小。
 
 ## api接口及参数说明
@@ -74,6 +74,13 @@ http://xxx:port/api/clientList
 POST请求
 Json参数：{"key":不重复的数字key, "pwd":"密码", "name":"客户端名"}
 http://xxx:port/api/addClient
+```
+
+修改客户端信息
+```
+POST请求
+Json参数：{"key":客户端数字key,"newKey":新的key, "pwd":"新密码", "name":"客户端名称"}
+http://xxx:port/api/modifyClient
 ```
 
 移除客户端

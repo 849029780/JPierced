@@ -18,16 +18,17 @@ import com.jian.web.result.Result;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundInvoker;
-import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.ssl.SslProtocols;
 import io.netty.util.internal.StringUtil;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.http.*;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.PemKeyCertOptions;
-import io.vertx.core.net.SSLEngineOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -42,7 +43,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
