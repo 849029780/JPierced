@@ -105,7 +105,9 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
         if (evt instanceof IdleStateEvent event) {
             switch (event.state()) {
                 case READER_IDLE: //读空闲
-                    // 不处理
+                    log.warn("接收服务端响应的心跳超时！已自动认为该连接已断开，准备关闭本地连接...");
+                    //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
+                    ctx.close();
                     break;
                 case WRITER_IDLE: //写空闲
                     long msgId = System.nanoTime();
@@ -115,11 +117,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     ctx.writeAndFlush(healthReqPacks);
                     // 不处理
                     break;
-                case ALL_IDLE: //读写空闲
-                    // 记录上一次接收到心跳的时间，如果时间超过规定阈值则该连接已经断开
-                    log.warn("接收服务端响应的心跳超时！已自动认为该连接已断开，准备关闭本地连接...");
-                    //这里close后会自动出发channelRemove事件，然后执行关闭本地相关端口连接
-                    ctx.close();
+                case ALL_IDLE: //读写空闲 不处理
                     break;
             }
         }

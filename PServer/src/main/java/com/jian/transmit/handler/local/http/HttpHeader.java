@@ -1,7 +1,6 @@
 package com.jian.transmit.handler.local.http;
 
 import io.netty.util.AsciiString;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

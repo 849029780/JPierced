@@ -17,13 +17,13 @@ web.port=8000
 # 是否启用支持HTTPS网页的穿透，开启支持需要在运行环境的同目录放置https的证书文件pierced.crt，pierced.key，key使用pkcs8，未配置启动将会默认关闭HTTPS
 # 启用https后，管理相关接口也将使用https
 enable.https=true
-# web管理的登录用户名及密码
-login.username=xxxx
-login.pwd=xxxx
 # ack通道的端口(ack通道主要用于收发连接及连接响应消息，以及设置被穿透客户端的本地连接上的是否自动读等作用)
 ack.port=6210
 # 主要的数据传输端口
 transmit.port=9999
+# web管理的登录用户名及密码
+login.username=xxxx
+login.pwd=xxxx
 ```
 
 ## PClient配置

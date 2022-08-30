@@ -13,9 +13,9 @@
 
     <properties>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
-        <vertx.version>4.3.0</vertx.version>
+        <vertx.version>4.3.1</vertx.version>
         <jackson.version>2.13.3</jackson.version>
-        <jwt.version>3.19.2</jwt.version>
+        <jwt.version>4.0.0</jwt.version>
     </properties>
 
     <dependencies>
