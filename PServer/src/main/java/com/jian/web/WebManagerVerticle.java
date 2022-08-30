@@ -561,6 +561,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                         if (clientInfo.isOnline()) {
                             Server.listenLocal(Set.of(newServerPort), clientInfo);
                         }
+                        //重新保存数据
+                        Config.saveTransmitData();
                     }
                 });
             } else {
@@ -570,6 +572,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                 oldNetAddress.setProtocol(protocol);
                 //添加新端口信息
                 clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
+                //重新保存数据
+                Config.saveTransmitData();
             }
         } else {
             clientInfo.getPortMappingAddress().remove(oldServerPort);
@@ -578,9 +582,9 @@ public class WebManagerVerticle extends AbstractVerticle {
             oldNetAddress.setProtocol(protocol);
             //添加新端口信息
             clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
+            //重新保存数据
+            Config.saveTransmitData();
         }
-        //重新保存数据
-        Config.saveTransmitData();
         return Result.SUCCESS("修改映射端口完成！修改后如无法访问，请继续使用原端口！");
     }
 
