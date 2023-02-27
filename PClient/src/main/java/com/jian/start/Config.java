@@ -26,7 +26,7 @@ public class Config {
     /***
      * 获取当前jar包所在路径
      */
-    static final String dirPath = System.getProperty("user.dir");
+    static String dirPath = System.getProperty("user.dir");
 
     /***
      * 配置文件
@@ -51,18 +51,14 @@ public class Config {
 
     /***
      * 获取文件流
-     * @param fileName
-     * @return
      */
-    private static InputStream getFileInputStream(String fileName, boolean isFindClsspath) {
+    private static InputStream getFileInputStream(String fileName) {
         InputStream inputStream = null;
         String filePath = dirPath + File.separator + fileName;
         File file = new File(filePath);
         try {
             if (!file.exists()) {
-                if (isFindClsspath) {
-                    inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
-                }
+                inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
             } else {
                 inputStream = Files.newInputStream(file.toPath());
             }
@@ -77,7 +73,7 @@ public class Config {
      */
     public static boolean initConfig() {
         boolean suc = false;
-        try (InputStream resource = getFileInputStream(propertiesFileName, true)) {
+        try (InputStream resource = getFileInputStream(propertiesFileName)) {
             if (Objects.nonNull(resource)) {
                 Constants.CONFIG.load(resource);
                 log.info("配置文件加载成功！");
@@ -91,13 +87,12 @@ public class Config {
 
     /***
      * 传输数据端口ssl
-     * @return
      */
     public static boolean initTransmitPortSSL() {
         try {
-            InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
-            InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
-            InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit, true);
+            InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit);
+            InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit);
+            InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit);
             //和本地的https连接为单向认证
             Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             //必须经过SSL双向认证

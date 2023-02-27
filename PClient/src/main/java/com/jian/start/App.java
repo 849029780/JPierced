@@ -8,6 +8,7 @@ import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /***
@@ -19,6 +20,12 @@ import java.util.function.Consumer;
 public class App {
 
     public static void main(String[] args) {
+        if (Objects.nonNull(args) && args.length > 0) {
+            String arg = args[0];
+            if (!StringUtil.isNullOrEmpty(arg)) {
+                Config.dirPath = arg;
+            }
+        }
         if (Config.initConfig()) {
             String hostProperty = Constants.CONFIG.getProperty(Constants.HOST_PROPERTY_NAME);
             String portProperty = Constants.CONFIG.getProperty(Constants.PORT_PROPERTY_NAME);

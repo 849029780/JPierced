@@ -32,7 +32,7 @@ public class Config {
     /***
      * 获取当前jar包所在路径
      */
-    static final String dirPath = System.getProperty("user.dir");
+    static String dirPath = System.getProperty("user.dir");
 
     /***
      * 数据文件路径，默认在该jar包下
@@ -72,7 +72,6 @@ public class Config {
 
     /***
      * 获取文件流
-     * @return
      */
     public static InputStream getFileInputStream(String fileName, boolean isFindClsspath) {
         InputStream inputStream = null;
@@ -94,41 +93,31 @@ public class Config {
 
     /***
      * 获取https证书绝对路径
-     * @param
-     * @return
      */
     public static String getCertAbsolutePath() {
-        String certPath = dirPath + File.separator + crtFileName;
-        return certPath;
+        return dirPath + File.separator + crtFileName;
     }
 
     /***
      * 获取https证书key绝对路径
-     * @param
-     * @return
      */
     public static String getCertKeyAbsolutePath() {
-        String certKeyPath = dirPath + File.separator + crtKeyFileName;
-        return certKeyPath;
+        return dirPath + File.separator + crtKeyFileName;
     }
 
 
     /***
      * 获取文件outputsream
      */
-    private static OutputStream getFileOutStream(String fileName, boolean notFoundCreateNow) {
+    private static OutputStream getFileOutStream(String fileName) {
         OutputStream outputStream = null;
         String filePath = dirPath + File.separator + fileName;
         File file = new File(filePath);
         try {
             if (!file.exists()) {
-                if (notFoundCreateNow) {
-                    file.createNewFile();
-                    outputStream = Files.newOutputStream(file.toPath(), StandardOpenOption.WRITE);
-                }
-            } else {
-                outputStream = Files.newOutputStream(file.toPath(), StandardOpenOption.WRITE);
+                file.createNewFile();
             }
+            outputStream = Files.newOutputStream(file.toPath(), StandardOpenOption.WRITE);
         } catch (IOException e) {
             log.error("获取文件outputSteam：" + fileName + "错误！", e);
         }
@@ -192,7 +181,7 @@ public class Config {
             }
             //序列化浅copy对象为json
             String dataJson = JsonUtils.JSON_PARSER.writeValueAsString(mapSaved);
-            OutputStream fileOutStream = getFileOutStream(dataFileName, true);
+            OutputStream fileOutStream = getFileOutStream(dataFileName);
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(fileOutStream));
             bufferedWriter.write(dataJson);
             bufferedWriter.flush();
@@ -210,7 +199,7 @@ public class Config {
      * 保存配置文件
      */
     public static void saveProperties() {
-        try (OutputStream outputStream = getFileOutStream(propertiesFileName, true)) {
+        try (OutputStream outputStream = getFileOutStream(propertiesFileName)) {
             Constants.CONFIG.store(outputStream, "修改时间:" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
             outputStream.flush();
         } catch (IOException e) {
