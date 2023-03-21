@@ -442,7 +442,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     /***
      * 添加映射
-     * @param params {"key":"数字去掉双引号", "serverPort":"xxx", "host":"", "port":"数字去掉双引号", "protocol":"1或2 数字去掉双引号"}
+     * @param params {"key":"数字去掉双引号", "serverPort":"xxx", "host":"", "port":"数字去掉双引号", "protocol":"1或2 数字去掉双引号", "cliUseHttps": true}
      * @return
      */
     public Result addClientPortMapping(JsonObject params) {
@@ -452,6 +452,8 @@ public class WebManagerVerticle extends AbstractVerticle {
         Integer port = params.getInteger("port");
         //协议类型，1--tcp，2--http，3--https(https暂未实现)
         Integer protocolType = params.getInteger("protocol");
+        //客户端是否使用Https
+        Boolean cliUseHttps = params.getBoolean("cliUseHttps", false);
 
         if (Objects.isNull(key)) {
             return Result.FAIL("映射端口失败！客户端key为空！");
@@ -481,7 +483,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
 
         //添加到映射
-        clientInfo.getPortMappingAddress().put(serverPort, new NetAddress(host, port, protocol));
+        clientInfo.getPortMappingAddress().put(serverPort, new NetAddress(host, port, protocol, cliUseHttps));
 
         //判断当前客户端是否在线，在线的话则需要监听新添加的端口
         if (clientInfo.isOnline()) {
@@ -505,8 +507,10 @@ public class WebManagerVerticle extends AbstractVerticle {
         Integer newServerPort = params.getInteger("newServerPort");
         String host = params.getString("host");
         Integer port = params.getInteger("port");
+        //客户端是否使用Https
+        Boolean cliUseHttps = params.getBoolean("cliUseHttps");
 
-        //协议类型，1--tcp，2--http，3--https(https暂未实现)
+        //协议类型，1--tcp，2--http，3--https
         Integer protocolType = params.getInteger("protocol");
 
         if (Objects.isNull(key)) {
@@ -524,6 +528,10 @@ public class WebManagerVerticle extends AbstractVerticle {
 
         //老映射地址
         NetAddress oldNetAddress = clientInfo.getPortMappingAddress().get(oldServerPort);
+
+        if (Objects.isNull(cliUseHttps)) {
+            cliUseHttps = oldNetAddress.getCliUseHttps();
+        }
 
         if (Objects.isNull(oldNetAddress)) {
             return Result.FAIL("修改映射端口失败！修改的服务端映射端口不存在！");
@@ -550,13 +558,14 @@ public class WebManagerVerticle extends AbstractVerticle {
             //关闭本地端口
             ChannelFuture channelFuture = closeLocalPort(clientInfo, channel, oldServerPort);
             if (Objects.nonNull(channelFuture)) {
+                Boolean finalCliUseHttps = cliUseHttps;
                 channelFuture.addListener(closeFuture -> {
                     //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
                     if (closeFuture.isSuccess()) {
                         clientInfo.getPortMappingAddress().remove(oldServerPort);
                         clientInfo.getListenPortMap().remove(oldServerPort);
                         //添加新端口信息
-                        clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol));
+                        clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol, finalCliUseHttps));
                         //判断当前客户端是否在线，在线的话则需要监听新添加的端口
                         if (clientInfo.isOnline()) {
                             Server.listenLocal(Set.of(newServerPort), clientInfo);

@@ -14,8 +14,11 @@
 ```
 # web管理的服务端口
 web.port=8000 
-# 是否启用支持HTTPS网页的穿透，开启支持需要在运行环境的同目录放置https的证书文件pierced.crt，pierced.key，key使用pkcs8，未配置启动将会默认关闭HTTPS
-# 启用https后，管理相关接口也将使用https
+# 是否启用支持HTTPS网页的穿透，开启支持需要在运行环境的同目录放置https的证书文件pierced.crt，pierced.key，key使用pkcs8，
+# 可使用openssl命令直接将Nginx证书的key转为pkcs8的key，如下命令：
+openssl pkcs8 -topk8 -inform pem -in 证书.key -outform pem -nocrypt -out 证书pkcs8.key
+# 未配置证书时，启动将会默认关闭使用HTTPS。
+# 配置证书后并启用https后，管理相关接口也将使用https
 enable.https=true
 # ack通道的端口(ack通道主要用于收发连接及连接响应消息，以及设置被穿透客户端的本地连接上的是否自动读等作用)
 ack.port=6210
@@ -46,9 +49,9 @@ pwd=xxx
 由于项目中默认放置了我自己生成的CA证书及密钥，可以直接使用，如需要自行生成，生成后替换掉resources/certs中相应的证书文件即可，注意生成的客户端及服务端证书都必须是统一CA签名的。  
 使用Maven命令mvn package编译打包成可运行的jar包(打包后在项目目录的target目录下)；  
 1、将PServer.jar上传到有公网的服务器上，并同时上传server.properties配置文件(配置说明如上)  
-然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PServer-1.0-SNAPSHOT.jar > /dev/null &2>1```  
+然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PServer-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```  
 2、将PClient.jar放到被穿透的机器上，在同目录下放置client.properties配置文件(配置说明如上)  
-然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null &2>1```  
+然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```  
 【注意】：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后才可使用，根据使用场景设置Jvm的内存大小。
 
 ## api接口及参数说明
@@ -102,7 +105,7 @@ http://xxx:port/api/shotClient
 ```
 POST请求  
 protocol参数值说明: 1--TCP,2--HTTP,3--HTTPS
-Json参数：{"key":数字客户端key, "serverPort":映射在服务端上的端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":数字，取值如上协议类型说明}
+Json参数：{"key":数字客户端key, "serverPort":映射在服务端上的端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":数字，取值如上协议类型说明, "cliUseHttps": true 布尔值}
 http://xxx:port/api/addClientPortMapping
 ```
 
@@ -110,7 +113,7 @@ http://xxx:port/api/addClientPortMapping
 ```
 POST请求  
 protocol参数值说明: 1--TCP,2--HTTP,3--HTTPS
-Json参数：{"key":数字客户端key, "oldServerPort":原端口, "newServerPort":新端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":数字，取值如上协议类型说明}
+Json参数：{"key":数字客户端key, "oldServerPort":原端口, "newServerPort":新端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":数字，取值如上协议类型说明, "cliUseHttps": true 布尔值}
 http://xxx:port/api/modifyClientPortMapping
 ```
 

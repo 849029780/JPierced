@@ -94,7 +94,7 @@ public class Config {
             InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit);
             InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit);
             //和本地的https连接为单向认证
-            Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+            Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().build();
             //必须经过SSL双向认证
             Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).startTls(true).build();
             caCrtInputTransmit.close();

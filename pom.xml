@@ -17,10 +17,10 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <lombok.version>1.18.24</lombok.version>
-        <netty.version>4.1.86.Final</netty.version>
-        <logback.version>1.4.5</logback.version>
-        <netty-tcnative-boringssl.version>2.0.54.Final</netty-tcnative-boringssl.version>
+        <lombok.version>1.18.26</lombok.version>
+        <netty.version>4.1.90.Final</netty.version>
+        <logback.version>1.4.6</logback.version>
+        <netty-tcnative-boringssl.version>2.0.59.Final</netty-tcnative-boringssl.version>
     </properties>
 
 

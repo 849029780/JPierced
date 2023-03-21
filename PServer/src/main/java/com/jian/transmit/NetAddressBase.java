@@ -12,8 +12,15 @@ public class NetAddressBase extends SocketAddress {
 
     private Integer port;
 
-    //默认为tcp
+    /***
+     * 默认为tcp
+     */
     private Protocol protocol;
+
+    /***
+     * 客户端是否启用https
+     */
+    private Boolean cliUseHttps = Boolean.FALSE;
 
     public enum Protocol {
         TCP,

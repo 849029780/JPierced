@@ -40,6 +40,7 @@ public class App {
                 log.error("server.port配置为空！启动失败！");
                 return;
             }
+
             if (StringUtil.isNullOrEmpty(keyProperty)) {
                 log.error("key配置为空！启动失败！");
                 return;

@@ -23,9 +23,10 @@ public class NetAddress extends NetAddressBase {
      */
     private boolean isListen;
 
-    public NetAddress(String host, Integer port, Protocol protocol) {
+    public NetAddress(String host, Integer port, Protocol protocol,Boolean cliUseHttps) {
         setHost(host);
         setPort(port);
         setProtocol(protocol);
+        setCliUseHttps(cliUseHttps);
     }
 }

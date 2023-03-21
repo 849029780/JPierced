@@ -76,20 +76,15 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         ChannelPipeline pipeline = channel.pipeline();
         //http协议时需要额外添加handler处理
         switch (netAddress.getProtocol()) {
-            case HTTPS -> {
+            case HTTPS, HTTP -> {
                 pipeline.addLast(new LocalHttpByteToMessageCodec(netAddress.getHost(), netAddress.getPort()));
-
                 //是否启用https
-                if (Constants.IS_ENABLE_HTTPS) {
+                if (netAddress.getCliUseHttps()) {
                     connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTPS);
                 } else {
                     log.warn("https未启用，暂不可使用https协议访问！已切换为http访问！");
                     connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTP);
                 }
-            }
-            case HTTP -> {
-                pipeline.addLast(new LocalHttpByteToMessageCodec(netAddress.getHost(), netAddress.getPort()));
-                connectReqPacks.setProtocol(ConnectReqPacks.Protocol.HTTP);
             }
             case TCP -> connectReqPacks.setProtocol(ConnectReqPacks.Protocol.TCP);
         }
