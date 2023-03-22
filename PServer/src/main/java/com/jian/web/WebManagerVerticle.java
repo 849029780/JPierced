@@ -111,7 +111,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         //设置响应头Content-type为json
         router.route("/api/*").produces(HttpHeaderValues.APPLICATION_JSON.toString()).handler(responseContentTypeHandler);
         router.route()
-                .handler(CorsHandler.create("*").allowedHeaders(allowedHeaders).allowedMethods(new HashSet<>(HttpMethod.values())))
+                .handler(CorsHandler.create().allowedHeaders(allowedHeaders).allowedMethods(new HashSet<>(HttpMethod.values())))
                 .handler(BodyHandler.create())
                 .handler(han -> {
                     HttpServerRequest request = han.request();
@@ -233,8 +233,8 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     /***
      * 校验token
-     * @param token
-     * @return
+     * @param token 登录token
+     * @return 响应结果
      */
     public boolean checkToken(String token) {
         boolean isOk = false;
@@ -263,7 +263,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 登录
      * @param params {"username":"", "pwd":""}
-     * @return token
+     * @return 响应结果 token
      */
     public Result login(JsonObject params) {
         String username = params.getString("username", "");
@@ -287,7 +287,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 客户端列表
      * @param params {"key":"数字去掉双引号", "name":"", "serverPort":"数字去掉双引号"}
-     * @return
+     * @return 响应结果
      */
     public Result clienList(JsonObject params) {
         Long key = params.getLong("key");
@@ -320,7 +320,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 添加客户端
      * @param params {"key":"数字去掉双引号", "pwd":"xxx", "name":""}
-     * @return
+     * @return 响应结果
      */
     public Result addClient(JsonObject params) {
         Long key = params.getLong("key");
@@ -358,7 +358,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 修改客户端
      * @param params {"key":"数字去掉双引号","newKey":新的key, "pwd":"xxx", "name":""}
-     * @return
+     * @return 响应结果
      */
     private Result modifyClient(JsonObject params) {
         Long key = params.getLong("key");
@@ -394,7 +394,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 移除客户端
      * @param params {"key":"数字去掉双引号"}
-     * @return
+     * @return 响应结果
      */
     public Result removeClient(JsonObject params) {
         Long key = params.getLong("key");
@@ -417,7 +417,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 踢出客户端
      * @param params {"key":"数字去掉双引号"}
-     * @return
+     * @return 响应结果
      */
     private Result shotClient(JsonObject params) {
         Long key = params.getLong("key");
@@ -443,7 +443,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 添加映射
      * @param params {"key":"数字去掉双引号", "serverPort":"xxx", "host":"", "port":"数字去掉双引号", "protocol":"1或2 数字去掉双引号", "cliUseHttps": true}
-     * @return
+     * @return 响应结果
      */
     public Result addClientPortMapping(JsonObject params) {
         Long key = params.getLong("key");
@@ -499,7 +499,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 修改映射
      * @param params {"key":"数字去掉双引号", "oldServerPort":"数字去掉双引号", "newServerPort":"数字去掉双引号", "host":"", "port":"数字去掉双引号", "protocol":"1或2 数字去掉双引号"}
-     * @return
+     * @return 响应结果 响应结果
      */
     public Result modifyClientPortMapping(JsonObject params) {
         Long key = params.getLong("key");
@@ -600,7 +600,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 关闭端口
      * @param params {"key":"数字去掉双引号","port":""}
-     * @return
+     * @return 响应结果
      */
     private Result closePort(JsonObject params) {
         Long key = params.getLong("key");
@@ -643,7 +643,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 监听端口
      * @param params {"key":"数字去掉双引号","port":""}
-     * @return
+     * @return 响应结果
      */
     private Result listenPort(JsonObject params) {
         Long key = params.getLong("key");
@@ -680,7 +680,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      *
      * @param protocolType 1--tcp 2--http 3--https
-     * @return
+     * @return 响应结果
      */
     private NetAddress.Protocol getProtocolByType(int protocolType) {
         NetAddress.Protocol protocol;
@@ -695,7 +695,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 移除映射
      * @param params {"key":"", "serverPort":""}
-     * @return
+     * @return 响应结果
      */
     public Result removeClientPortMapping(JsonObject params) {
         Long key = params.getLong("key");
@@ -729,8 +729,8 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     /***
      * 关闭本地端口 同时关闭本地端口上的连接
-     * @param clientInfo
-     * @param serverPort
+     * @param clientInfo 客户端信息
+     * @param serverPort 服务端端口
      */
     public ChannelFuture closeLocalPort(ClientInfo clientInfo, Channel serverPortChannel, Integer serverPort) {
         //获取该客户端的远程连接，如果连接为空，则该客户端不在线
@@ -785,7 +785,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 设置传输服务端口
      * @param params {"serverPort":""}
-     * @return
+     * @return 响应结果
      */
     public Result setTrasmitPort(JsonObject params) {
         Integer port = params.getInteger("serverPort");
@@ -823,7 +823,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 设置web服务端口
      * @param params {"webPort":""}
-     * @return
+     * @return 响应结果
      */
     public Result setWebPort(JsonObject params) {
         Integer port = params.getInteger("webPort");
@@ -854,7 +854,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     }
 
     JsonObject getBodyAsJson(RoutingContext context) {
-        JsonObject bodyAsJson = context.getBodyAsJson();
+        JsonObject bodyAsJson = context.body().asJsonObject();
         if (Objects.isNull(bodyAsJson)) {
             bodyAsJson = new JsonObject();
         }

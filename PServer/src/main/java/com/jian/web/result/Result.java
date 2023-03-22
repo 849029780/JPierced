@@ -9,55 +9,55 @@ import lombok.Data;
  * @date 2022/04/04
  */
 @Data
-public class Result<T> {
+public class Result {
 
     private Integer resultCode;
 
-    private T data;
+    private Object data;
 
     private String msg;
 
-    public static <T> Result<T> newInstance(int resultCode, T data, String msg) {
-        Result<T> tResult = new Result<>();
+    public static Result newInstance(int resultCode, Object data, String msg) {
+        Result tResult = new Result();
         tResult.setResultCode(resultCode);
         tResult.setData(data);
         tResult.setMsg(msg);
         return tResult;
     }
 
-    public static <T> Result<T> SUCCESS(T data, String msg) {
+    public static Result SUCCESS(Object data, String msg) {
         return newInstance(SUCCESS_CODE, data, msg);
     }
 
-    public static <T> Result<T> SUCCESS(T data) {
+    public static  Result SUCCESS(Object data) {
         return SUCCESS(data, null);
     }
 
-    public static <T> Result<T> SUCCESS(String msg) {
+    public static  Result SUCCESS(String msg) {
         return SUCCESS(null, msg);
     }
 
-    public static <T> Result<T> SUCCESS() {
+    public static  Result SUCCESS() {
         return SUCCESS(null, null);
     }
 
-    public static <T> Result<T> FAIL(T data, String msg) {
+    public static  Result FAIL(Object data, String msg) {
         return newInstance(FAIL_CODE, data, msg);
     }
 
-    public static <T> Result<T> FAIL(T data) {
+    public static  Result FAIL(Object data) {
         return FAIL(data, null);
     }
 
-    public static <T> Result<T> FAIL(String msg) {
+    public static  Result FAIL(String msg) {
         return FAIL(null, msg);
     }
 
-    public static <T> Result<T> FAIL() {
+    public static  Result FAIL() {
         return FAIL(null, null);
     }
 
-    public static <T> Result<T> UN_LOGIN(String msg){
+    public static  Result UN_LOGIN(String msg){
         return newInstance(UN_LOGIN, null, msg);
     }
 
