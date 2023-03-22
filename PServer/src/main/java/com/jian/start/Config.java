@@ -79,7 +79,7 @@ public class Config {
         File file = new File(filePath);
         try {
             if (!file.exists()) {
-                if(isFindClsspath){
+                if (isFindClsspath) {
                     inputStream = Config.class.getClassLoader().getResourceAsStream(fileName);
                 }
             } else {
@@ -155,7 +155,7 @@ public class Config {
     public static void initTransmitData() {
         try (InputStream dataInputStream = getFileInputStream(dataFileName, false)) {
             if (Objects.isNull(dataInputStream)) {
-                log.warn("{}文件不存在！暂不加载已保存的数据！",dataFileName);
+                log.warn("{}文件不存在！暂不加载已保存的数据！", dataFileName);
                 return;
             }
             Constants.CLIENTS = JsonUtils.JSON_PARSER.readValue(dataInputStream, new TypeReference<ConcurrentHashMap<Long, ClientInfo>>() {
@@ -180,7 +180,8 @@ public class Config {
                 mapSaved.put(key, clientInfoSaved);
             }
             //序列化浅copy对象为json
-            String dataJson = JsonUtils.JSON_PARSER.writeValueAsString(mapSaved);
+            String dataJson = JsonUtils.JSON_PARSER.writerWithDefaultPrettyPrinter().writeValueAsString(mapSaved);
+
             OutputStream fileOutStream = getFileOutStream(dataFileName);
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(fileOutStream));
             bufferedWriter.write(dataJson);
@@ -237,7 +238,7 @@ public class Config {
                 Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
                 return false;
             }
-        }else{
+        } else {
             log.warn("HTTPS未启用！");
         }
         return true;
