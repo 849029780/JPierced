@@ -21,5 +21,6 @@ public class NetAddressSaved extends NetAddressBase {
         setHost(netAddress.getHost());
         setPort(netAddress.getPort());
         setProtocol(netAddress.getProtocol());
+        setCliUseHttps(netAddress.getCliUseHttps());
     }
 }

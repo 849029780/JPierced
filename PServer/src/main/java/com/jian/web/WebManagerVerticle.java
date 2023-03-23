@@ -476,6 +476,10 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("映射端口失败！映射端口协议类型为空！");
         }
         NetAddress.Protocol protocol = getProtocolByType(protocolType);
+
+        if(!Constants.IS_ENABLE_HTTPS && protocol == NetAddress.Protocol.HTTPS){
+            return Result.FAIL("映射端口失败！Https证书未配置，不允许使用Https！");
+        }
         //
         NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
         if (Objects.nonNull(netAddress)) {
@@ -529,12 +533,13 @@ public class WebManagerVerticle extends AbstractVerticle {
         //老映射地址
         NetAddress oldNetAddress = clientInfo.getPortMappingAddress().get(oldServerPort);
 
-        if (Objects.isNull(cliUseHttps)) {
-            cliUseHttps = oldNetAddress.getCliUseHttps();
-        }
 
         if (Objects.isNull(oldNetAddress)) {
             return Result.FAIL("修改映射端口失败！修改的服务端映射端口不存在！");
+        }
+
+        if (Objects.isNull(cliUseHttps)) {
+            cliUseHttps = oldNetAddress.getCliUseHttps();
         }
 
         if (Objects.isNull(newServerPort)) {
@@ -549,6 +554,10 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("修改映射端口失败！映射端口协议类型为空！");
         }
         NetAddress.Protocol protocol = getProtocolByType(protocolType);
+
+        if(!Constants.IS_ENABLE_HTTPS && protocol == NetAddress.Protocol.HTTPS){
+            return Result.FAIL("修改映射端口失败！Https证书未配置，不允许使用Https！");
+        }
 
         //判断是否在线，在线则需要关闭端口重新监听新端口
         if (clientInfo.isOnline()) {
@@ -589,6 +598,7 @@ public class WebManagerVerticle extends AbstractVerticle {
             oldNetAddress.setHost(host);
             oldNetAddress.setPort(port);
             oldNetAddress.setProtocol(protocol);
+            oldNetAddress.setCliUseHttps(cliUseHttps);
             //添加新端口信息
             clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
             //重新保存数据
