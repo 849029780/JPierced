@@ -53,7 +53,8 @@ pwd=xxx
 2、将PClient.jar放到被穿透的机器上，在同目录下放置client.properties配置文件(配置说明如上)  
 然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```  
 【注意】：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后才可使用，根据使用场景设置Jvm的内存大小。
-3、也可使用docker部署Client，如果连接宿主机，IP需要填写host.docker.internal，否则会导致连接不上，docker具体配置，请参考项目内Dockerfile。
+3、使用docker部署PServer，配置参考项目中的Dockerfile，网桥配置一定要使用宿主机端口，否则会导致连接不上，详情参考Dockerbuild。
+4、也可使用docker部署PClient，如果连接宿主机，IP需要填写host.docker.internal，否则会导致连接不上，docker具体配置，请参考项目内Dockerfile。
 
 ## api接口及参数说明
 
