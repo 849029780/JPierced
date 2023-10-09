@@ -1,0 +1,2 @@
+docker build -t pserver:1.0.0 .
+docker run --network=host -d --name pserver pserver:1.0.0

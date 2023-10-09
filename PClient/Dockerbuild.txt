@@ -1,0 +1,2 @@
+docker build -t pclient:1.0.0 .
+docker run -d --name pclient pclient:1.0.0

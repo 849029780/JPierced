@@ -46,8 +46,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
             channel.close();
             return;
         }
-
-        //生成通道码
+          //生成通道码
         long thisChannelHash = System.nanoTime();
         long tarChannelHash = thisChannelHash >> 1;
 
