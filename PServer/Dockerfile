@@ -1,5 +1,8 @@
 FROM openjdk:17
 LABEL maintainer=Jian
+RUN rm -f /etc/localtime \
+&& ln -sv /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+&& echo "Asia/Shanghai" > /etc/timezone
 RUN mkdir jpserver
 COPY ./target/server.properties jpserver/
 COPY ./target/PServer-1.0-SNAPSHOT.jar jpserver/
