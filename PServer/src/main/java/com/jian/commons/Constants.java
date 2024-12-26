@@ -9,16 +9,8 @@ import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
 import com.jian.transmit.handler.remote.ack.AckChannelInitializer;
 import com.jian.transmit.handler.remote.transfer.RemoteChannelInitializer;
-import io.netty.channel.*;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
-import io.netty.channel.kqueue.KQueueServerSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -46,29 +38,11 @@ public class Constants {
      * boss线程数
      */
     public static final int BOSS_THREAD_NUM = THREAD_NUM >> 1;
-    /***
-     * 服务端接受连接处理线程组
-     */
-    public static final EventLoopGroup BOSS_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(BOSS_THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(BOSS_THREAD_NUM) : new NioEventLoopGroup(BOSS_THREAD_NUM);
-    /***
-     * 服务端编解码工作线程组
-     */
-    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(THREAD_NUM) : new NioEventLoopGroup(THREAD_NUM);
 
     /***
      * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
      */
     public static final int ACK_WORK_THREAD_NUM = 4;
-
-    /***
-     * ack通道工作线程
-     */
-    public static final EventLoopGroup ACK_WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(ACK_WORK_THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(ACK_WORK_THREAD_NUM) : new NioEventLoopGroup(ACK_WORK_THREAD_NUM);
-
-    /***
-     * 服务端通道类型
-     */
-    public static final Class<? extends ServerSocketChannel> SERVER_SOCKET_CHANNEL_CLASS = Epoll.isAvailable() ? EpollServerSocketChannel.class : KQueue.isAvailable() ? KQueueServerSocketChannel.class : NioServerSocketChannel.class;
 
     /***
      * 绑定在本地通道上的 当前通道hash

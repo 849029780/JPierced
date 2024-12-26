@@ -1,6 +1,7 @@
 package com.jian.transmit;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Jian
  * @date 2022/4/2
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 public class ClientInfoSaved extends ClientInfoBase {

@@ -40,25 +40,11 @@ public class Constants {
      * 线程数
      */
     public static final int THREAD_NUM = 16;
-    /***
-     * 编解码工作线程组
-     */
-    public static final EventLoopGroup WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(THREAD_NUM) : new NioEventLoopGroup(THREAD_NUM);
 
     /***
      * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
      */
     public static final int ACK_WORK_THREAD_NUM = 4;
-
-    /***
-     * ack通道工作线程
-     */
-    public static final EventLoopGroup ACK_WORK_EVENT_LOOP_GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup(ACK_WORK_THREAD_NUM) : KQueue.isAvailable() ? new KQueueEventLoopGroup(ACK_WORK_THREAD_NUM) : new NioEventLoopGroup(ACK_WORK_THREAD_NUM);
-
-    /***
-     * 通道类型
-     */
-    public static final Class<? extends SocketChannel> SOCKET_CHANNEL_CLASS = Epoll.isAvailable() ? EpollSocketChannel.class : KQueue.isAvailable() ? KQueueSocketChannel.class : NioSocketChannel.class;
 
     /***
      * 绑定在本地通道上的 当前通道hash

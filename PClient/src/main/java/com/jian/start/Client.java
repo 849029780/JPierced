@@ -1,12 +1,12 @@
 package com.jian.start;
 
 import com.jian.commons.Constants;
+import com.jian.utils.ChannelEventUtils;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.*;
 import io.netty.util.concurrent.GenericFutureListener;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
@@ -37,22 +37,16 @@ public class Client {
     /***
      * 是否可进行重连，只有登录成功后断开连接才允许重连，别的操作不允许重连
      */
+    @Setter
+    @Getter
     private boolean canReconnect = false;
 
     private Client() {
         this.bootstrap = new Bootstrap();
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
-        this.bootstrap.channel(Constants.SOCKET_CHANNEL_CLASS);
+        this.bootstrap.channel(ChannelEventUtils.getSocketChannelClass());
         this.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-    }
-
-    public boolean isCanReconnect() {
-        return canReconnect;
-    }
-
-    public void setCanReconnect(boolean canReconnect) {
-        this.canReconnect = canReconnect;
     }
 
     public static Client getInstance() {
@@ -72,26 +66,26 @@ public class Client {
 
     public static Client getLocalInstance() {
         Client client = getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
-        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
+        client.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return client;
     }
 
     public static Client getLocalHttpsInstance() {
         Client client = getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
-        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
+        client.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return client;
     }
 
 
     public static Client getRemoteInstance() {
         Client client = getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
-        client.bootstrap.group(Constants.WORK_EVENT_LOOP_GROUP);
+        client.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return client;
     }
 
     public static Client getRemoteAckInstance() {
         Client client = getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
-        client.bootstrap.group(Constants.ACK_WORK_EVENT_LOOP_GROUP);
+        client.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.ACK_WORK_THREAD_NUM));
         return client;
     }
 

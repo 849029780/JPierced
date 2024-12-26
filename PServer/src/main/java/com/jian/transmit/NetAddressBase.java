@@ -1,9 +1,11 @@
 package com.jian.transmit;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.net.SocketAddress;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class NetAddressBase extends SocketAddress {
 

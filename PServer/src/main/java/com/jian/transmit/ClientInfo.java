@@ -3,6 +3,7 @@ package com.jian.transmit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.netty.channel.Channel;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Jian
  * @date 2022/4/2
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class ClientInfo extends ClientInfoBase {
     /***

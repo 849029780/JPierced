@@ -163,6 +163,7 @@
 
     <!--指定包下的log输出级别-->
     <logger name="com.jian" level="INFO" />
+    <logger name="org.slf4j" level="WARN"/>
 
 
 </configuration>

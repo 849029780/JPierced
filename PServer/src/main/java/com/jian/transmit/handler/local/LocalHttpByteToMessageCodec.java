@@ -11,6 +11,8 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,8 @@ public class LocalHttpByteToMessageCodec extends ByteToMessageCodec<ByteBuf> {
     private final LocalHttpBaseDecoder reqDecoder;
     private final LocalHttpBaseDecoder respDecoder;
 
+    @Getter
+    @Setter
     private String reqHost;
 
     ByteBuf cumulation;
@@ -35,14 +39,6 @@ public class LocalHttpByteToMessageCodec extends ByteToMessageCodec<ByteBuf> {
     private final int discardAfterReads;
 
     private int numReads;
-
-    public void setReqHost(String reqHost) {
-        this.reqHost = reqHost;
-    }
-
-    public String getReqHost() {
-        return reqHost;
-    }
 
     public LocalHttpByteToMessageCodec(String host, Integer port) {
         //super(host, port);
@@ -68,7 +64,7 @@ public class LocalHttpByteToMessageCodec extends ByteToMessageCodec<ByteBuf> {
             protected HttpMessage createMessage(String[] initialLine) {
                 return new DefaultHttpRequest(
                         HttpVersion.valueOf(initialLine[2]),
-                        HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);
+                        HttpMethod.valueOf(initialLine[0]), initialLine[1], DefaultHttpHeadersFactory.headersFactory().withValidation(validateHeaders));
             }
         };
 
@@ -92,7 +88,7 @@ public class LocalHttpByteToMessageCodec extends ByteToMessageCodec<ByteBuf> {
             protected HttpMessage createMessage(String[] initialLine) {
                 return new DefaultHttpResponse(
                         HttpVersion.valueOf(initialLine[0]),
-                        HttpResponseStatus.valueOf(Integer.parseInt(initialLine[1]), initialLine[2]), validateHeaders);
+                        HttpResponseStatus.valueOf(Integer.parseInt(initialLine[1]), initialLine[2]), DefaultHttpHeadersFactory.headersFactory().withValidation(validateHeaders));
             }
         };
     }

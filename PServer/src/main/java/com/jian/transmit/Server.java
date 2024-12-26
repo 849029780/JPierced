@@ -2,6 +2,7 @@ package com.jian.transmit;
 
 import com.jian.beans.transfer.MessageReqPacks;
 import com.jian.commons.Constants;
+import com.jian.utils.ChannelEventUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class Server {
         serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
         //关闭小包组装成大包，如果都是小流量 则可以关闭，以减少延迟，减少延迟后将会多发送tcp包头，会占用一定带宽
         //serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-        serverBootstrap.channel(Constants.SERVER_SOCKET_CHANNEL_CLASS);
+        serverBootstrap.channel(ChannelEventUtils.getSocketChannelClass());
     }
 
     public static Server getInstance() {
@@ -47,25 +48,25 @@ public class Server {
 
     public static Server getLocalInstance() {
         Server server = getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
-        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
+        server.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return server;
     }
 
     public static Server getLocalHttpsInstance() {
         Server server = getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
-        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
+        server.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return server;
     }
 
     public static Server getRemoteInstance() {
         Server server = getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
-        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.WORK_EVENT_LOOP_GROUP);
+        server.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return server;
     }
 
     public static Server getRemoteAckInstance() {
         Server server = getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
-        server.group(Constants.BOSS_EVENT_LOOP_GROUP, Constants.ACK_WORK_EVENT_LOOP_GROUP);
+        server.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.ACK_WORK_THREAD_NUM));
         return server;
     }
 
@@ -79,9 +80,8 @@ public class Server {
         return this;
     }
 
-    public Server group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+    public void group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         this.serverBootstrap.group(parentGroup, childGroup);
-        return this;
     }
 
     public static void listenLocal(Set<Integer> ports, ClientInfo clientInfo) {
