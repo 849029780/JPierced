@@ -168,7 +168,7 @@ public class Constants {
     /***
      * 配置属性
      */
-    public static Properties CONFIG = new Properties();
+    public static ServerConfig CONFIG;
 
     /***
      * vertx
@@ -184,35 +184,6 @@ public class Constants {
      * 传输服务监听的端口channel 用于重启操作
      */
     public static Channel LISTEN_REMOTE_CHANNEL;
-    /***
-     * 传输端口配置文件属性名
-     */
-    public static final String TRANSMIT_PORT_PROPERTY = "transmit.port";
-
-    /***
-     * ACK port
-     */
-    public static final String ACK_PORT_PROPERTY = "ack.port";
-    /***
-     * web端口配置文件属性名
-     */
-    public static final String WEB_PORT_PROPERTY = "web.port";
-
-    /***
-     * web登录的用户名
-     */
-    public static final String LOGIN_USERNAME_PROPERTY = "login.username";
-
-    /***
-     * web登录的密码
-     */
-    public static final String LOGIN_PWD_PROPERTY = "login.pwd";
-
-    /***
-     * 是否启动https
-     */
-    public static final String ENABLE_HTTPS_PROPERTY_NAME = "enable.https";
-
     /***
      * 是否启用Https
      */
@@ -233,16 +204,7 @@ public class Constants {
      */
     public static final Algorithm JWT_ALGORITHM = Algorithm.HMAC512("jian0321");
 
-    /***
-     * 默认传输端口
-     */
-    public static final String DEF_TRANSMIT_PORT = "9999";
-    public static final String DEF_ACK_PORT = "6210";
 
-    /***
-     * 默认web端口
-     */
-    public static final String DEF_WEB_PORT = "8000";
 
 
 }

@@ -156,8 +156,7 @@ public class Server {
 
 
     public static ChannelFuture listenRemote() {
-        String tport = Constants.CONFIG.getProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
-        Integer port = Integer.valueOf(tport);
+        Integer port = Constants.CONFIG.getTransmitPort();
         ChannelFuture channelFuture = Server.getRemoteInstance().listen(port);
         channelFuture.addListener(future -> {
             if (future.isSuccess()) {
@@ -204,9 +203,7 @@ public class Server {
 
 
     public static void listenRemoteAck() {
-        String ackPort = Constants.CONFIG.getProperty(Constants.ACK_PORT_PROPERTY, Constants.DEF_ACK_PORT);
-        //
-        ChannelFuture channelFuture = Server.getRemoteAckInstance().listen(Integer.parseInt(ackPort));
+        ChannelFuture channelFuture = Server.getRemoteAckInstance().listen(Constants.CONFIG.getAckPort());
         channelFuture.addListener(future -> {
             ChannelFuture channelFuture1 = (ChannelFuture) future;
             if (channelFuture1.isSuccess()) {

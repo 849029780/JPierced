@@ -121,7 +121,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 remoteChannel.pipeline().addFirst(new IdleStateHandler(Constants.DISCONNECT_HEALTH_SECONDS, 0, 0, TimeUnit.SECONDS));
                 channel.pipeline().addFirst(new IdleStateHandler(Constants.DISCONNECT_HEALTH_SECONDS, 0, 0, TimeUnit.SECONDS));
                 MessageReqPacks messageReqPacks = new MessageReqPacks();
-                if (ports.size() == 0) {
+                if (ports.isEmpty()) {
                     messageReqPacks.setMsg("客户端暂未配置映射端口！");
                     channel.writeAndFlush(messageReqPacks);
                 } else {

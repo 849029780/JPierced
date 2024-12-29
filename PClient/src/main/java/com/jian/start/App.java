@@ -27,16 +27,17 @@ public class App {
             }
         }
         if (Config.initConfig()) {
-            String hostProperty = Constants.CONFIG.getProperty(Constants.HOST_PROPERTY_NAME);
-            String portProperty = Constants.CONFIG.getProperty(Constants.PORT_PROPERTY_NAME);
-            String keyProperty = Constants.CONFIG.getProperty(Constants.KEY_PROPERTY_NAME);
-            String pwdProperty = Constants.CONFIG.getProperty(Constants.PWD_PROPERTY_NAME);
+            String hostProperty = Constants.CONFIG.getServerHost();
+            Integer portProperty = Constants.CONFIG.getServerPort();
+            String keyProperty = Constants.CONFIG.getKey();
+            String pwdProperty = Constants.CONFIG.getPwd();
+
 
             if (StringUtil.isNullOrEmpty(hostProperty)) {
                 log.error("server.host配置为空！启动失败！");
                 return;
             }
-            if (StringUtil.isNullOrEmpty(portProperty)) {
+            if (Objects.isNull(portProperty)) {
                 log.error("server.port配置为空！启动失败！");
                 return;
             }
@@ -49,7 +50,7 @@ public class App {
                 log.error("pwd配置为空！启动失败！");
                 return;
             }
-            Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, Integer.parseInt(portProperty)), (Consumer<ChannelFuture>) future -> {
+            Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, portProperty), (Consumer<ChannelFuture>) future -> {
                 Channel channel = future.channel();
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
                 connectAuthReqPacks.setKey(Long.parseLong(keyProperty));

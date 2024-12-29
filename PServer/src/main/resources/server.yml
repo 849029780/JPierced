@@ -1,0 +1,6 @@
+login-username: xxxx
+login-pwd: xxxx
+ack-port: 6211
+transmit-port: 9998
+web-port: 8001
+useHttps: true

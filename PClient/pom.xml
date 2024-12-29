@@ -11,34 +11,33 @@
 
     <artifactId>PClient</artifactId>
 
-    <properties>
-        <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.jian</groupId>
             <artifactId>PCommons</artifactId>
-            <version>${jian.commons.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>${netty.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-tcnative-boringssl-static</artifactId>
-            <version>${netty-tcnative-boringssl.version}</version>
         </dependency>
 
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+        </dependency>
+
+
     </dependencies>
 
 </project>

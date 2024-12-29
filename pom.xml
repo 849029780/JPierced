@@ -19,13 +19,15 @@
         <maven.compiler.target>17</maven.compiler.target>
         <lombok.version>1.18.34</lombok.version>
         <netty.version>4.2.0.RC1</netty.version>
-<!--        <netty.version>4.1.113.Final</netty.version>-->
-        <logback.version>1.5.12</logback.version>
+        <!--        <netty.version>4.1.113.Final</netty.version>-->
+        <logback.version>1.5.15</logback.version>
         <netty-tcnative-boringssl.version>2.0.69.Final</netty-tcnative-boringssl.version>
 
         <vertx.version>4.5.11</vertx.version>
-        <jackson.version>2.18.1</jackson.version>
+        <jackson.version>2.18.2</jackson.version>
         <jwt.version>4.4.0</jwt.version>
+        <snakeyaml.version>2.3</snakeyaml.version>
+        <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
     </properties>
 
 
@@ -37,8 +39,62 @@
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
-
     </dependencies>
+
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-tcnative-boringssl-static</artifactId>
+                <version>${netty-tcnative-boringssl.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.auth0</groupId>
+                <artifactId>java-jwt</artifactId>
+                <version>${jwt.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.jian</groupId>
+                <artifactId>PCommons</artifactId>
+                <version>${jian.commons.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-web</artifactId>
+                <version>${vertx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>

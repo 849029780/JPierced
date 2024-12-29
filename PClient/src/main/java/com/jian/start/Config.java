@@ -1,11 +1,13 @@
 package com.jian.start;
 
+import com.jian.commons.ClientConfig;
 import com.jian.commons.Constants;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProtocols;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
@@ -87,10 +89,16 @@ public class Config {
         boolean suc = false;
         try (InputStream resource = getFileInputStream(propertiesFileName)) {
             if (Objects.nonNull(resource)) {
-                Constants.CONFIG.load(resource);
+                Yaml yml = new Yaml();
+                yml.load(resource);
+                Constants.CONFIG = yml.loadAs(resource, ClientConfig.class);
                 log.info("配置文件加载成功！");
             }
-            suc = initTransmitPortSSL();
+            if (Constants.CONFIG.getUseSsl()) {
+                suc = initTransmitPortSSL();
+            } else {
+                suc = true;
+            }
         } catch (IOException e) {
             log.error("加载config.properties文件错误！", e);
         }
@@ -137,12 +145,9 @@ public class Config {
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);
-        }
-
-        catch (IOException e) {
+        } catch (IOException e) {
             log.error("传输端口构建SSLContext失败，ssl证书错误！", e);
-        }
-        catch (CertificateException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
+        } catch (CertificateException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
             throw new RuntimeException(e);
         }
         return false;

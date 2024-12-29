@@ -3,6 +3,7 @@ package com.jian.start;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.jian.commons.Constants;
+import com.jian.commons.ServerConfig;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.ClientInfoSaved;
 import com.jian.utils.JsonUtils;
@@ -12,11 +13,13 @@ import io.netty.handler.ssl.SslProtocols;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.KeyStore;
@@ -146,13 +149,8 @@ public class Config {
         boolean suc = false;
         try (InputStream resource = getFileInputStream(propertiesFileName, true)) {
             if (Objects.nonNull(resource)) {
-                Constants.CONFIG.load(resource);
-            }
-            if (StringUtil.isNullOrEmpty(Constants.CONFIG.getProperty(Constants.WEB_PORT_PROPERTY))) {
-                Constants.CONFIG.setProperty(Constants.WEB_PORT_PROPERTY, Constants.DEF_WEB_PORT);
-            }
-            if (StringUtil.isNullOrEmpty(Constants.CONFIG.getProperty(Constants.TRANSMIT_PORT_PROPERTY))) {
-                Constants.CONFIG.setProperty(Constants.TRANSMIT_PORT_PROPERTY, Constants.DEF_TRANSMIT_PORT);
+                Yaml yaml = new Yaml();
+                Constants.CONFIG = yaml.loadAs(resource, ServerConfig.class);
             }
             log.info("配置文件加载完成！");
             suc = initLocalPortSSL();
@@ -216,7 +214,10 @@ public class Config {
      */
     public static void saveProperties() {
         try (OutputStream outputStream = getFileOutStream(propertiesFileName)) {
-            Constants.CONFIG.store(outputStream, "修改时间:" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
+            Yaml yaml = new Yaml();
+            String dump = yaml.dump(Constants.CONFIG);
+            byte[] bytes = dump.getBytes(StandardCharsets.UTF_8);
+            outputStream.write(bytes, 0, bytes.length);
             outputStream.flush();
         } catch (IOException e) {
             log.error("保存配置文件失败！写入配置文件错误！", e);
@@ -228,8 +229,7 @@ public class Config {
      * 初始化ssl
      */
     public static boolean initLocalPortSSL() {
-        String enableHttps = Constants.CONFIG.getProperty(Constants.ENABLE_HTTPS_PROPERTY_NAME, "false");
-        Constants.IS_ENABLE_HTTPS = Boolean.parseBoolean(enableHttps);
+        Constants.IS_ENABLE_HTTPS = Constants.CONFIG.getUseHttps();
         if (Constants.IS_ENABLE_HTTPS) {
             try {
                 InputStream crtInput = getFileInputStream(crtFileName, true);
@@ -295,9 +295,7 @@ public class Config {
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);
-        }
-
-        catch (IOException e) {
+        } catch (IOException e) {
             log.error("传输端口构建SSLContext失败，ssl证书错误！", e);
         } catch (UnrecoverableKeyException | CertificateException | KeyStoreException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
