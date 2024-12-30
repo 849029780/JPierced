@@ -5,14 +5,28 @@ import lombok.Data;
 @Data
 public class ServerConfig {
 
-    private String loginUsername;
-    private String loginPwd;
+    private Login login;
+    private Transmit transmit;
+    private Web web;
 
+    @Data
+    public static class Login {
+        private String username;
+        private String password;
+    }
 
-    private Integer ackPort = 6210;
-    private Integer transmitPort = 9999;
-    private Integer webPort = 8000;
+    @Data
+    public static class Transmit {
+        private Integer port;
+        private Boolean useSsl;
+        private Integer ackPort;
+    }
 
-    private Boolean useHttps = false;
+    @Data
+    public static class Web {
+        private Integer port;
+        private Boolean useHttps;
+    }
+
 
 }

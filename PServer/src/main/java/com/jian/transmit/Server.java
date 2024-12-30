@@ -23,7 +23,7 @@ import java.util.concurrent.CountDownLatch;
 @Slf4j
 public class Server {
 
-    private ServerBootstrap serverBootstrap;
+    private final ServerBootstrap serverBootstrap;
 
     private Server() {
         serverBootstrap = new ServerBootstrap();
@@ -156,7 +156,7 @@ public class Server {
 
 
     public static ChannelFuture listenRemote() {
-        Integer port = Constants.CONFIG.getTransmitPort();
+        Integer port = Constants.CONFIG.getTransmit().getPort();
         ChannelFuture channelFuture = Server.getRemoteInstance().listen(port);
         channelFuture.addListener(future -> {
             if (future.isSuccess()) {
@@ -203,7 +203,7 @@ public class Server {
 
 
     public static void listenRemoteAck() {
-        ChannelFuture channelFuture = Server.getRemoteAckInstance().listen(Constants.CONFIG.getAckPort());
+        ChannelFuture channelFuture = Server.getRemoteAckInstance().listen(Constants.CONFIG.getTransmit().getAckPort());
         channelFuture.addListener(future -> {
             ChannelFuture channelFuture1 = (ChannelFuture) future;
             if (channelFuture1.isSuccess()) {

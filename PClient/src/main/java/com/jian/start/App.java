@@ -27,10 +27,10 @@ public class App {
             }
         }
         if (Config.initConfig()) {
-            String hostProperty = Constants.CONFIG.getServerHost();
-            Integer portProperty = Constants.CONFIG.getServerPort();
-            String keyProperty = Constants.CONFIG.getKey();
-            String pwdProperty = Constants.CONFIG.getPwd();
+            String hostProperty = Constants.CONFIG.getServer().getHost();
+            Integer portProperty = Constants.CONFIG.getServer().getPort();
+            String keyProperty = Constants.CONFIG.getServer().getUsername();
+            String pwdProperty = Constants.CONFIG.getServer().getPassword();
 
 
             if (StringUtil.isNullOrEmpty(hostProperty)) {

@@ -1,7 +1,9 @@
 package com.jian.start;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jian.commons.ClientConfig;
 import com.jian.commons.Constants;
+import com.jian.utils.YamlUtils;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProtocols;
 import io.netty.handler.ssl.SslProvider;
@@ -40,7 +42,7 @@ public class Config {
     /***
      * 配置文件
      */
-    static final String propertiesFileName = "client.properties";
+    static final String propertiesFileName = "client.yml";
 
     /***
      * ca证书名
@@ -89,16 +91,11 @@ public class Config {
         boolean suc = false;
         try (InputStream resource = getFileInputStream(propertiesFileName)) {
             if (Objects.nonNull(resource)) {
-                Yaml yml = new Yaml();
-                yml.load(resource);
-                Constants.CONFIG = yml.loadAs(resource, ClientConfig.class);
+                ObjectMapper yamlObjectMapper = YamlUtils.getYamlObjectMapper();
+                Constants.CONFIG = yamlObjectMapper.readValue(resource, ClientConfig.class);
                 log.info("配置文件加载成功！");
             }
-            if (Constants.CONFIG.getUseSsl()) {
-                suc = initTransmitPortSSL();
-            } else {
-                suc = true;
-            }
+            suc = initTransmitPortSSL();
         } catch (IOException e) {
             log.error("加载config.properties文件错误！", e);
         }
@@ -109,6 +106,10 @@ public class Config {
      * 传输数据端口ssl
      */
     public static boolean initTransmitPortSSL() {
+        if (!Constants.CONFIG.getServer().getUseSsl()) {
+            log.warn("传输通道未启用ssl加密.");
+            return true;
+        }
         try {
             /*InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit);
             InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit);

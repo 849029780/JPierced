@@ -55,7 +55,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     Client.getRemoteAckInstance().connect(inetSocketAddress, (Consumer<ChannelFuture>) future -> {
                         Channel ackChannel = future.channel();
                         if (future.isSuccess()) {
-                            String keyStr = Constants.CONFIG.getProperty(Constants.KEY_PROPERTY_NAME);
+                            String keyStr = Constants.CONFIG.getServer().getUsername();
                             ConnectAckChannelReqPacks connectAckChannelReqPacks = new ConnectAckChannelReqPacks();
                             connectAckChannelReqPacks.setKey(Long.parseLong(keyStr));
                             ackChannel.writeAndFlush(connectAckChannelReqPacks);

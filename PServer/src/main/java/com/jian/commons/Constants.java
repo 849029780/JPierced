@@ -7,8 +7,11 @@ import com.jian.transmit.handler.local.LocalChannelInBoundHandler;
 import com.jian.transmit.handler.local.LocalChannelInitializer;
 import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
-import com.jian.transmit.handler.remote.ack.AckChannelInitializer;
-import com.jian.transmit.handler.remote.transfer.RemoteChannelInitializer;
+import com.jian.transmit.handler.remote.CustomChannelInitializer;
+import com.jian.transmit.handler.remote.ack.AckChannelInBoundHandler;
+import com.jian.transmit.handler.remote.ack.AckMessageToMessageCodec;
+import com.jian.transmit.handler.remote.transfer.RemoteChannelInBoundHandler;
+import com.jian.transmit.handler.remote.transfer.RemoteMessageToMessageCodec;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.handler.ssl.SslContext;
@@ -17,7 +20,6 @@ import io.netty.util.concurrent.ScheduledFuture;
 import io.vertx.core.Vertx;
 
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -143,7 +145,7 @@ public class Constants {
     /***
      * 远程通道初始化Handler
      */
-    public static final ChannelInitializer<Channel> REMOTE_CHANNEL_INITIALIZER = new RemoteChannelInitializer();
+    public static final ChannelInitializer<Channel> REMOTE_CHANNEL_INITIALIZER = new CustomChannelInitializer(new RemoteMessageToMessageCodec(),new RemoteChannelInBoundHandler());
 
     /***
      * ack端口
@@ -153,7 +155,7 @@ public class Constants {
     /***
      * 远程通道ack初始化handler
      */
-    public static final ChannelInitializer<Channel> REMOTE_ACK_CHANNEL_INITIALIZER = new AckChannelInitializer();
+    public static final ChannelInitializer<Channel> REMOTE_ACK_CHANNEL_INITIALIZER = new CustomChannelInitializer(new AckMessageToMessageCodec(),new AckChannelInBoundHandler());
 
     /***
      *

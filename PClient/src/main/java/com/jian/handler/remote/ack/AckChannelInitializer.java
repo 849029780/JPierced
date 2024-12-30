@@ -24,7 +24,9 @@ public class AckChannelInitializer extends ChannelInitializer<Channel> {
     @Override
     protected void initChannel(Channel channel) {
         ChannelPipeline pipeline = channel.pipeline();
-        pipeline.addLast(Constants.REMOTE_SSL_CONTEXT.newHandler(channel.alloc()));
+        if(Constants.CONFIG.getServer().getUseSsl()){
+            pipeline.addLast(Constants.REMOTE_SSL_CONTEXT.newHandler(channel.alloc()));
+        }
         pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
         pipeline.addLast(this.ackMessageToMessageCodec);
         pipeline.addLast(this.ackChannelInBoundHandler);

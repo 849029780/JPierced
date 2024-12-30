@@ -26,7 +26,6 @@
         <vertx.version>4.5.11</vertx.version>
         <jackson.version>2.18.2</jackson.version>
         <jwt.version>4.4.0</jwt.version>
-        <snakeyaml.version>2.3</snakeyaml.version>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
     </properties>
 
@@ -89,10 +88,12 @@
 
 
             <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>${snakeyaml.version}</version>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-yaml</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
+
+
         </dependencies>
     </dependencyManagement>
 

@@ -74,7 +74,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        Integer port = Constants.CONFIG.getWebPort();
+        Integer port = Constants.CONFIG.getWeb().getPort();
         Router router = routerManager();
         if (Constants.IS_ENABLE_HTTPS) {
             HttpServerOptions httpServerOptions = new HttpServerOptions();
@@ -267,8 +267,8 @@ public class WebManagerVerticle extends AbstractVerticle {
     public Result login(JsonObject params) {
         String username = params.getString("username", "");
         String pwd = params.getString("pwd", "");
-        String sysUserName = Constants.CONFIG.getLoginUsername();
-        String sysPwd = Constants.CONFIG.getLoginPwd();
+        String sysUserName = Constants.CONFIG.getLogin().getUsername();
+        String sysPwd = Constants.CONFIG.getLogin().getPassword();
         Result result;
         //
         if (sysUserName.equals(username) && sysPwd.equals(pwd)) {
@@ -476,7 +476,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
         NetAddress.Protocol protocol = getProtocolByType(protocolType);
 
-        if(!Constants.IS_ENABLE_HTTPS && protocol == NetAddress.Protocol.HTTPS){
+        if (!Constants.IS_ENABLE_HTTPS && protocol == NetAddress.Protocol.HTTPS) {
             return Result.FAIL("映射端口失败！Https证书未配置，不允许使用Https！");
         }
         //
@@ -554,7 +554,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
         NetAddress.Protocol protocol = getProtocolByType(protocolType);
 
-        if(!Constants.IS_ENABLE_HTTPS && protocol == NetAddress.Protocol.HTTPS){
+        if (!Constants.IS_ENABLE_HTTPS && protocol == NetAddress.Protocol.HTTPS) {
             return Result.FAIL("修改映射端口失败！Https证书未配置，不允许使用Https！");
         }
 
@@ -803,9 +803,9 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
 
         //原端口
-        Integer oldPort = Constants.CONFIG.getTransmitPort();
+        Integer oldPort = Constants.CONFIG.getTransmit().getPort();
         //设置配置
-        Constants.CONFIG.setTransmitPort(port);
+        Constants.CONFIG.getTransmit().setPort(port);
         //Config.saveProperties();
         //关闭监听的传输端口
         Constants.LISTEN_REMOTE_CHANNEL.close().addListener(closeFuture -> {
@@ -819,7 +819,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                     } else {
                         log.warn("重启传输服务失败！端口:{}，即将恢复原端口:{}重启..", port, oldPort);
                         //设置配置
-                        Constants.CONFIG.setTransmitPort(oldPort);
+                        Constants.CONFIG.getTransmit().setPort(oldPort);
                         //重启原端口
                         Server.listenRemote();
                     }
@@ -840,10 +840,10 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("设置web服务端口失败！端口号为空或非法！");
         }
         //原端口
-        Integer oldPort = Constants.CONFIG.getWebPort();
+        Integer oldPort = Constants.CONFIG.getWeb().getPort();
         Constants.FIXED_THREAD_POOL.execute(() -> {
             //设置配置
-            Constants.CONFIG.setWebPort(port);
+            Constants.CONFIG.getWeb().setPort(port);
             Constants.VERTX.undeploy(Constants.VERTX_WEB_DEPLOY_ID).onSuccess(han -> {
                 log.info("web服务已停止，准备重启web服务，端口:{}", port);
                 Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> {
@@ -853,7 +853,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                 }).onFailure(hann -> {
                     log.error("web服务重启失败！端口:{}，将恢复原端口:{}重启...", port, oldPort, hann);
                     //设置配置
-                    Constants.CONFIG.setWebPort(oldPort);
+                    Constants.CONFIG.getWeb().setPort(oldPort);
                     //原端口
                     Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> Constants.VERTX_WEB_DEPLOY_ID = deployId);
                 });

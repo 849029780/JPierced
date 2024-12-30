@@ -5,11 +5,15 @@ import lombok.Data;
 @Data
 public class ClientConfig {
 
-    private String serverHost;
-    private Integer serverPort;
-    private String key;
-    private String pwd;
+    private Server server;
 
-    private Boolean useSsl;
+    @Data
+    public static class Server{
+        private String host;
+        private Integer port;
+        private String username;
+        private String password;
+        private Boolean useSsl;
+    }
 
 }

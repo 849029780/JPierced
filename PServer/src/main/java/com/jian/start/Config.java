@@ -2,11 +2,13 @@ package com.jian.start;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jian.commons.Constants;
 import com.jian.commons.ServerConfig;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.ClientInfoSaved;
 import com.jian.utils.JsonUtils;
+import com.jian.utils.YamlUtils;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProtocols;
@@ -55,7 +57,7 @@ public class Config {
     /***
      * 配置文件名
      */
-    static final String propertiesFileName = "server.properties";
+    static final String propertiesFileName = "server.yml";
 
     /***
      * 证书名
@@ -104,7 +106,7 @@ public class Config {
                 inputStream = Files.newInputStream(file.toPath());
             }
         } catch (IOException e) {
-            log.error("读取文件：" + fileName + "错误！", e);
+            log.error("读取文件：{},错误！", fileName, e);
         }
         return inputStream;
     }
@@ -137,7 +139,7 @@ public class Config {
             }
             outputStream = Files.newOutputStream(file.toPath(), StandardOpenOption.WRITE);
         } catch (IOException e) {
-            log.error("获取文件outputSteam：" + fileName + "错误！", e);
+            log.error("获取文件outputSteam：{},错误！", fileName, e);
         }
         return outputStream;
     }
@@ -149,10 +151,10 @@ public class Config {
         boolean suc = false;
         try (InputStream resource = getFileInputStream(propertiesFileName, true)) {
             if (Objects.nonNull(resource)) {
-                Yaml yaml = new Yaml();
-                Constants.CONFIG = yaml.loadAs(resource, ServerConfig.class);
+                ObjectMapper yamlObjectMapper = YamlUtils.getYamlObjectMapper();
+                Constants.CONFIG = yamlObjectMapper.readValue(resource, ServerConfig.class);
+                log.info("配置文件加载完成！");
             }
-            log.info("配置文件加载完成！");
             suc = initLocalPortSSL();
             suc = initTransmitPortSSL();
         } catch (IOException e) {
@@ -229,40 +231,43 @@ public class Config {
      * 初始化ssl
      */
     public static boolean initLocalPortSSL() {
-        Constants.IS_ENABLE_HTTPS = Constants.CONFIG.getUseHttps();
-        if (Constants.IS_ENABLE_HTTPS) {
-            try {
-                InputStream crtInput = getFileInputStream(crtFileName, true);
-                InputStream crtKeyInput = getFileInputStream(crtKeyFileName, true);
-                if (Objects.isNull(crtInput) || Objects.isNull(crtKeyInput)) {
-                    log.warn("未找到HTTPS的SSL证书，默认停用HTTPS穿透");
-                    Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
-                    return true;
-                }
-                Constants.SSL_LOCAL_PORT_CONTEXT = SslContextBuilder.forServer(crtInput, crtKeyInput).build();
-                crtInput.close();
-                crtKeyInput.close();
-                log.info("已启用HTTPS！");
-                return true;
-            } catch (SSLException e) {
-                log.error("sslContext构建错误！", e);
-                Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
-                return false;
-            } catch (IOException e) {
-                log.error("sslContext构建SSL错误！", e);
-                Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
-                return false;
-            }
-        } else {
+        if (!Constants.CONFIG.getWeb().getUseHttps()) {
             log.warn("HTTPS未启用！");
+            return true;
         }
-        return true;
+        try {
+            InputStream crtInput = getFileInputStream(crtFileName, true);
+            InputStream crtKeyInput = getFileInputStream(crtKeyFileName, true);
+            if (Objects.isNull(crtInput) || Objects.isNull(crtKeyInput)) {
+                log.warn("未找到HTTPS的SSL证书，默认停用HTTPS穿透");
+                Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
+                return true;
+            }
+            Constants.SSL_LOCAL_PORT_CONTEXT = SslContextBuilder.forServer(crtInput, crtKeyInput).build();
+            crtInput.close();
+            crtKeyInput.close();
+            log.info("已启用HTTPS！");
+            return true;
+        } catch (SSLException e) {
+            log.error("sslContext构建错误！", e);
+            Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
+            return false;
+        } catch (IOException e) {
+            log.error("sslContext构建SSL错误！", e);
+            Constants.IS_ENABLE_HTTPS = Boolean.FALSE;
+            return false;
+        }
     }
 
     /***
      * 传输数据端口ssl
      */
     public static boolean initTransmitPortSSL() {
+        if (!Constants.CONFIG.getTransmit().getUseSsl()) {
+            log.warn("传输通道未启用ssl加密.");
+            return true;
+        }
+
         try {
             /*InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit, true);
             InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit, true);
@@ -290,7 +295,6 @@ public class Config {
 
             //Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(crtInputTransmit,crtKeyInputTransmit).trustManager(caCrtInputTransmit).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).sslProvider(SslProvider.OPENSSL).build();
             Constants.SSL_TRANSMIT_PORT_CONTEXT = SslContextBuilder.forServer(kmf).trustManager(tmf).clientAuth(ClientAuth.REQUIRE).protocols(SslProtocols.TLS_v1_3).sslProvider(SslProvider.OPENSSL).build();
-
 
             return true;
         } catch (SSLException e) {
