@@ -20,6 +20,8 @@ public class BaseTransferPacks {
      */
     private byte type;
 
+
+
     public interface TYPE {
         /***
          * 连接请求

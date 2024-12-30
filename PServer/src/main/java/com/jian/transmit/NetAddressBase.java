@@ -26,6 +26,7 @@ public class NetAddressBase extends SocketAddress {
 
     public enum Protocol {
         TCP,
+        UDP,
         HTTP,
         HTTPS
     }

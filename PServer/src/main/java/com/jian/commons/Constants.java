@@ -3,17 +3,20 @@ package com.jian.commons;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
-import com.jian.transmit.handler.local.LocalChannelInBoundHandler;
-import com.jian.transmit.handler.local.LocalChannelInitializer;
-import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
-import com.jian.transmit.handler.local.LocalTcpChannelInBoundHandler;
-import com.jian.transmit.handler.remote.CustomChannelInitializer;
-import com.jian.transmit.handler.remote.ack.AckChannelInBoundHandler;
-import com.jian.transmit.handler.remote.ack.AckMessageToMessageCodec;
-import com.jian.transmit.handler.remote.transfer.RemoteChannelInBoundHandler;
-import com.jian.transmit.handler.remote.transfer.RemoteMessageToMessageCodec;
+import com.jian.transmit.tcp.handler.local.LocalChannelInBoundHandler;
+import com.jian.transmit.tcp.handler.local.LocalChannelInitializer;
+import com.jian.transmit.tcp.handler.local.LocalHttpsChannelInitializer;
+import com.jian.transmit.tcp.handler.local.LocalTcpChannelInBoundHandler;
+import com.jian.transmit.tcp.handler.remote.CustomChannelInitializer;
+import com.jian.transmit.tcp.handler.remote.ack.AckChannelInBoundHandler;
+import com.jian.transmit.tcp.handler.remote.ack.AckMessageToMessageCodec;
+import com.jian.transmit.tcp.handler.remote.transfer.RemoteChannelInBoundHandler;
+import com.jian.transmit.tcp.handler.remote.transfer.RemoteMessageToMessageCodec;
+import com.jian.transmit.udp.handler.LocalChannelInboundHandler;
+import com.jian.transmit.udp.handler.LocalUdpChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -34,7 +37,7 @@ public class Constants {
     /***
      * 线程数
      */
-    public static final int THREAD_NUM = 16;
+    public static final int THREAD_NUM = 0;
 
     /***
      * boss线程数
@@ -145,7 +148,7 @@ public class Constants {
     /***
      * 远程通道初始化Handler
      */
-    public static final ChannelInitializer<Channel> REMOTE_CHANNEL_INITIALIZER = new CustomChannelInitializer(new RemoteMessageToMessageCodec(),new RemoteChannelInBoundHandler());
+    public static final ChannelInitializer<Channel> REMOTE_CHANNEL_INITIALIZER = new CustomChannelInitializer(new RemoteMessageToMessageCodec(), new RemoteChannelInBoundHandler());
 
     /***
      * ack端口
@@ -155,7 +158,7 @@ public class Constants {
     /***
      * 远程通道ack初始化handler
      */
-    public static final ChannelInitializer<Channel> REMOTE_ACK_CHANNEL_INITIALIZER = new CustomChannelInitializer(new AckMessageToMessageCodec(),new AckChannelInBoundHandler());
+    public static final ChannelInitializer<Channel> REMOTE_ACK_CHANNEL_INITIALIZER = new CustomChannelInitializer(new AckMessageToMessageCodec(), new AckChannelInBoundHandler());
 
     /***
      *
@@ -206,7 +209,10 @@ public class Constants {
      */
     public static final Algorithm JWT_ALGORITHM = Algorithm.HMAC512("jian0321");
 
-
+    /***
+     * udp handler初始化器
+     */
+    public static final ChannelInitializer<DatagramChannel> LOCAL_UDP_CHANNEL_INITIALIZER = new LocalUdpChannelInitializer(new LocalChannelInboundHandler());
 
 
 }

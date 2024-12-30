@@ -1,7 +1,7 @@
 package com.jian.start;
 
 import com.jian.commons.Constants;
-import com.jian.transmit.Server;
+import com.jian.transmit.tcp.TcpServer;
 import com.jian.web.WebManagerVerticle;
 import io.netty.util.internal.StringUtil;
 import io.vertx.core.Vertx;
@@ -25,8 +25,8 @@ public class App {
         }
         if (Config.initConfig()) {
             Config.initTransmitData();
-            Server.listenRemote();
-            Server.listenRemoteAck();
+            TcpServer.listenRemote();
+            TcpServer.listenRemoteAck();
             Constants.VERTX = Vertx.vertx();
             Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> Constants.VERTX_WEB_DEPLOY_ID = deployId);
         }

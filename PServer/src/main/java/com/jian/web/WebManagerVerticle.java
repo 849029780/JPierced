@@ -11,7 +11,7 @@ import com.jian.commons.Constants;
 import com.jian.start.Config;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
-import com.jian.transmit.Server;
+import com.jian.transmit.tcp.TcpServer;
 import com.jian.utils.JsonUtils;
 import com.jian.web.result.Page;
 import com.jian.web.result.Result;
@@ -449,7 +449,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         Integer serverPort = params.getInteger("serverPort");
         String host = params.getString("host");
         Integer port = params.getInteger("port");
-        //协议类型，1--tcp，2--http，3--https(https暂未实现)
+        //协议类型，1--tcp，2--http，3--https，4--udp
         Integer protocolType = params.getInteger("protocol");
         //客户端是否使用Https
         Boolean cliUseHttps = params.getBoolean("cliUseHttps", false);
@@ -490,7 +490,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
         //判断当前客户端是否在线，在线的话则需要监听新添加的端口
         if (clientInfo.isOnline()) {
-            Server.listenLocal(Collections.singleton(serverPort), clientInfo);
+            TcpServer.listenLocal(Collections.singleton(serverPort), clientInfo);
         }
 
         //重新保存数据
@@ -576,7 +576,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                         clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol, finalCliUseHttps));
                         //判断当前客户端是否在线，在线的话则需要监听新添加的端口
                         if (clientInfo.isOnline()) {
-                            Server.listenLocal(Set.of(newServerPort), clientInfo);
+                            TcpServer.listenLocal(Set.of(newServerPort), clientInfo);
                         }
                         //重新保存数据
                         Config.saveTransmitData();
@@ -681,14 +681,14 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
 
         //监听端口
-        Server.listenLocal(Set.of(port), clientInfo);
+        TcpServer.listenLocal(Set.of(port), clientInfo);
 
         return Result.SUCCESS("当前客户端已监听该端口！");
     }
 
     /***
      *
-     * @param protocolType 1--tcp 2--http 3--https
+     * @param protocolType 1--tcp 2--http 3--https 4--udp
      * @return 响应结果
      */
     private NetAddress.Protocol getProtocolByType(int protocolType) {
@@ -696,6 +696,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         switch (protocolType) {
             case 2 -> protocol = NetAddress.Protocol.HTTP;
             case 3 -> protocol = NetAddress.Protocol.HTTPS;
+            case 4 -> protocol = NetAddress.Protocol.UDP;
             default -> protocol = NetAddress.Protocol.TCP;
         }
         return protocol;
@@ -812,7 +813,7 @@ public class WebManagerVerticle extends AbstractVerticle {
             if (closeFuture.isSuccess()) {
                 log.info("重启传输服务，端口:{}", port);
                 //重新监听服务
-                Server.listenRemote().addListener(future -> {
+                TcpServer.listenRemote().addListener(future -> {
                     if (future.isSuccess()) {
                         //保存配置
                         Config.saveProperties();
@@ -821,7 +822,7 @@ public class WebManagerVerticle extends AbstractVerticle {
                         //设置配置
                         Constants.CONFIG.getTransmit().setPort(oldPort);
                         //重启原端口
-                        Server.listenRemote();
+                        TcpServer.listenRemote();
                     }
                 });
             }

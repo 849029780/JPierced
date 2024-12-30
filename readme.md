@@ -35,9 +35,9 @@ login.pwd=xxxx
 
 ```
 # 以上配置的服务端地址
-server.host=localhost
+tcpServer.host=localhost
 # 以上配置的服务端传输端口，注意是传输端口，非ack的端口
-server.port=9999
+tcpServer.port=9999
 # 客户端登录认证用户名及密码，用户名只支持Long的数字(必须在管理端添加客户端后才能登录，否则连接不上)
 key=2222
 pwd=xxx

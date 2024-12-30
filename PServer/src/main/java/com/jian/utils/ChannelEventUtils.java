@@ -4,15 +4,20 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.uring.IoUring;
+import io.netty.channel.uring.IoUringDatagramChannel;
 import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 
@@ -58,6 +63,25 @@ public class ChannelEventUtils {
             clazz = KQueueServerSocketChannel.class;
         } else {
             clazz = NioServerSocketChannel.class;
+        }
+        return clazz;
+    }
+
+
+    /***
+     * 根据操作系统获取对应datagramChannel
+     * @return EventLoopGroup
+     */
+    public static Class<? extends DatagramChannel> getDatagramChannelClass() {
+        Class<? extends DatagramChannel> clazz;
+        if (IoUring.isAvailable()) {
+            clazz = IoUringDatagramChannel.class;
+        } else if (Epoll.isAvailable()) {
+            clazz = EpollDatagramChannel.class;
+        } else if (KQueue.isAvailable()) {
+            clazz = KQueueDatagramChannel.class;
+        } else {
+            clazz = NioDatagramChannel.class;
         }
         return clazz;
     }

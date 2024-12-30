@@ -1,11 +1,11 @@
 package com.jian.commons;
 
-import com.jian.transmit.handler.local.LocalChannelInBoundHandler;
-import com.jian.transmit.handler.local.LocalChannelInitializer;
-import com.jian.transmit.handler.local.LocalHttpsChannelInitializer;
-import com.jian.transmit.handler.remote.ack.AckChannelInitializer;
-import com.jian.transmit.handler.remote.transfer.RemoteChannelInitializer;
-import com.jian.transmit.Client;
+import com.jian.transmit.tcp.handler.local.LocalChannelInBoundHandler;
+import com.jian.transmit.tcp.handler.local.LocalChannelInitializer;
+import com.jian.transmit.tcp.handler.local.LocalHttpsChannelInitializer;
+import com.jian.transmit.tcp.handler.remote.ack.AckChannelInitializer;
+import com.jian.transmit.tcp.handler.remote.transfer.RemoteChannelInitializer;
+import com.jian.transmit.tcp.TcpClient;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.handler.ssl.SslContext;
@@ -52,7 +52,7 @@ public class Constants {
     /***
      * 通道上绑定的连接信息
      */
-    public static final AttributeKey<Client> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
+    public static final AttributeKey<TcpClient> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
 
     /***
      * 远程通道是否已开启心跳

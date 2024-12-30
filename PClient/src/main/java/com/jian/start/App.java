@@ -2,7 +2,7 @@ package com.jian.start;
 
 import com.jian.beans.transfer.ConnectAuthReqPacks;
 import com.jian.commons.Constants;
-import com.jian.transmit.Client;
+import com.jian.transmit.tcp.TcpClient;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.internal.StringUtil;
@@ -51,7 +51,7 @@ public class App {
                 log.error("pwd配置为空！启动失败！");
                 return;
             }
-            Client.getRemoteInstance().connect(new InetSocketAddress(hostProperty, portProperty), (Consumer<ChannelFuture>) future -> {
+            TcpClient.getRemoteInstance().connect(new InetSocketAddress(hostProperty, portProperty), (Consumer<ChannelFuture>) future -> {
                 Channel channel = future.channel();
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
                 connectAuthReqPacks.setKey(Long.parseLong(keyProperty));
