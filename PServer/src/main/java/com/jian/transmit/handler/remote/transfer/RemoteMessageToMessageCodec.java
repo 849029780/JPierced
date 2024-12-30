@@ -8,7 +8,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageCodec;
-import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketException;
@@ -148,7 +147,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         //如果是关闭的传输通道，则本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
         Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         Optional.ofNullable(localChannelMap).ifPresent(map -> {
-            if (map.size() > 0) {
+            if (!map.isEmpty()) {
                 for (Map.Entry<Long, Channel> entry : localChannelMap.entrySet()) {
                     if (Objects.nonNull(entry)) {
                         Channel localChannel = entry.getValue();

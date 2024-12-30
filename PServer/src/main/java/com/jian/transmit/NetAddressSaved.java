@@ -1,11 +1,8 @@
 package com.jian.transmit;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-
-import java.net.SocketAddress;
 
 /**
  * 描述
@@ -13,6 +10,7 @@ import java.net.SocketAddress;
  * @author Jian
  * @date 2022/04/04
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 public class NetAddressSaved extends NetAddressBase {

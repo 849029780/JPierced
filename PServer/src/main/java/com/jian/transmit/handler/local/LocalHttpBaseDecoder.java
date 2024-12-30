@@ -697,7 +697,7 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
                             replaceHost(buf);
 
                             //判断是否有在host先解析且需要被替换url的header，如果存在，则解析完host时需要再解析那些待解析的hander
-                            if (Objects.nonNull(notAppendHeaders) && notAppendHeaders.size() > 0) {
+                            if (Objects.nonNull(notAppendHeaders) && !notAppendHeaders.isEmpty()) {
                                 ListIterator<HttpHeader> httpHeaderListIterator = notAppendHeaders.listIterator();
                                 while (httpHeaderListIterator.hasNext()) {
                                     HttpHeader httpHeader = httpHeaderListIterator.next();
