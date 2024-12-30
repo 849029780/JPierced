@@ -5,15 +5,8 @@ import lombok.Data;
 @Data
 public class ServerConfig {
 
-    private Login login;
     private Transmit transmit;
     private Web web;
-
-    @Data
-    public static class Login {
-        private String username;
-        private String password;
-    }
 
     @Data
     public static class Transmit {
@@ -24,6 +17,9 @@ public class ServerConfig {
 
     @Data
     public static class Web {
+        private String defUsername;
+        private String defPassword;
+
         private Integer port;
         private Boolean useHttps;
     }

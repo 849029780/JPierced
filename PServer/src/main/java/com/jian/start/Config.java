@@ -216,9 +216,8 @@ public class Config {
      */
     public static void saveProperties() {
         try (OutputStream outputStream = getFileOutStream(propertiesFileName)) {
-            Yaml yaml = new Yaml();
-            String dump = yaml.dump(Constants.CONFIG);
-            byte[] bytes = dump.getBytes(StandardCharsets.UTF_8);
+            String yaml = YamlUtils.getYamlObjectMapper().writeValueAsString(Constants.CONFIG);
+            byte[] bytes = yaml.getBytes(StandardCharsets.UTF_8);
             outputStream.write(bytes, 0, bytes.length);
             outputStream.flush();
         } catch (IOException e) {

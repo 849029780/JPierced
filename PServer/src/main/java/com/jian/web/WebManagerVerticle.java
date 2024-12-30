@@ -80,8 +80,8 @@ public class WebManagerVerticle extends AbstractVerticle {
             HttpServerOptions httpServerOptions = new HttpServerOptions();
             PemKeyCertOptions pemKeyCertOptions = new PemKeyCertOptions();
             pemKeyCertOptions.setCertPath(Config.getCertAbsolutePath()).setKeyPath(Config.getCertKeyAbsolutePath());
-            httpServerOptions.setSsl(true).setPemKeyCertOptions(pemKeyCertOptions);
-            httpServerOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
+            httpServerOptions.setSsl(true).setKeyCertOptions(pemKeyCertOptions);
+            httpServerOptions.setSslEngineOptions(new OpenSSLEngineOptions());
             httpServerOptions.addEnabledSecureTransportProtocol(SslProtocols.TLS_v1_3);
             httpServer = vertx.createHttpServer(httpServerOptions);
         } else {
@@ -267,8 +267,8 @@ public class WebManagerVerticle extends AbstractVerticle {
     public Result login(JsonObject params) {
         String username = params.getString("username", "");
         String pwd = params.getString("pwd", "");
-        String sysUserName = Constants.CONFIG.getLogin().getUsername();
-        String sysPwd = Constants.CONFIG.getLogin().getPassword();
+        String sysUserName = Constants.CONFIG.getWeb().getDefUsername();
+        String sysPwd = Constants.CONFIG.getWeb().getDefPassword();
         Result result;
         //
         if (sysUserName.equals(username) && sysPwd.equals(pwd)) {

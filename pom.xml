@@ -23,7 +23,8 @@
         <logback.version>1.5.15</logback.version>
         <netty-tcnative-boringssl.version>2.0.69.Final</netty-tcnative-boringssl.version>
 
-        <vertx.version>4.5.11</vertx.version>
+<!--        <vertx.version>4.5.11</vertx.version>-->
+        <vertx.version>5.0.0.CR3</vertx.version>
         <jackson.version>2.18.2</jackson.version>
         <jwt.version>4.4.0</jwt.version>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
@@ -79,6 +80,13 @@
                 <artifactId>vertx-web</artifactId>
                 <version>${vertx.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-io_uring-incubator</artifactId>
+                <version>${vertx.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>

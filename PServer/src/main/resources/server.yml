@@ -1,12 +1,10 @@
-login:
-  username: xxxx
-  password: xxxx
-
 transmit:
   port: 9998
   use-ssl: false
   ack-port: 6211
 
 web:
-  port: 8001
+  def-username: xxxx
+  def-password: xxxx
+  port: 8000
   use-https: false
