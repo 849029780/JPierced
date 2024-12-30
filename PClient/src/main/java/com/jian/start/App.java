@@ -2,6 +2,7 @@ package com.jian.start;
 
 import com.jian.beans.transfer.ConnectAuthReqPacks;
 import com.jian.commons.Constants;
+import com.jian.transmit.Client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.internal.StringUtil;

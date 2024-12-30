@@ -1,4 +1,4 @@
-package com.jian.handler.remote.transfer;
+package com.jian.transmit.handler.remote.transfer;
 
 import com.jian.commons.Constants;
 import io.netty.channel.Channel;
