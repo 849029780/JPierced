@@ -1,11 +1,11 @@
 package com.jian.commons;
 
+import com.jian.transmit.tcp.client.AbstractTcpClient;
 import com.jian.transmit.tcp.handler.local.LocalChannelInBoundHandler;
 import com.jian.transmit.tcp.handler.local.LocalChannelInitializer;
 import com.jian.transmit.tcp.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.tcp.handler.remote.ack.AckChannelInitializer;
 import com.jian.transmit.tcp.handler.remote.transfer.RemoteChannelInitializer;
-import com.jian.transmit.tcp.TcpClient;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.handler.ssl.SslContext;
@@ -27,7 +27,7 @@ public class Constants {
     /***
      * 线程数
      */
-    public static final int THREAD_NUM = 16;
+    public static final int THREAD_NUM = 0;
 
     /***
      * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
@@ -52,7 +52,9 @@ public class Constants {
     /***
      * 通道上绑定的连接信息
      */
-    public static final AttributeKey<TcpClient> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
+    public static final AttributeKey<AbstractTcpClient> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
+
+    //public static final AttributeKey<TcpClient> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
 
     /***
      * 远程通道是否已开启心跳

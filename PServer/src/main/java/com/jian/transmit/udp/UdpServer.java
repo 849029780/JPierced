@@ -9,6 +9,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -50,7 +51,6 @@ public class UdpServer {
     /***
      * 端口监听
      * @param addressList 待监听的端口和地址列表
-     * @return 监听结果
      */
     public static void listenLocal(List<NetAddress> addressList, ClientInfo clientInfo) {
         if (!clientInfo.isOnline()) {
@@ -63,21 +63,29 @@ public class UdpServer {
             ChannelFuture future = localInstance.bootstrap.bind(netAddress.getPort());
             future.addListener(fute -> {
                 if (!fute.isSuccess()) {
-                    log.warn("客户端");
+                    log.warn("客户端key:{},name:{}，启动udp端口:{}失败！", clientInfo.getKey(), clientInfo.getName(), netAddress.getPort());
                 }
-
-                //本地端口启动状态设置
+                //本地端口监听状态
                 netAddress.setListen(true);
+                Channel channel = future.channel();
+                //该通道绑定好客户端通道
+                Channel remoteChannel = clientInfo.getRemoteChannel();
+                Channel ackChannel = clientInfo.getAckChannel();
+                channel.attr(Constants.REMOTE_CHANNEL_KEY).set(remoteChannel);
+                channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(ackChannel);
+                //udp监听的端口保存到客户端口映射map中
+                clientInfo.getListenPortMap().put(netAddress.getPort(), channel);
 
-                ChannelFuture channelFuture = (ChannelFuture) future;
-                Channel channel = channelFuture.channel();
-                channel.attr()
-
-
-
-
+                channel.closeFuture().addListener(UdpServer::closeProcess);
             });
         }
+    }
+
+    private static void closeProcess(Future<? super Void> closeFuture) {
+        ChannelFuture channelFuture = (ChannelFuture) closeFuture;
+
+
+
 
 
     }

@@ -2,7 +2,8 @@ package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
-import com.jian.transmit.tcp.TcpClient;
+import com.jian.transmit.tcp.client.AbstractTcpClient;
+import com.jian.transmit.tcp.client.TcpClient;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -38,11 +39,11 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
 
                 InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
                 log.debug("连接本地服务:{}:{}，协议类型:{}", host, port, connectReqPacks.getProtocol());
-                TcpClient tcpClient;
+                AbstractTcpClient tcpClient;
                 if (connectReqPacks.getProtocol() == ConnectReqPacks.Protocol.HTTPS) {
-                    tcpClient = TcpClient.getLocalHttpsInstance().option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
+                    tcpClient = TcpClient.getTcpClient().localHttpsChannelInitializer().option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
                 } else {
-                    tcpClient = TcpClient.getLocalInstance().option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
+                    tcpClient = TcpClient.getTcpClient().localChannelInitializer().option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
                 }
 
                 //发起连接本地
@@ -64,7 +65,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                         localChannel.config().setAutoRead(Boolean.TRUE);
                         connectRespPacks.setState(ConnectRespPacks.STATE.SUCCESS);
                         connectRespPacks.setMsg("连接本地服务成功！");
-                        log.debug("连接本地服务:{}:{}成功！", host, port);
+                        log.info("连接本地服务:{}:{}成功！", host, port);
                     } else {
                         connectRespPacks.setState(ConnectRespPacks.STATE.FAIL);
                         connectRespPacks.setMsg("连接本地服务失败！请检查地址和端口再试！");
@@ -116,11 +117,11 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                     log.info("ack连接完成！{}", msg);
                 }
 
-                TcpClient tcpClient = transimitChannel.attr(Constants.CLIENT_KEY).get();
+                AbstractTcpClient abstractTcpClient = transimitChannel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才允许断开重连
-                Optional.ofNullable(tcpClient).ifPresent(cli -> {
+                Optional.ofNullable(abstractTcpClient).ifPresent(cli -> {
                     //可进行重连
-                    tcpClient.setCanReconnect(true);
+                    abstractTcpClient.setCanReconnect(true);
                     //重连次数置空
                     //client.getRecount().set(0);
                 });

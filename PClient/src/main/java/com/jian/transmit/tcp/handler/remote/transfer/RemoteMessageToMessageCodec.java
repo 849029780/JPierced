@@ -2,7 +2,7 @@ package com.jian.transmit.tcp.handler.remote.transfer;
 
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
-import com.jian.transmit.tcp.TcpClient;
+import com.jian.transmit.tcp.client.AbstractTcpClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -158,9 +158,9 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             //本地连接关闭后置空
             Constants.LOCAL_CHANNEL_MAP = null;
         }
-        TcpClient tcpClient = channel.attr(Constants.CLIENT_KEY).get();
-        Optional.ofNullable(tcpClient).ifPresent(cli -> {
-            if (tcpClient.isCanReconnect()) {
+        AbstractTcpClient abstractTcpClient = channel.attr(Constants.CLIENT_KEY).get();
+        Optional.ofNullable(abstractTcpClient).ifPresent(cli -> {
+            if (abstractTcpClient.isCanReconnect()) {
                 //重连
                 Constants.CACHED_EXECUTOR_POOL.execute(cli::reConnct);
             } else {

@@ -1,9 +1,11 @@
-package com.jian.transmit.tcp;
+package com.jian.transmit.tcp.client;
 
 import com.jian.commons.Constants;
-import com.jian.utils.ChannelEventUtils;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.util.concurrent.GenericFutureListener;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,15 +16,22 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+
 /***
- *
+ * abstract tcpClient
  * @author Jian
- * @date 2022/4/2
+ * @date 2025-01-21
  */
 @Slf4j
-public class TcpClient {
+public abstract class AbstractTcpClient {
 
-    private final Bootstrap bootstrap;
+    Bootstrap bootstrap;
+
+    public abstract boolean support();
+
+    public abstract AbstractTcpClient getInstance();
+
+    public abstract AbstractTcpClient groupThreadNum(int threadNum);
 
     /***
      * 保存
@@ -41,52 +50,40 @@ public class TcpClient {
     @Getter
     private boolean canReconnect = false;
 
-    private TcpClient() {
-        this.bootstrap = new Bootstrap();
-        this.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
-        this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
-        this.bootstrap.channel(ChannelEventUtils.getSocketChannelClass());
-        this.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-    }
 
-    public static TcpClient getInstance() {
-        return new TcpClient();
-    }
-
-    public static TcpClient getInstance(ChannelInitializer<Channel> initializer) {
-        TcpClient tcpClient = getInstance();
-        tcpClient.bootstrap.handler(initializer);
-        return tcpClient;
-    }
-
-    public <T> TcpClient option(ChannelOption<T> option, T value) {
-        bootstrap.option(option, value);
+    public AbstractTcpClient localChannelInitializer() {
+        this.handler(Constants.LOCAL_CHANNEL_INITIALIZER);
+        this.groupThreadNum(Constants.THREAD_NUM);
         return this;
     }
 
-    public static TcpClient getLocalInstance() {
-        TcpClient tcpClient = getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
-        tcpClient.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
-        return tcpClient;
+    public AbstractTcpClient localHttpsChannelInitializer() {
+        this.handler(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
+        this.groupThreadNum(Constants.THREAD_NUM);
+        return this;
     }
 
-    public static TcpClient getLocalHttpsInstance() {
-        TcpClient tcpClient = getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
-        tcpClient.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
-        return tcpClient;
+    public AbstractTcpClient remoteChannelInitializer() {
+        this.handler(Constants.REMOTE_CHANNEL_INITIALIZER);
+        this.groupThreadNum(Constants.THREAD_NUM);
+        return this;
+    }
+
+    public AbstractTcpClient remoteAckInitializer() {
+        this.handler(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
+        this.groupThreadNum(Constants.ACK_WORK_THREAD_NUM);
+        return this;
     }
 
 
-    public static TcpClient getRemoteInstance() {
-        TcpClient tcpClient = getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
-        tcpClient.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
-        return tcpClient;
+    public AbstractTcpClient handler(ChannelInitializer<Channel> initializer) {
+        this.bootstrap.handler(initializer);
+        return this;
     }
 
-    public static TcpClient getRemoteAckInstance() {
-        TcpClient tcpClient = getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
-        tcpClient.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.ACK_WORK_THREAD_NUM));
-        return tcpClient;
+    public <T> AbstractTcpClient option(ChannelOption<T> option, T value) {
+        bootstrap.option(option, value);
+        return this;
     }
 
     public ChannelFuture connect(InetSocketAddress socketAddress) {
@@ -111,7 +108,7 @@ public class TcpClient {
                 //重连
                 Constants.CACHED_EXECUTOR_POOL.execute(this::reConnct);
             } else {
-                log.warn("连接服务:{}失败！", this.connectInetSocketAddress);
+                log.warn("连接服务:{}失败！", this.connectInetSocketAddress, future.cause());
                 System.exit(0);
             }
         });
@@ -136,5 +133,6 @@ public class TcpClient {
         }
         connect(this.connectInetSocketAddress, this.successFuture);
     }
+
 
 }

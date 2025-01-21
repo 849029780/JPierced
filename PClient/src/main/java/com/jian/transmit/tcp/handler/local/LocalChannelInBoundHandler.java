@@ -34,7 +34,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         transferDataPacks.setDatas(byteBuf);
         try {
             Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(transferDataPacks);
-        } catch (NullPointerException e) {
+        } catch (Exception e) {
             ReferenceCountUtil.release(byteBuf);
         }
     }
@@ -56,7 +56,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
 
-        if(Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)){
+        if (Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)) {
             //向ack通道发送对远程端设置是否可读
             Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
             AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();

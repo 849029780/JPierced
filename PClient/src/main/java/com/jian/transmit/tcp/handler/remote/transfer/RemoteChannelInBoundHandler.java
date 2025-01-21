@@ -2,7 +2,8 @@ package com.jian.transmit.tcp.handler.remote.transfer;
 
 import com.jian.beans.transfer.*;
 import com.jian.commons.Constants;
-import com.jian.transmit.tcp.TcpClient;
+import com.jian.transmit.tcp.client.AbstractTcpClient;
+import com.jian.transmit.tcp.client.TcpClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
@@ -52,7 +53,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     //服务端地址
                     InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
                     InetSocketAddress inetSocketAddress = new InetSocketAddress(remoteAddress.getAddress(), connectAuthRespPacks.getAckPort());
-                    TcpClient.getRemoteAckInstance().connect(inetSocketAddress, (Consumer<ChannelFuture>) future -> {
+                    TcpClient.getTcpClient().remoteAckInitializer().connect(inetSocketAddress, (Consumer<ChannelFuture>) future -> {
                         Channel ackChannel = future.channel();
                         if (future.isSuccess()) {
                             String keyStr = Constants.CONFIG.getServer().getUsername();
@@ -88,11 +89,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             }
             case 10 -> {//断开和远程的连接
                 log.info("接收到服务端要求断开和服务端的连接！");
-                TcpClient tcpClient = channel.attr(Constants.CLIENT_KEY).get();
+                AbstractTcpClient abstractTcpClient = channel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才会将重试次数置空
-                Optional.ofNullable(tcpClient).ifPresent(cli -> {
+                Optional.ofNullable(abstractTcpClient).ifPresent(cli -> {
                     //设置不可进行重连
-                    tcpClient.setCanReconnect(false);
+                    abstractTcpClient.setCanReconnect(false);
                 });
                 channel.close();
             }

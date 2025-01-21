@@ -20,6 +20,7 @@ import io.netty.channel.uring.IoUring;
 import io.netty.channel.uring.IoUringDatagramChannel;
 import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
+import lombok.extern.slf4j.Slf4j;
 
 
 /***
@@ -27,6 +28,7 @@ import io.netty.channel.uring.IoUringServerSocketChannel;
  * @author Jian
  * @date 2024-09-14
  */
+@Slf4j
 public class ChannelEventUtils {
 
     /***
@@ -57,12 +59,16 @@ public class ChannelEventUtils {
         Class<? extends ServerSocketChannel> clazz;
         if (IoUring.isAvailable()) {
             clazz = IoUringServerSocketChannel.class;
+            log.info("使用IO_Uring Channel.");
         } else if (Epoll.isAvailable()) {
             clazz = EpollServerSocketChannel.class;
+            log.info("使用Epoll Channel.");
         } else if (KQueue.isAvailable()) {
             clazz = KQueueServerSocketChannel.class;
+            log.info("使用Kqueue Channel.");
         } else {
             clazz = NioServerSocketChannel.class;
+            log.info("使用Nio Channel.");
         }
         return clazz;
     }

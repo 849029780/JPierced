@@ -14,9 +14,9 @@ public class Server {
         for (NetAddress netAddress : addressList) {
             NetAddressBase.Protocol protocol = netAddress.getProtocol();
             if(protocol == NetAddressBase.Protocol.UDP) {
-                UdpServer.
+                //UdpServer.
             }else{
-                TcpServer.listenLocal();
+                //TcpServer.listenLocal();
             }
         }
 
