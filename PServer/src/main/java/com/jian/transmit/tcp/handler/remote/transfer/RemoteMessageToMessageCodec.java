@@ -1,6 +1,10 @@
 package com.jian.transmit.tcp.handler.remote.transfer;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.beans.NetAddr;
+import com.jian.beans.transfer.req.*;
+import com.jian.beans.transfer.resp.ConnectAuthRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
@@ -61,17 +65,17 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 out.add(buffer);
             }
             case 7 -> { //传输数据
-                TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
+                TcpTransferDataPacks tcpTransferDataPacks = (TcpTransferDataPacks) baseTransferPacks;
                 packSize += 8;
-                ByteBuf datas = transferDataPacks.getDatas();
-                int readableBytes = datas.readableBytes();
+                ByteBuf data = tcpTransferDataPacks.getDatas();
+                int readableBytes = data.readableBytes();
                 packSize += readableBytes;
 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
-                buffer.writeLong(transferDataPacks.getTargetChannelHash());
+                buffer.writeLong(tcpTransferDataPacks.getTarChannelHash());
                 out.add(buffer);
-                out.add(datas);
+                out.add(data);
             }
             case 9 -> { //响应心跳
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
@@ -90,6 +94,57 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(type);
                 buffer.writeByte(disConnectClientReqPacks.getCode());
                 out.add(buffer);
+            }
+            case 18 -> { //下发添加服务端udp端口映射地址
+                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;
+                packSize += 1;
+                List<NetAddr> netAddrList = udpPortMappingAddReqPacks.getNetAddrList();
+                ByteBuf nbuf = ctx.alloc().buffer();
+                for (NetAddr netAddr : netAddrList) {
+                    packSize += 4;
+                    String host = netAddr.getHost();
+                    byte[] hostBytes = host.getBytes(StandardCharsets.UTF_8);
+                    int hostLen = hostBytes.length;
+                    packSize += 4 + hostLen + 4;
+
+                    nbuf.writeInt(netAddr.getSourcePort());
+                    nbuf.writeByte(hostLen);
+                    nbuf.writeBytes(hostBytes);
+                    nbuf.writeInt(netAddr.getPort());
+                }
+                int size = netAddrList.size();
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeByte(size);
+                out.add(buffer);
+                out.add(nbuf);
+            }
+            case 19 -> {
+                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
+                packSize += 1 + 4;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeInt(udpPortMappingRemReqPacks.getSourcePort());
+                out.add(buffer);
+            }
+            case 20 -> { //udp数据传输
+                UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
+                ByteBuf data = udpTransferDataPacks.getDatas();
+                int dataLen = data.readableBytes();
+                packSize += 4 + 1 + udpTransferDataPacks.getIpLen() + 4 + dataLen;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeInt(udpTransferDataPacks.getSourcePort());
+
+                String senderHost = udpTransferDataPacks.getSenderHost();
+                byte[] bytes = senderHost.getBytes(StandardCharsets.UTF_8);
+
+                buffer.writeByte(bytes.length);
+                buffer.writeBytes(bytes);
+                buffer.writeInt(udpTransferDataPacks.getSenderPort());
+                buffer.writeInt(dataLen);
+                out.add(buffer);
+                out.add(data);
             }
         }
 
@@ -120,20 +175,36 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 connectAuthReqPacks.setPwdLen(pwdLen);
                 list.add(connectAuthReqPacks);
             }
-            case 7 -> { //传输数据
-                TransferDataPacks transferDataPacks = new TransferDataPacks();
+            case 7 -> { //tcp传输数据
+                TcpTransferDataPacks tcpTransferDataPacks = new TcpTransferDataPacks();
                 long targetChannelHash = byteBuf.readLong();
                 int readableBytes = byteBuf.readableBytes();
                 ByteBuf buffer = byteBuf.readRetainedSlice(readableBytes);
-                transferDataPacks.setTargetChannelHash(targetChannelHash);
-                transferDataPacks.setDatas(buffer);
-                list.add(transferDataPacks);
+                tcpTransferDataPacks.setTarChannelHash(targetChannelHash);
+                tcpTransferDataPacks.setDatas(buffer);
+                list.add(tcpTransferDataPacks);
             }
             case 8 -> { //接收心跳请求
                 HealthReqPacks healthReqPacks = new HealthReqPacks();
                 long msgId = byteBuf.readLong();
                 healthReqPacks.setMsgId(msgId);
                 list.add(healthReqPacks);
+            }
+            case 20 -> { //udp数据传输
+                UdpTransferDataPacks udpTransferDataPacks = new UdpTransferDataPacks();
+                int sourcePort = byteBuf.readInt();
+                byte ipLen = byteBuf.readByte();
+                CharSequence charSequence = byteBuf.readCharSequence(ipLen, StandardCharsets.UTF_8);
+                String ipHost = charSequence.toString();
+                int port = byteBuf.readInt();
+                int dataLen = byteBuf.readInt();
+                ByteBuf data = byteBuf.readRetainedSlice(dataLen);
+                udpTransferDataPacks.setSourcePort(sourcePort);
+                udpTransferDataPacks.setIpLen(ipLen);
+                udpTransferDataPacks.setSenderHost(ipHost);
+                udpTransferDataPacks.setSenderPort(port);
+                udpTransferDataPacks.setDatas(data);
+                list.add(udpTransferDataPacks);
             }
         }
     }
@@ -144,11 +215,17 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
         log.debug("传输通道关闭...");
+
+        //关闭端口监听
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
+        if (Objects.isNull(clientInfo)) return;
+
         //如果是关闭的传输通道，则本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
-        Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        Optional.ofNullable(localChannelMap).ifPresent(map -> {
+        ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+
+        Optional.ofNullable(connectedMap).ifPresent(map -> {
             if (!map.isEmpty()) {
-                for (Map.Entry<Long, Channel> entry : localChannelMap.entrySet()) {
+                for (Map.Entry<Long, Channel> entry : connectedMap.entrySet()) {
                     if (Objects.nonNull(entry)) {
                         Channel localChannel = entry.getValue();
                         Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
@@ -157,31 +234,30 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             }
         });
 
-        //关闭端口监听
-        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
-        Optional.ofNullable(clientInfo).ifPresent(cli -> {
-            cli.setOnline(false);
-            cli.setRemoteChannel(null);
 
-            //如果远程通道上有ack通道，则需要关闭ack通道
-            Channel ackChannel = clientInfo.getAckChannel();
-            if (Objects.nonNull(ackChannel)) {
-                ackChannel.close();
-            }
+        clientInfo.setOnline(false);
+        clientInfo.setRemoteChannel(null);
 
-            //获取该客户端监听的所有端口，并将这些端口全部取消监听
-            Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
-            log.warn("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());
-            for (Map.Entry<Integer, Channel> listen : listenPortMap.entrySet()) {
-                //监听的端口通道，非连接通道
-                Channel listenChannel = listen.getValue();
-                //关闭监听的端口
-                Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
-                NetAddress netAddress = clientInfo.getPortMappingAddress().get(listen.getKey());
-                Optional.ofNullable(netAddress).ifPresent(addr -> addr.setListen(false));
-            }
-            clientInfo.setListenPortMap(new ConcurrentHashMap<>());
-        });
+        //如果远程通道上有ack通道，则需要关闭ack通道
+        Channel ackChannel = clientInfo.getAckChannel();
+        if (Objects.nonNull(ackChannel)) {
+            ackChannel.close();
+        }
+
+        //获取该客户端监听的所有端口，并将这些端口全部取消监听
+        Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
+        log.warn("客户端key:{}，name:{}，断开连接,即将关闭该客户端监听的所有端口:{}", clientInfo.getKey(), clientInfo.getName(), listenPortMap.keySet());
+        for (Map.Entry<Integer, Channel> listen : listenPortMap.entrySet()) {
+            //监听的端口通道，非连接通道
+            Channel listenChannel = listen.getValue();
+            //关闭监听的端口
+            Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
+            NetAddress netAddress = clientInfo.getPortMappingAddress().get(listen.getKey());
+            Optional.ofNullable(netAddress).ifPresent(addr -> addr.setListen(false));
+        }
+        clientInfo.setListenPortMap(new ConcurrentHashMap<>());
+
+
     }
 
     @Override
@@ -190,8 +266,10 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         Channel channel = ctx.channel();
         boolean writable = channel.isWritable();
         //远程通道写缓冲状态和本地自动读状态设置为一致，如果通道缓冲写满了，则不允许本地通道自动读
-        Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        for (Map.Entry<Long, Channel> entry : localChannelMap.entrySet()) {
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
+        if (Objects.isNull(clientInfo)) return;
+        ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+        for (Map.Entry<Long, Channel> entry : connectedMap.entrySet()) {
             Channel localChannel = entry.getValue();
             Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
         }
@@ -200,7 +278,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         Channel channel = ctx.channel();
-        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
         if (Objects.nonNull(clientInfo)) {
             if (cause instanceof SocketException cause1) {
                 log.error("客户端通道发生错误！客户key:{},name:{},{}", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());

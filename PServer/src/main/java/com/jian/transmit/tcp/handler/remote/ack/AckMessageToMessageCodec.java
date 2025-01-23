@@ -1,6 +1,10 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.req.*;
+import com.jian.beans.transfer.resp.ConnectAckChannelRespPacks;
+import com.jian.beans.transfer.resp.ConnectRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import io.netty.buffer.ByteBuf;
@@ -39,7 +43,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 packSize += hostLen;
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
-                buffer.writeLong(connectReqPacks.getThisChannelHash());
+                buffer.writeLong(connectReqPacks.getSourceChannelHash());
                 buffer.writeLong(connectReqPacks.getTarChannelHash());
                 buffer.writeInt(connectReqPacks.getPort());
                 buffer.writeByte(connectReqPacks.getProtocol());
@@ -174,7 +178,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
         //远程客户端有发生断开连接时，需要关闭该通道上的所有本地连接，且关闭当前客户端监听的端口
         Channel channel = ctx.channel();
         log.debug("ack通道关闭...");
-        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
         if (Objects.nonNull(clientInfo)) {
             Channel remoteChannel = clientInfo.getRemoteChannel();
             if (Objects.nonNull(remoteChannel)) {
@@ -187,7 +191,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         Channel channel = ctx.channel();
-        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
         if (Objects.nonNull(clientInfo)) {
             if (cause instanceof SocketException cause1) {
                 log.error("客户端ack通道发生错误！客户key:{},name:{},{}", clientInfo.getKey(), clientInfo.getName(), cause1.getMessage());

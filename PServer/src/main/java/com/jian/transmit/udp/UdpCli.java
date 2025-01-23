@@ -21,29 +21,30 @@ import java.util.List;
  * @date 2024-12-30
  */
 @Slf4j
-public class UdpServer {
+public class UdpCli {
 
     private final Bootstrap bootstrap;
 
-    public UdpServer() {
+    public UdpCli() {
         this.bootstrap = new Bootstrap();
     }
 
 
-    public static UdpServer getInstance() {
-        return new UdpServer();
+    public static UdpCli getInstance() {
+        return new UdpCli();
     }
 
 
-    public static UdpServer getInstance(ChannelInitializer<DatagramChannel> channelInitializer) {
-        UdpServer instance = getInstance();
+    public static UdpCli getInstance(ChannelInitializer<DatagramChannel> channelInitializer) {
+        UdpCli instance = getInstance();
+        instance.bootstrap.channel(ChannelEventUtils.getDatagramChannelClass());
         instance.bootstrap.handler(channelInitializer);
         return instance;
     }
 
 
-    public static UdpServer getLocalInstance() {
-        UdpServer instance = getInstance(Constants.LOCAL_UDP_CHANNEL_INITIALIZER);
+    public static UdpCli getLocalInstance() {
+        UdpCli instance = getInstance(Constants.LOCAL_UDP_CHANNEL_INITIALIZER);
         instance.bootstrap.group(ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
         return instance;
     }
@@ -59,7 +60,7 @@ public class UdpServer {
         }
 
         for (NetAddress netAddress : addressList) {
-            UdpServer localInstance = getLocalInstance();
+            UdpCli localInstance = getLocalInstance();
             ChannelFuture future = localInstance.bootstrap.bind(netAddress.getPort());
             future.addListener(fute -> {
                 if (!fute.isSuccess()) {
@@ -75,17 +76,17 @@ public class UdpServer {
                 channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(ackChannel);
                 //udp监听的端口保存到客户端口映射map中
                 clientInfo.getListenPortMap().put(netAddress.getPort(), channel);
-
-                channel.closeFuture().addListener(UdpServer::closeProcess);
+                channel.closeFuture().addListener(UdpCli::closeProcess);
             });
         }
     }
 
+    /***
+     * 端口停用
+     * @param closeFuture
+     */
     private static void closeProcess(Future<? super Void> closeFuture) {
         ChannelFuture channelFuture = (ChannelFuture) closeFuture;
-
-
-
 
 
     }

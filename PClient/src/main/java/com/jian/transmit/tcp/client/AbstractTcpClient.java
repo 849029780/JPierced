@@ -2,10 +2,7 @@ package com.jian.transmit.tcp.client;
 
 import com.jian.commons.Constants;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.*;
 import io.netty.util.concurrent.GenericFutureListener;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,13 +22,13 @@ import java.util.function.Consumer;
 @Slf4j
 public abstract class AbstractTcpClient {
 
+    public static MultiThreadIoEventLoopGroup EVENT_LOOP_GROUP;
+
     Bootstrap bootstrap;
 
     public abstract boolean support();
 
     public abstract AbstractTcpClient getInstance();
-
-    public abstract AbstractTcpClient groupThreadNum(int threadNum);
 
     /***
      * 保存
@@ -53,25 +50,21 @@ public abstract class AbstractTcpClient {
 
     public AbstractTcpClient localChannelInitializer() {
         this.handler(Constants.LOCAL_CHANNEL_INITIALIZER);
-        this.groupThreadNum(Constants.THREAD_NUM);
         return this;
     }
 
     public AbstractTcpClient localHttpsChannelInitializer() {
         this.handler(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
-        this.groupThreadNum(Constants.THREAD_NUM);
         return this;
     }
 
     public AbstractTcpClient remoteChannelInitializer() {
         this.handler(Constants.REMOTE_CHANNEL_INITIALIZER);
-        this.groupThreadNum(Constants.THREAD_NUM);
         return this;
     }
 
     public AbstractTcpClient remoteAckInitializer() {
         this.handler(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
-        this.groupThreadNum(Constants.ACK_WORK_THREAD_NUM);
         return this;
     }
 

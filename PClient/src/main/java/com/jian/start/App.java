@@ -1,6 +1,6 @@
 package com.jian.start;
 
-import com.jian.beans.transfer.ConnectAuthReqPacks;
+import com.jian.beans.transfer.req.ConnectAuthReqPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.tcp.client.TcpClient;
 import io.netty.channel.Channel;
@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /***
- *
+ * 从这里开始
  * @author Jian
  * @date 2022/4/2
  */

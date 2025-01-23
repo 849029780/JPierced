@@ -4,9 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.jian.beans.transfer.DisConnectClientReqPacks;
-import com.jian.beans.transfer.DisConnectReqPacks;
-import com.jian.beans.transfer.MessageReqPacks;
+import com.jian.beans.transfer.req.DisConnectClientReqPacks;
+import com.jian.beans.transfer.req.DisConnectReqPacks;
+import com.jian.beans.transfer.req.MessageReqPacks;
 import com.jian.commons.Constants;
 import com.jian.start.Config;
 import com.jian.transmit.ClientInfo;
@@ -43,6 +43,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -747,10 +748,10 @@ public class WebManagerVerticle extends AbstractVerticle {
         Channel remoteChannel = clientInfo.getRemoteChannel();
         Optional.ofNullable(remoteChannel).ifPresent(remoteCh -> {
             //客户端在线，则获取该客户端上绑定的本地连接通道
-            Map<Long, Channel> longChannelMap = remoteCh.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-            if (!longChannelMap.isEmpty()) {
+            ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+            if (!connectedMap.isEmpty()) {
                 //本地所有连接通道判断端口号是否和当前移除的端口号一致，一致则需要通知远程关闭该通道对应的连接
-                for (Map.Entry<Long, Channel> longChannelEntry : longChannelMap.entrySet()) {
+                for (Map.Entry<Long, Channel> longChannelEntry : connectedMap.entrySet()) {
                     Channel localChannel = longChannelEntry.getValue();
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) localChannel.localAddress();
                     if (inetSocketAddress.getPort() == serverPort) {

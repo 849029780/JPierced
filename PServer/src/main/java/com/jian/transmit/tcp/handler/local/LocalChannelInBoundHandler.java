@@ -1,8 +1,8 @@
 package com.jian.transmit.tcp.handler.local;
 
-import com.jian.beans.transfer.AutoreadReqPacks;
-import com.jian.beans.transfer.ConnectReqPacks;
-import com.jian.beans.transfer.DisConnectReqPacks;
+import com.jian.beans.transfer.req.AutoreadReqPacks;
+import com.jian.beans.transfer.req.ConnectReqPacks;
+import com.jian.beans.transfer.req.DisConnectReqPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
@@ -16,6 +16,7 @@ import java.net.SocketException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /***
  *
@@ -39,7 +40,7 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         Integer port = socketAddress.getPort();
         log.debug("端口:{}，新的连接..", port);
         //通过端口号获取该端口是哪个客户端监听的
-        ClientInfo clientInfo = channel.parent().attr(Constants.LOCAL_BIND_CLIENT_KEY).get();
+        ClientInfo clientInfo = channel.parent().attr(Constants.CLIENT_INFO_KEY).get();
         if (Objects.isNull(clientInfo) || !clientInfo.isOnline()) {
             log.info("该端口:{}，未找到在线的客户端，连接已关闭..", port);
             //客户端未连接
@@ -59,13 +60,12 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         channel.attr(Constants.REMOTE_ACK_CHANNEL_KEY).set(ackChannel);
 
         //当前hash对应本地连接通道
-        Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        localChannelMap.put(thisChannelHash, channel);
-
+        ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+        connectedMap.put(thisChannelHash, channel);
 
         ConnectReqPacks connectReqPacks = new ConnectReqPacks();
         //设置远端绑定时是相反绑定
-        connectReqPacks.setThisChannelHash(tarChannelHash);
+        connectReqPacks.setSourceChannelHash(tarChannelHash);
         connectReqPacks.setTarChannelHash(thisChannelHash);
 
         //从客户信息中获取该端口对应的哪个本地连接
@@ -107,9 +107,11 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         if (Objects.isNull(remoteChannel)) {
             return;
         }
+
         //从远程通道上获取绑定的本地通道信息，且移除本地通道
-        Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-        localChannelMap.remove(thisChannelHash);
+        ClientInfo clientInfo = channel.parent().attr(Constants.CLIENT_INFO_KEY).get();
+        clientInfo.getConnectedMap().remove(thisChannelHash);
+
 
         DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
         disConnectReqPacks.setTarChannelHash(tarChannelHash);

@@ -1,21 +1,23 @@
 package com.jian.commons;
 
+import com.jian.beans.UdpSenderChannelInfo;
 import com.jian.transmit.tcp.client.AbstractTcpClient;
 import com.jian.transmit.tcp.handler.local.LocalChannelInBoundHandler;
 import com.jian.transmit.tcp.handler.local.LocalChannelInitializer;
 import com.jian.transmit.tcp.handler.local.LocalHttpsChannelInitializer;
 import com.jian.transmit.tcp.handler.remote.ack.AckChannelInitializer;
 import com.jian.transmit.tcp.handler.remote.transfer.RemoteChannelInitializer;
+import com.jian.transmit.udp.handler.LocalUdpChannelInboundHandler;
+import com.jian.transmit.udp.handler.LocalUdpChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /***
  *
@@ -27,12 +29,9 @@ public class Constants {
     /***
      * 线程数
      */
-    public static final int THREAD_NUM = 0;
+    public static final int THREAD_NUM = 8;
 
-    /***
-     * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
-     */
-    public static final int ACK_WORK_THREAD_NUM = 4;
+    public static final int UDP_THREAD_NUM = 4;
 
     /***
      * 绑定在本地通道上的 当前通道hash
@@ -53,8 +52,6 @@ public class Constants {
      * 通道上绑定的连接信息
      */
     public static final AttributeKey<AbstractTcpClient> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
-
-    //public static final AttributeKey<TcpClient> CLIENT_KEY = AttributeKey.valueOf("CLIENT_KEY");
 
     /***
      * 远程通道是否已开启心跳
@@ -135,6 +132,37 @@ public class Constants {
      * 配置
      */
     public static ClientConfig CONFIG;
+
+
+    /***
+     * 发送者地址信息
+     */
+    public static final AttributeKey<InetSocketAddress> SENDER_ADDR = AttributeKey.valueOf("SENDER_ADDR");
+
+    /***
+     * 服务端接收udp数据的端口
+     */
+    public static final AttributeKey<Integer> SOURCE_PORT = AttributeKey.valueOf("SOURCE_PORT");
+
+    /***
+     * udp消息处理器
+     */
+    public static final LocalUdpChannelInboundHandler LOCAL_UDP_CHANEL_INBOUND_HANDLER = new LocalUdpChannelInboundHandler();
+
+    /***
+     * udp通道初始化器
+     */
+    public static final ChannelInitializer<DatagramChannel> UDP_CHANNEL_INITIALIZER = new LocalUdpChannelInitializer();
+
+    /***
+     * 服务端udp端口号对应本地udp端口和地址
+     */
+    public static Map<Integer, InetSocketAddress> UDP_SERVER_MAPPING_ADDR = new ConcurrentHashMap<>();
+
+    /***
+     * 发送者映射本地的udp channel
+     */
+    public static Map<String, UdpSenderChannelInfo> SENDER_CHANNEL = new ConcurrentHashMap<>();
 
 
 }

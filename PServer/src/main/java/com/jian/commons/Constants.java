@@ -37,17 +37,12 @@ public class Constants {
     /***
      * 线程数
      */
-    public static final int THREAD_NUM = 0;
+    public static final int THREAD_NUM = 8;
 
     /***
      * boss线程数
      */
-    public static final int BOSS_THREAD_NUM = THREAD_NUM >> 1;
-
-    /***
-     * ack通道工作线程，单独管理，防止传输工作线程导致ack通道数据发送延迟
-     */
-    public static final int ACK_WORK_THREAD_NUM = 4;
+    public static final int BOSS_THREAD_NUM = 4;
 
     /***
      * 绑定在本地通道上的 当前通道hash
@@ -69,26 +64,6 @@ public class Constants {
     public static final AttributeKey<Channel> REMOTE_ACK_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_ACK_CHANNEL");
 
     /***
-     * 绑定在ack通道上的远程传输通道
-     */
-    //public static final AttributeKey<Channel> REMOTE_CHANNEL_IN_ACK_KEY = AttributeKey.valueOf("REMOTE_CHANNEL_IN_ACK");
-
-    /***
-     * 将远程通道设置为不自动读的本地通道id，用于通道移除时使用，如果该本地通道移除时发现自己锁定了远程通道，则需要解锁，如果非当前本地通道锁定的远程通道，则不允许被解锁
-     */
-    //public static final AttributeKey<ChannelId> LOCK_CHANNEL_ID_KEY = AttributeKey.valueOf("LOCK_CHANNEL_ID");
-
-    /***
-     * 绑定在远程通道上的 本地连接信息 map key为本地连接通道的hash，val为通道
-     */
-    public static final AttributeKey<Map<Long, Channel>> REMOTE_BIND_LOCAL_CHANNEL_KEY = AttributeKey.valueOf("REMOTE_BIND_LOCAL_CHANNEL");
-
-    /***
-     * 绑定在远程通道上的 当前客户端连接信息
-     */
-    public static final AttributeKey<ClientInfo> REMOTE_BIND_CLIENT_KEY = AttributeKey.valueOf("REMOTE_BIND_CLIENT");
-
-    /***
      * 认证超时器属性
      */
     public static final AttributeKey<ScheduledFuture<?>> AUTH_SCHEDULED_KEY = AttributeKey.valueOf("AUTH_SCHEDULED");
@@ -105,14 +80,9 @@ public class Constants {
     public static final int BASE_PACK_SIZE = 4 + 1;
 
     /***
-     * 本地服务端端口映射被穿透机器上的地址和端口(Client中的portMappingAddress)
-     */
-    //public static Map<Integer, ClientInfo> PORT_MAPPING_CLIENT = new ConcurrentHashMap<>();
-
-    /***
      * 绑定在本地通道上的 当前客户端连接信息
      */
-    public static final AttributeKey<ClientInfo> LOCAL_BIND_CLIENT_KEY = AttributeKey.valueOf("LOCAL_BIND_CLIENT");
+    public static final AttributeKey<ClientInfo> CLIENT_INFO_KEY = AttributeKey.valueOf("CLIENT_INFO");
 
     /***
      * 绑定在本地通道上 客户端方需要连接的地址信息

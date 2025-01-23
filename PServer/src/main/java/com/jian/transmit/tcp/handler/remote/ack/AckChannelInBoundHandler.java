@@ -1,6 +1,10 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.req.*;
+import com.jian.beans.transfer.resp.ConnectAckChannelRespPacks;
+import com.jian.beans.transfer.resp.ConnectRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
@@ -16,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /***
@@ -31,13 +36,14 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
     protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) {
         byte type = baseTransferPacks.getType();
         Channel channel = ctx.channel();
-        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
         switch (type) {
             case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
                 Channel remoteChannel = clientInfo.getRemoteChannel();
-                Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-                Channel localChannel = localChannelMap.get(connectRespPacks.getThisChannelHash());
+
+                ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+                Channel localChannel = connectedMap.get(connectRespPacks.getThisChannelHash());
                 if (Objects.isNull(localChannel)) {
                     log.warn("连接响应本地连接通道已不存在！已告知被穿透的客户端断开已连接的服务！");
                     //本地通道不存在时，则需要关闭被穿透机器连接的客户端
@@ -110,7 +116,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 //设置ack通道到客户信息中
                 clientInfo.setAckChannel(channel);
                 //ack通道上也绑定客户端信息
-                channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).set(clientInfo);
+                channel.attr(Constants.CLIENT_INFO_KEY).set(clientInfo);
 
                 //---------------------传输通道后续设置------------------
                 Map<Integer, NetAddress> portMappingAddress = clientInfo.getPortMappingAddress();
@@ -142,8 +148,8 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 //从ack通道上获取传输通道
                 Channel remoteChannel = clientInfo.getRemoteChannel();
                 if (Objects.nonNull(remoteChannel)) {
-                    Map<Long, Channel> localChannelMap = remoteChannel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
-                    Channel localChannel = localChannelMap.get(autoreadReqPacks.getTarChannelHash());
+                    ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+                    Channel localChannel = connectedMap.get(autoreadReqPacks.getTarChannelHash());
                     Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
                 }
             }
@@ -156,7 +162,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent event) {
             Channel channel = ctx.channel();
-            ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+            ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
             switch (event.state()) {
                 case READER_IDLE:
                     //读空闲时，则认为客户端已失去连接

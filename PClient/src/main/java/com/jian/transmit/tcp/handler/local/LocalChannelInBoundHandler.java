@@ -1,8 +1,8 @@
 package com.jian.transmit.tcp.handler.local;
 
-import com.jian.beans.transfer.AutoreadReqPacks;
-import com.jian.beans.transfer.DisConnectReqPacks;
-import com.jian.beans.transfer.TransferDataPacks;
+import com.jian.beans.transfer.req.AutoreadReqPacks;
+import com.jian.beans.transfer.req.DisConnectReqPacks;
+import com.jian.beans.transfer.TcpTransferDataPacks;
 import com.jian.commons.Constants;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -29,11 +29,11 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         Channel channel = ctx.channel();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
         byteBuf.retain();
-        TransferDataPacks transferDataPacks = new TransferDataPacks();
-        transferDataPacks.setTargetChannelHash(tarChannelHash);
-        transferDataPacks.setDatas(byteBuf);
+        TcpTransferDataPacks tcpTransferDataPacks = new TcpTransferDataPacks();
+        tcpTransferDataPacks.setTarChannelHash(tarChannelHash);
+        tcpTransferDataPacks.setDatas(byteBuf);
         try {
-            Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(transferDataPacks);
+            Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(tcpTransferDataPacks);
         } catch (Exception e) {
             ReferenceCountUtil.release(byteBuf);
         }

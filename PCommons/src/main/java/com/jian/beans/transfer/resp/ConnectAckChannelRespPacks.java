@@ -1,7 +1,10 @@
-package com.jian.beans.transfer;
+package com.jian.beans.transfer.resp;
 
+import com.jian.beans.transfer.BaseTransferPacks;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class ConnectAckChannelRespPacks extends BaseTransferPacks {
 

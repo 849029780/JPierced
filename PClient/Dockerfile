@@ -7,4 +7,4 @@ RUN mkdir jpclient
 COPY ./target/client.yml jpclient/
 COPY ./target/PClient-1.0-SNAPSHOT-jar-with-dependencies.jar jpclient/
 WORKDIR jpclient
-CMD ["java","-jar","-Xms40M","-Xmx150M","PClient-1.0-SNAPSHOT-jar-with-dependencies.jar"]
+CMD ["java","-Dio.netty.leakDetection.level=paranoid","-Xms40M","-Xmx150M","-jar","PClient-1.0-SNAPSHOT-jar-with-dependencies.jar"]

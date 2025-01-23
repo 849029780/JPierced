@@ -1,6 +1,6 @@
 package com.jian.transmit.tcp;
 
-import com.jian.beans.transfer.MessageReqPacks;
+import com.jian.beans.transfer.req.MessageReqPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
@@ -50,25 +50,25 @@ public class TcpServer {
 
     public static TcpServer getLocalInstance() {
         TcpServer tcpServer = getInstance(Constants.LOCAL_CHANNEL_INITIALIZER);
-        tcpServer.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
+        tcpServer.group(ChannelEventUtils.getBossLoopGroup(), ChannelEventUtils.getWorkLoopGroup());
         return tcpServer;
     }
 
     public static TcpServer getLocalHttpsInstance() {
         TcpServer tcpServer = getInstance(Constants.LOCAL_HTTPS_CHANNEL_INITIALIZER);
-        tcpServer.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
+        tcpServer.group(ChannelEventUtils.getBossLoopGroup(), ChannelEventUtils.getWorkLoopGroup());
         return tcpServer;
     }
 
     public static TcpServer getRemoteInstance() {
         TcpServer tcpServer = getInstance(Constants.REMOTE_CHANNEL_INITIALIZER);
-        tcpServer.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.THREAD_NUM));
+        tcpServer.group(ChannelEventUtils.getBossLoopGroup(), ChannelEventUtils.getWorkLoopGroup());
         return tcpServer;
     }
 
     public static TcpServer getRemoteAckInstance() {
         TcpServer tcpServer = getInstance(Constants.REMOTE_ACK_CHANNEL_INITIALIZER);
-        tcpServer.group(ChannelEventUtils.getEventLoopGroup(Constants.BOSS_THREAD_NUM), ChannelEventUtils.getEventLoopGroup(Constants.ACK_WORK_THREAD_NUM));
+        tcpServer.group(ChannelEventUtils.getBossLoopGroup(), ChannelEventUtils.getWorkLoopGroup());
         return tcpServer;
     }
 
@@ -118,7 +118,7 @@ public class TcpServer {
                             log.info("客户端key：{}，name:{}，监听端口:{}成功！映射的本地地址为:{}", clientInfo.getKey(), clientInfo.getName(), port, netAddress);
                             clientInfo.getListenPortMap().put(port, channel1);
                             //设置客户端信息
-                            channel1.attr(Constants.LOCAL_BIND_CLIENT_KEY).set(clientInfo);
+                            channel1.attr(Constants.CLIENT_INFO_KEY).set(clientInfo);
                             channel1.attr(Constants.LOCAL_BIND_CLIENT_NET_LOCAL_KEY).set(netAddress);
                         } else {
                             if (future1.cause() instanceof BindException) {
@@ -175,6 +175,7 @@ public class TcpServer {
                 //将传输端口服务置空
                 Constants.LISTEN_REMOTE_CHANNEL = null;
                 log.warn("传输服务已停止..端口:{}", port);
+
                 //将已连接的客户端重置为离线，及清空相关的数据
                 for (Map.Entry<Long, ClientInfo> clientInfoEntry : Constants.CLIENTS.entrySet()) {
                     ClientInfo clientInfo = clientInfoEntry.getValue();

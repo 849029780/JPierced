@@ -21,7 +21,6 @@ public class BaseTransferPacks {
     private byte type;
 
 
-
     public interface TYPE {
         /***
          * 连接请求
@@ -51,7 +50,7 @@ public class BaseTransferPacks {
         /***
          * 传输数据
          */
-        byte TRANSFER_DATA = 7;
+        byte TCP_TRANSFER_DATA = 7;
 
         /***
          * 心跳请求
@@ -74,9 +73,6 @@ public class BaseTransferPacks {
         byte MESSAGE_REQ = 11;
 
 
-
-
-
         /***
          * 活动通道连接请求
          */
@@ -92,10 +88,24 @@ public class BaseTransferPacks {
          */
         byte ACK_AUTO_READ_REQ = 14;
 
+
+        /***
+         * udp端口映射增加
+         */
+        byte UDP_PORT_MAPPING_ADD_REQ = 18;
+        /***
+         * udp端口映射移除
+         */
+        byte UDP_PORT_MAPPING_REM_REQ = 19;
+        /***
+         * udp数据传输
+         */
+        byte UDP_TRANSFER_DATA = 20;
+
     }
 
 
-    public interface STATE{
+    public interface STATE {
         /***
          * 成功
          */

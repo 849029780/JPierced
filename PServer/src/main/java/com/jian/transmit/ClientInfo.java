@@ -8,7 +8,7 @@ import lombok.EqualsAndHashCode;
 import java.util.concurrent.ConcurrentHashMap;
 
 /***
- *
+ * 客户连接信息
  * @author Jian
  * @date 2022/4/2
  */
@@ -42,5 +42,11 @@ public class ClientInfo extends ClientInfoBase {
      */
     @JsonIgnore
     private ConcurrentHashMap<Integer, Channel> listenPortMap = new ConcurrentHashMap<>();
+
+    /***
+     * 该客户端监听的端口上所有连接的通道
+     */
+    @JsonIgnore
+    private ConcurrentHashMap<Long, Channel> connectedMap = new ConcurrentHashMap<>();
 
 }

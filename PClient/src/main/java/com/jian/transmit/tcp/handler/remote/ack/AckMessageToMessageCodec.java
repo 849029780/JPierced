@@ -1,6 +1,10 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.req.*;
+import com.jian.beans.transfer.resp.ConnectAckChannelRespPacks;
+import com.jian.beans.transfer.resp.ConnectRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -108,7 +112,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                     connectRespPacks.setHost(host);
                 }
                 connectRespPacks.setPackSize(packSize);
-                connectRespPacks.setThisChannelHash(thisChannelHash);
+                connectRespPacks.setSourceChannelHash(thisChannelHash);
                 connectRespPacks.setTarChannelHash(tarChannelHash);
                 connectRespPacks.setPort(port);
                 connectRespPacks.setProtocol(protocol);

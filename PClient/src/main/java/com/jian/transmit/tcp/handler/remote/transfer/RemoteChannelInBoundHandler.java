@@ -1,17 +1,27 @@
 package com.jian.transmit.tcp.handler.remote.transfer;
 
+import com.jian.beans.UdpSenderChannelInfo;
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.beans.NetAddr;
+import com.jian.beans.transfer.req.*;
+import com.jian.beans.transfer.resp.ConnectAuthRespPacks;
+import com.jian.beans.transfer.resp.ConnectRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.tcp.client.AbstractTcpClient;
 import com.jian.transmit.tcp.client.TcpClient;
+import com.jian.transmit.udp.client.UdpClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -72,10 +82,10 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 }
             }
             case 7 -> { //传输数据
-                TransferDataPacks transferDataPacks = ((TransferDataPacks) baseTransferPacks);
-                Long targetChannelHash = transferDataPacks.getTargetChannelHash();
+                TcpTransferDataPacks tcpTransferDataPacks = ((TcpTransferDataPacks) baseTransferPacks);
+                Long targetChannelHash = tcpTransferDataPacks.getTarChannelHash();
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(targetChannelHash);
-                ByteBuf datas = transferDataPacks.getDatas();
+                ByteBuf datas = tcpTransferDataPacks.getDatas();
                 try {
                     localChannel.writeAndFlush(datas);
                 } catch (NullPointerException e) {
@@ -96,6 +106,43 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     abstractTcpClient.setCanReconnect(false);
                 });
                 channel.close();
+            }
+            case 18 -> { //添加本地udp端口映射表
+                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;
+                List<NetAddr> netAddrList = udpPortMappingAddReqPacks.getNetAddrList();
+                for (NetAddr netAddr : netAddrList) {
+                    Integer sourcePort = netAddr.getSourcePort();
+                    String host = netAddr.getHost();
+                    Integer port = netAddr.getPort();
+                    InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
+                    Constants.UDP_SERVER_MAPPING_ADDR.put(sourcePort, inetSocketAddress);
+                }
+            }
+            case 19 -> { //移除本地udp端口映射
+                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
+                Integer sourcePort = udpPortMappingRemReqPacks.getSourcePort();
+                Constants.UDP_SERVER_MAPPING_ADDR.remove(sourcePort);
+            }
+            case 20 -> { //udp数据传输
+                UdpTransferDataPacks udpTransferDataPacks = ((UdpTransferDataPacks) baseTransferPacks);
+                Integer sourcePort = udpTransferDataPacks.getSourcePort();
+                ByteBuf datas = udpTransferDataPacks.getDatas();
+                //目标地址
+                InetSocketAddress tarInetAddr = Constants.UDP_SERVER_MAPPING_ADDR.get(sourcePort);
+                String senderHost = udpTransferDataPacks.getSenderHost();
+                Integer senderPort = udpTransferDataPacks.getSenderPort();
+                String sender = senderHost + ":" + senderPort;
+                UdpSenderChannelInfo udpSenderChannelInfo = Constants.SENDER_CHANNEL.get(sender);
+                if (Objects.isNull(udpSenderChannelInfo)) {
+                    udpSenderChannelInfo = new UdpSenderChannelInfo();
+                    InetSocketAddress senderAddr = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
+                    Channel udpChannel = UdpClient.getUdpClient().init().bind(0, sourcePort, senderAddr);
+                    udpSenderChannelInfo.setChannel(udpChannel);
+                }
+                Channel localUdpChannel = udpSenderChannelInfo.getChannel();
+                DatagramPacket datagramPacket = new DatagramPacket(datas, tarInetAddr);
+                udpSenderChannelInfo.setTime(LocalDateTime.now());
+                localUdpChannel.writeAndFlush(datagramPacket);
             }
         }
     }

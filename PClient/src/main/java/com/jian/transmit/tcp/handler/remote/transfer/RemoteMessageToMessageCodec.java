@@ -1,6 +1,10 @@
 package com.jian.transmit.tcp.handler.remote.transfer;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.beans.NetAddr;
+import com.jian.beans.transfer.req.*;
+import com.jian.beans.transfer.resp.ConnectAuthRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.tcp.client.AbstractTcpClient;
 import io.netty.buffer.ByteBuf;
@@ -15,10 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /***
  *
@@ -59,15 +60,15 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 out.add(buffer);
             }
             case 7 -> { //传输数据
-                TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
+                TcpTransferDataPacks tcpTransferDataPacks = (TcpTransferDataPacks) baseTransferPacks;
                 packSize += 8;
-                ByteBuf datas = transferDataPacks.getDatas();
+                ByteBuf datas = tcpTransferDataPacks.getDatas();
                 int readableBytes = datas.readableBytes();
                 packSize += readableBytes;
 
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
-                buffer.writeLong(transferDataPacks.getTargetChannelHash());
+                buffer.writeLong(tcpTransferDataPacks.getTarChannelHash());
                 out.add(buffer);
                 out.add(datas);
             }
@@ -78,6 +79,24 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(type);
                 buffer.writeLong(healthReqPacks.getMsgId());
                 out.add(buffer);
+            }
+            case 20 -> { //udp数据传输
+                UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
+                ByteBuf data = udpTransferDataPacks.getDatas();
+                int dataLen = data.readableBytes();
+                packSize += 4 + 1 + udpTransferDataPacks.getIpLen() + 4 + dataLen;
+                buffer.writeInt(packSize);
+                buffer.writeInt(udpTransferDataPacks.getSourcePort());
+
+                String senderHost = udpTransferDataPacks.getSenderHost();
+                byte[] bytes = senderHost.getBytes(StandardCharsets.UTF_8);
+
+                buffer.writeByte(bytes.length);
+                buffer.writeBytes(bytes);
+                buffer.writeInt(udpTransferDataPacks.getSenderPort());
+                buffer.writeInt(dataLen);
+                out.add(buffer);
+                out.add(data);
             }
         }
 
@@ -113,13 +132,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 list.add(connectAuthRespPacks);
             }
             case 7 -> { //传输数据
-                TransferDataPacks transferDataPacks = new TransferDataPacks();
+                TcpTransferDataPacks tcpTransferDataPacks = new TcpTransferDataPacks();
                 long targetChannelHash = byteBuf.readLong();
                 int readableBytes = byteBuf.readableBytes();
                 ByteBuf buffer = byteBuf.readRetainedSlice(readableBytes);
-                transferDataPacks.setTargetChannelHash(targetChannelHash);
-                transferDataPacks.setDatas(buffer);
-                list.add(transferDataPacks);
+                tcpTransferDataPacks.setTarChannelHash(targetChannelHash);
+                tcpTransferDataPacks.setDatas(buffer);
+                list.add(tcpTransferDataPacks);
             }
             case 9 -> {//心跳响应
                 HealthRespPacks healthRespPacks = new HealthRespPacks();
@@ -133,6 +152,43 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 disConnectClientReqPacks.setPackSize(packSize);
                 disConnectClientReqPacks.setCode(code);
                 list.add(disConnectClientReqPacks);
+            }
+            case 18 -> {
+                byte count = byteBuf.readByte();
+                List<NetAddr> netAddrs = new ArrayList<>(count);
+                for (byte i = 0; i < count; i++) {
+                    int sourcePort = byteBuf.readInt();
+                    byte hostLen = byteBuf.readByte();
+                    ByteBuf hostBytes = byteBuf.readBytes(hostLen);
+                    String host = hostBytes.toString(StandardCharsets.UTF_8);
+                    int port = byteBuf.readInt();
+                    netAddrs.add(new NetAddr(sourcePort, host, port));
+                }
+                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
+                udpPortMappingAddReqPacks.setNetAddrList(netAddrs);
+                list.add(udpPortMappingAddReqPacks);
+            }
+            case 19 -> {
+                int sourcePort = byteBuf.readInt();
+                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = new UdpPortMappingRemReqPacks();
+                udpPortMappingRemReqPacks.setSourcePort(sourcePort);
+                list.add(udpPortMappingRemReqPacks);
+            }
+            case 20 -> { //udp数据传输
+                UdpTransferDataPacks udpTransferDataPacks = new UdpTransferDataPacks();
+                int sourcePort = byteBuf.readInt();
+                byte ipLen = byteBuf.readByte();
+                CharSequence charSequence = byteBuf.readCharSequence(ipLen, StandardCharsets.UTF_8);
+                String ipHost = charSequence.toString();
+                int port = byteBuf.readInt();
+                int dataLen = byteBuf.readInt();
+                ByteBuf data = byteBuf.readRetainedSlice(dataLen);
+                udpTransferDataPacks.setSourcePort(sourcePort);
+                udpTransferDataPacks.setIpLen(ipLen);
+                udpTransferDataPacks.setSenderHost(ipHost);
+                udpTransferDataPacks.setSenderPort(port);
+                udpTransferDataPacks.setDatas(data);
+                list.add(udpTransferDataPacks);
             }
         }
     }

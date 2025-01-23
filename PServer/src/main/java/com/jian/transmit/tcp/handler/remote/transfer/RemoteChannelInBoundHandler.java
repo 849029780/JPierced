@@ -1,16 +1,24 @@
 package com.jian.transmit.tcp.handler.remote.transfer;
 
-import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.BaseTransferPacks;
+import com.jian.beans.transfer.TcpTransferDataPacks;
+import com.jian.beans.transfer.UdpTransferDataPacks;
+import com.jian.beans.transfer.req.ConnectAuthReqPacks;
+import com.jian.beans.transfer.req.DisConnectReqPacks;
+import com.jian.beans.transfer.req.HealthReqPacks;
+import com.jian.beans.transfer.resp.ConnectAuthRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +38,6 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
     protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) {
         byte type = baseTransferPacks.getType();
         Channel channel = ctx.channel();
-        Map<Long, Channel> localChannelMap = channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).get();
         switch (type) {
             case 3 -> {//客户发起断开连接请求
                 if (checkIsAuth(channel)) {
@@ -38,8 +45,12 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 }
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
-                Channel localChannel = localChannelMap.remove(tarChannelHash);
-                //关闭本地连接的通道
+
+                ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
+                ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+                Channel localChannel = connectedMap.remove(tarChannelHash);
+
+                //关闭本地连接的通道，必须将最后一条数据推送完毕后才可关闭
                 Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
                 log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
@@ -85,8 +96,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 //登录成功，绑定属性关系
                 clientInfo.setOnline(true);
                 clientInfo.setRemoteChannel(channel);
-                channel.attr(Constants.REMOTE_BIND_LOCAL_CHANNEL_KEY).set(new ConcurrentHashMap<>());
-                channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).set(clientInfo);
+                channel.attr(Constants.CLIENT_INFO_KEY).set(clientInfo);
 
                 //发送认证响应
                 connectAuthRespPacks.setState(ConnectAuthRespPacks.STATE.SUCCESS);
@@ -109,26 +119,46 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
 
             }
             case 7 -> { //传输数据
-                TransferDataPacks transferDataPacks = (TransferDataPacks) baseTransferPacks;
-                Long targetChannelHash = transferDataPacks.getTargetChannelHash();
-                Channel localChannel = localChannelMap.get(targetChannelHash);
+                TcpTransferDataPacks tcpTransferDataPacks = (TcpTransferDataPacks) baseTransferPacks;
+                Long targetChannelHash = tcpTransferDataPacks.getTarChannelHash();
+
+                ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
+                ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+                Channel localChannel = connectedMap.get(targetChannelHash);
                 try {
-                    localChannel.writeAndFlush(transferDataPacks.getDatas());
+                    localChannel.writeAndFlush(tcpTransferDataPacks.getDatas());
                 } catch (NullPointerException e) {
-                    ReferenceCountUtil.release(transferDataPacks.getDatas());
+                    ReferenceCountUtil.release(tcpTransferDataPacks.getDatas());
                 }
             }
             case 8 -> { //接收心跳请求
                 if (checkIsAuth(channel)) {
                     return;
                 }
-                ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+                ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 long msgId = healthReqPacks.getMsgId();
                 log.info("接收到客户端key:{}，name:{}，的心跳请求，msgId:{}", clientInfo.getKey(), clientInfo.getName(), msgId);
                 HealthRespPacks healthRespPacks = new HealthRespPacks();
                 healthRespPacks.setMsgId(msgId);
                 ctx.writeAndFlush(healthRespPacks);
+            }
+            case 20 -> { //udp数据传输
+                if (checkIsAuth(channel)) {
+                    return;
+                }
+                UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
+                ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
+                ConcurrentHashMap<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
+                Integer sourcePort = udpTransferDataPacks.getSourcePort();
+                Channel udpChannel = listenPortMap.get(sourcePort);
+
+                InetSocketAddress inetSocketAddress = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
+
+                DatagramPacket datagramPacket = new DatagramPacket(udpTransferDataPacks.getDatas(), inetSocketAddress);
+                //回复udp数据到原发送者
+                udpChannel.writeAndFlush(datagramPacket);
+
             }
             default -> throw new IllegalStateException("Unexpected value: " + type);
         }
@@ -139,7 +169,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
      */
     private boolean checkIsAuth(Channel channel) {
         boolean isAuth = false;
-        ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+        ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
         if (Objects.nonNull(clientInfo)) {
             isAuth = true;
         } else {
@@ -153,7 +183,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent event) {
             Channel channel = ctx.channel();
-            ClientInfo clientInfo = channel.attr(Constants.REMOTE_BIND_CLIENT_KEY).get();
+            ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
             switch (event.state()) {
                 case READER_IDLE:
                     //读空闲时，则认为客户端已失去连接

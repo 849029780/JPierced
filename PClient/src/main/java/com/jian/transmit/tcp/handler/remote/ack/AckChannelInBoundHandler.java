@@ -1,6 +1,13 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.req.AutoreadReqPacks;
+import com.jian.beans.transfer.req.ConnectReqPacks;
+import com.jian.beans.transfer.req.HealthReqPacks;
+import com.jian.beans.transfer.req.MessageReqPacks;
+import com.jian.beans.transfer.resp.ConnectAckChannelRespPacks;
+import com.jian.beans.transfer.resp.ConnectRespPacks;
+import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.tcp.client.AbstractTcpClient;
 import com.jian.transmit.tcp.client.TcpClient;
@@ -34,7 +41,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
                 String host = connectReqPacks.getHost();
                 Integer port = connectReqPacks.getPort();
-                Long thisChannelHash = connectReqPacks.getThisChannelHash();
+                Long thisChannelHash = connectReqPacks.getSourceChannelHash();
                 long tarChannelHash = connectReqPacks.getTarChannelHash();
 
                 InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);

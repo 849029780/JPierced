@@ -1,12 +1,15 @@
-package com.jian.beans.transfer;
+package com.jian.beans.transfer.req;
 
+import com.jian.beans.transfer.BaseTransferPacks;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /***
  *
  * @author Jian
  * @date 2022/4/2
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class ConnectAuthReqPacks extends BaseTransferPacks {
 
