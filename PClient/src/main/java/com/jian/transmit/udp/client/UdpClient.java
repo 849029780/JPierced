@@ -23,6 +23,7 @@ public class UdpClient {
             for (AbstractUdpClient abstractUdpClient : UDP_CLIENTS) {
                 if (abstractUdpClient.support()) {
                     UdpClient.abstractUdpClient = abstractUdpClient;
+                    break;
                 }
             }
         }

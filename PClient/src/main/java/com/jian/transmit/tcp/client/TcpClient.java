@@ -22,6 +22,7 @@ public class TcpClient {
             for (AbstractTcpClient abstractTcpClient : TCP_CLIENTS) {
                 if (abstractTcpClient.support()) {
                     TcpClient.abstractTcpClient = abstractTcpClient;
+                    break;
                 }
             }
         }
