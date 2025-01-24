@@ -1,5 +1,6 @@
 package com.jian.transmit.tcp;
 
+import com.jian.beans.transfer.req.DisConnectReqPacks;
 import com.jian.beans.transfer.req.MessageReqPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -221,5 +223,62 @@ public class TcpServer {
             }
         });
     }
+
+
+    /***
+     * 关闭本地端口 同时关闭本地端口上的连接
+     * @param clientInfo 客户端信息
+     * @param serverPort 服务端端口
+     */
+    public static ChannelFuture closeLocalPort(ClientInfo clientInfo, Channel serverPortChannel, Integer serverPort) {
+        //获取该客户端的远程连接，如果连接为空，则该客户端不在线
+        Channel remoteChannel = clientInfo.getRemoteChannel();
+        Optional.ofNullable(remoteChannel).ifPresent(remoteCh -> {
+            //客户端在线，则获取该客户端上绑定的本地连接通道
+            ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
+            if (!connectedMap.isEmpty()) {
+                //本地所有连接通道判断端口号是否和当前移除的端口号一致，一致则需要通知远程关闭该通道对应的连接
+                for (Map.Entry<Long, Channel> longChannelEntry : connectedMap.entrySet()) {
+                    Channel localChannel = longChannelEntry.getValue();
+                    InetSocketAddress inetSocketAddress = (InetSocketAddress) localChannel.localAddress();
+                    if (inetSocketAddress.getPort() == serverPort) {
+                        Long tarChannelHash = localChannel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
+                        if (Objects.nonNull(tarChannelHash)) {
+                            //通知客户端关闭该端口上的连接通道对应的远程通道
+                            DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
+                            disConnectReqPacks.setTarChannelHash(tarChannelHash);
+                            remoteChannel.writeAndFlush(disConnectReqPacks);
+                        }
+                    }
+                }
+            }
+        });
+
+        //如果不为空，则将channel关闭
+        ChannelFuture close = null;
+        if (Objects.nonNull(serverPortChannel)) {
+            close = serverPortChannel.close();
+            close.addListener(future -> {
+                if (future.isSuccess()) {
+                    log.info("管理员操作关闭端口:{}完成！", serverPort);
+                    NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
+                    if (Objects.nonNull(netAddress)) {
+                        netAddress.setListen(false);
+                    }
+                    Channel ackChannel = clientInfo.getAckChannel();
+                    if (Objects.nonNull(ackChannel)) {
+                        MessageReqPacks messageReqPacks = new MessageReqPacks();
+                        messageReqPacks.setMsg("服务端已关闭端口:" + serverPort + "的监听！");
+                        ackChannel.writeAndFlush(messageReqPacks);
+                    }
+                } else {
+                    log.warn("管理员操作关闭端口:{}失败！", serverPort);
+                }
+            });
+        }
+        return close;
+    }
+
+
 
 }

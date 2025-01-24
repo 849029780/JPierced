@@ -21,9 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 
 /***
@@ -107,22 +105,6 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 });
                 channel.close();
             }
-            case 18 -> { //添加本地udp端口映射表
-                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;
-                List<NetAddr> netAddrList = udpPortMappingAddReqPacks.getNetAddrList();
-                for (NetAddr netAddr : netAddrList) {
-                    Integer sourcePort = netAddr.getSourcePort();
-                    String host = netAddr.getHost();
-                    Integer port = netAddr.getPort();
-                    InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
-                    Constants.UDP_SERVER_MAPPING_ADDR.put(sourcePort, inetSocketAddress);
-                }
-            }
-            case 19 -> { //移除本地udp端口映射
-                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
-                Integer sourcePort = udpPortMappingRemReqPacks.getSourcePort();
-                Constants.UDP_SERVER_MAPPING_ADDR.remove(sourcePort);
-            }
             case 20 -> { //udp数据传输
                 UdpTransferDataPacks udpTransferDataPacks = ((UdpTransferDataPacks) baseTransferPacks);
                 Integer sourcePort = udpTransferDataPacks.getSourcePort();
@@ -138,6 +120,12 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     InetSocketAddress senderAddr = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
                     Channel udpChannel = UdpClient.getUdpClient().init().bind(0, sourcePort, senderAddr);
                     udpSenderChannelInfo.setChannel(udpChannel);
+                    List<Channel> channels = Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.get(sourcePort);
+                    if (Objects.isNull(channels)) {
+                        channels = Collections.synchronizedList(new ArrayList<>());
+                        Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.put(sourcePort, channels);
+                    }
+                    channels.add(udpChannel);
                 }
                 Channel localUdpChannel = udpSenderChannelInfo.getChannel();
                 DatagramPacket datagramPacket = new DatagramPacket(datas, tarInetAddr);

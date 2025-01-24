@@ -153,27 +153,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 disConnectClientReqPacks.setCode(code);
                 list.add(disConnectClientReqPacks);
             }
-            case 18 -> {
-                byte count = byteBuf.readByte();
-                List<NetAddr> netAddrs = new ArrayList<>(count);
-                for (byte i = 0; i < count; i++) {
-                    int sourcePort = byteBuf.readInt();
-                    byte hostLen = byteBuf.readByte();
-                    ByteBuf hostBytes = byteBuf.readBytes(hostLen);
-                    String host = hostBytes.toString(StandardCharsets.UTF_8);
-                    int port = byteBuf.readInt();
-                    netAddrs.add(new NetAddr(sourcePort, host, port));
-                }
-                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
-                udpPortMappingAddReqPacks.setNetAddrList(netAddrs);
-                list.add(udpPortMappingAddReqPacks);
-            }
-            case 19 -> {
-                int sourcePort = byteBuf.readInt();
-                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = new UdpPortMappingRemReqPacks();
-                udpPortMappingRemReqPacks.setSourcePort(sourcePort);
-                list.add(udpPortMappingRemReqPacks);
-            }
             case 20 -> { //udp数据传输
                 UdpTransferDataPacks udpTransferDataPacks = new UdpTransferDataPacks();
                 int sourcePort = byteBuf.readInt();

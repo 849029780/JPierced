@@ -11,7 +11,9 @@ import com.jian.commons.Constants;
 import com.jian.start.Config;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
+import com.jian.transmit.NetAddressBase;
 import com.jian.transmit.tcp.TcpServer;
+import com.jian.transmit.udp.UdpClient;
 import com.jian.utils.JsonUtils;
 import com.jian.web.result.Page;
 import com.jian.web.result.Result;
@@ -485,13 +487,15 @@ public class WebManagerVerticle extends AbstractVerticle {
         if (Objects.nonNull(netAddress)) {
             return Result.FAIL("映射端口失败！映射的端口已存在！");
         }
-
-        //添加到映射
+        //添加到映射map
         clientInfo.getPortMappingAddress().put(serverPort, new NetAddress(host, port, protocol, cliUseHttps));
-
         //判断当前客户端是否在线，在线的话则需要监听新添加的端口
         if (clientInfo.isOnline()) {
-            TcpServer.listenLocal(Collections.singleton(serverPort), clientInfo);
+            if (protocol == NetAddress.Protocol.UDP) {
+                UdpClient.listenLocal(Collections.singleton(serverPort), clientInfo);
+            } else {
+                TcpServer.listenLocal(Collections.singleton(serverPort), clientInfo);
+            }
         }
 
         //重新保存数据
@@ -565,7 +569,7 @@ public class WebManagerVerticle extends AbstractVerticle {
             Channel channel = clientInfo.getListenPortMap().get(oldServerPort);
 
             //关闭本地端口
-            ChannelFuture channelFuture = closeLocalPort(clientInfo, channel, oldServerPort);
+            ChannelFuture channelFuture = TcpServer.closeLocalPort(clientInfo, channel, oldServerPort);
             if (Objects.nonNull(channelFuture)) {
                 Boolean finalCliUseHttps = cliUseHttps;
                 channelFuture.addListener(closeFuture -> {
@@ -635,18 +639,21 @@ public class WebManagerVerticle extends AbstractVerticle {
             return Result.FAIL("当前客户端未映射该端口！关闭端口失败！");
         }
 
-
-        //关闭端口
-        ChannelFuture channelFuture = closeLocalPort(clientInfo, channel, port);
-        if (Objects.nonNull(channelFuture)) {
-            channelFuture.addListener(closeFuture -> {
-                //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
-                if (closeFuture.isSuccess()) {
-                    clientInfo.getListenPortMap().remove(port);
-                }
-            });
+        NetAddressBase.Protocol protocol = netAddress.getProtocol();
+        if (protocol == NetAddressBase.Protocol.UDP) {
+            //channel
+        } else {
+            //关闭端口
+            ChannelFuture channelFuture = TcpServer.closeLocalPort(clientInfo, channel, port);
+            if (Objects.nonNull(channelFuture)) {
+                channelFuture.addListener(closeFuture -> {
+                    //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
+                    if (closeFuture.isSuccess()) {
+                        clientInfo.getListenPortMap().remove(port);
+                    }
+                });
+            }
         }
-
         return Result.SUCCESS("当前客户端映射的端口已关闭！");
     }
 
@@ -680,10 +687,12 @@ public class WebManagerVerticle extends AbstractVerticle {
         if (Objects.nonNull(channel)) {
             return Result.FAIL("当前客户端已监听该端口！不可重复监听！");
         }
-
         //监听端口
-        TcpServer.listenLocal(Set.of(port), clientInfo);
-
+        if (netAddress.getProtocol() == NetAddressBase.Protocol.UDP) {
+            UdpClient.listenLocal(Set.of(port), clientInfo);
+        } else {
+            TcpServer.listenLocal(Set.of(port), clientInfo);
+        }
         return Result.SUCCESS("当前客户端已监听该端口！");
     }
 
@@ -731,65 +740,11 @@ public class WebManagerVerticle extends AbstractVerticle {
         Channel channel = clientInfo.getListenPortMap().remove(serverPort);
 
         //关闭本地端口
-        closeLocalPort(clientInfo, channel, serverPort);
+        TcpServer.closeLocalPort(clientInfo, channel, serverPort);
 
         //保存数据
         Config.saveTransmitData();
         return Result.SUCCESS("移除映射端口成功！");
-    }
-
-    /***
-     * 关闭本地端口 同时关闭本地端口上的连接
-     * @param clientInfo 客户端信息
-     * @param serverPort 服务端端口
-     */
-    public ChannelFuture closeLocalPort(ClientInfo clientInfo, Channel serverPortChannel, Integer serverPort) {
-        //获取该客户端的远程连接，如果连接为空，则该客户端不在线
-        Channel remoteChannel = clientInfo.getRemoteChannel();
-        Optional.ofNullable(remoteChannel).ifPresent(remoteCh -> {
-            //客户端在线，则获取该客户端上绑定的本地连接通道
-            ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
-            if (!connectedMap.isEmpty()) {
-                //本地所有连接通道判断端口号是否和当前移除的端口号一致，一致则需要通知远程关闭该通道对应的连接
-                for (Map.Entry<Long, Channel> longChannelEntry : connectedMap.entrySet()) {
-                    Channel localChannel = longChannelEntry.getValue();
-                    InetSocketAddress inetSocketAddress = (InetSocketAddress) localChannel.localAddress();
-                    if (inetSocketAddress.getPort() == serverPort) {
-                        Long tarChannelHash = localChannel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-                        if (Objects.nonNull(tarChannelHash)) {
-                            //通知客户端关闭该端口上的连接通道对应的远程通道
-                            DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
-                            disConnectReqPacks.setTarChannelHash(tarChannelHash);
-                            remoteChannel.writeAndFlush(disConnectReqPacks);
-                        }
-                    }
-                }
-            }
-        });
-
-        //如果不为空，则将channel关闭
-        ChannelFuture close = null;
-        if (Objects.nonNull(serverPortChannel)) {
-            close = serverPortChannel.close();
-            close.addListener(future -> {
-                if (future.isSuccess()) {
-                    log.info("管理员操作关闭端口:{}完成！", serverPort);
-                    NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
-                    if (Objects.nonNull(netAddress)) {
-                        netAddress.setListen(false);
-                    }
-                    Channel ackChannel = clientInfo.getAckChannel();
-                    if (Objects.nonNull(ackChannel)) {
-                        MessageReqPacks messageReqPacks = new MessageReqPacks();
-                        messageReqPacks.setMsg("服务端已关闭端口:" + serverPort + "的监听！");
-                        ackChannel.writeAndFlush(messageReqPacks);
-                    }
-                } else {
-                    log.warn("管理员操作关闭端口:{}失败！", serverPort);
-                }
-            });
-        }
-        return close;
     }
 
 

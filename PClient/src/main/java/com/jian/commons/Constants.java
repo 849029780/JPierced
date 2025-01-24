@@ -16,6 +16,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -158,6 +159,11 @@ public class Constants {
      * 服务端udp端口号对应本地udp端口和地址
      */
     public static Map<Integer, InetSocketAddress> UDP_SERVER_MAPPING_ADDR = new ConcurrentHashMap<>();
+
+    /***
+     * 服务端udp端口映射本地的udp服务
+     */
+    public static Map<Integer, List<Channel>> UDP_SERVER_MAPPING_LOCAL_CHANNEL = new ConcurrentHashMap<>();
 
     /***
      * 发送者映射本地的udp channel

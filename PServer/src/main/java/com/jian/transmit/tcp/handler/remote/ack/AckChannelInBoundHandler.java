@@ -1,6 +1,7 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
+import com.jian.beans.transfer.beans.NetAddr;
 import com.jian.beans.transfer.req.*;
 import com.jian.beans.transfer.resp.ConnectAckChannelRespPacks;
 import com.jian.beans.transfer.resp.ConnectRespPacks;
@@ -8,7 +9,9 @@ import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
+import com.jian.transmit.NetAddressBase;
 import com.jian.transmit.tcp.TcpServer;
+import com.jian.transmit.udp.UdpClient;
 import com.jian.utils.JsonUtils;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -16,10 +19,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +37,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
         byte type = baseTransferPacks.getType();
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
+        ClientInfo finalClientInfo = clientInfo;
         switch (type) {
             case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
@@ -119,22 +120,51 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 channel.attr(Constants.CLIENT_INFO_KEY).set(clientInfo);
 
                 //---------------------传输通道后续设置------------------
-                Map<Integer, NetAddress> portMappingAddress = clientInfo.getPortMappingAddress();
-                Set<Integer> ports = portMappingAddress.keySet();
 
+                Map<Integer, NetAddress> portMappingAddress = clientInfo.getPortMappingAddress();
                 log.info("客户端key:{}，name:{}，ack已连接，已开启心跳检测！", clientInfo.getKey(), clientInfo.getName());
                 //开启心跳检测
                 remoteChannel.pipeline().addFirst(new IdleStateHandler(Constants.DISCONNECT_HEALTH_SECONDS, 0, 0, TimeUnit.SECONDS));
                 channel.pipeline().addFirst(new IdleStateHandler(Constants.DISCONNECT_HEALTH_SECONDS, 0, 0, TimeUnit.SECONDS));
                 MessageReqPacks messageReqPacks = new MessageReqPacks();
-                if (ports.isEmpty()) {
+                if (portMappingAddress.isEmpty()) {
                     messageReqPacks.setMsg("客户端暂未配置映射端口！");
                     channel.writeAndFlush(messageReqPacks);
                 } else {
-                    messageReqPacks.setMsg("客户端配置的服务端映射端口为：" + JsonUtils.toJson(ports));
+                    Set<Integer> tcpPorts = new HashSet<>();
+                    Set<Integer> udpPorts = new HashSet<>();
+                    List<NetAddr> netAddrs = new ArrayList<>();
+
+                    portMappingAddress.forEach((k, v) -> {
+                        if (v.getProtocol() == NetAddressBase.Protocol.UDP) {
+                            udpPorts.add(k);
+                            netAddrs.add(new NetAddr(k, v.getHost(), v.getPort()));
+                        } else {
+                            tcpPorts.add(k);
+                        }
+                    });
+                    messageReqPacks.setMsg("客户端配置的服务端tcp映射端口为：" + JsonUtils.toJson(tcpPorts) + ",udp映射端口为：" + JsonUtils.toJson(udpPorts));
                     channel.writeAndFlush(messageReqPacks);
+
+
+                    //向客户端下发udp服务端口对应的目标地址
+                    if (!udpPorts.isEmpty()) {
+                        UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
+                        udpPortMappingAddReqPacks.setNetAddrList(netAddrs);
+                        ctx.writeAndFlush(udpPortMappingAddReqPacks).addListener(future -> {
+                            if (future.isSuccess()) {
+                                UdpClient.listenLocal(udpPorts, finalClientInfo);
+                            }
+                        });
+                    }
+
+
                     //异步启动该客户端需要监听的端口
-                    TcpServer.listenLocal(ports, clientInfo);
+                    if (!tcpPorts.isEmpty()) {
+                        TcpServer.listenLocal(tcpPorts, clientInfo);
+                    }
+
+
                 }
                 //---------------------传输通道后续设置------------------
 

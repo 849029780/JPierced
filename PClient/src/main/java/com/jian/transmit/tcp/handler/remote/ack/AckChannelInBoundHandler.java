@@ -1,10 +1,8 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
 import com.jian.beans.transfer.*;
-import com.jian.beans.transfer.req.AutoreadReqPacks;
-import com.jian.beans.transfer.req.ConnectReqPacks;
-import com.jian.beans.transfer.req.HealthReqPacks;
-import com.jian.beans.transfer.req.MessageReqPacks;
+import com.jian.beans.transfer.beans.NetAddr;
+import com.jian.beans.transfer.req.*;
 import com.jian.beans.transfer.resp.ConnectAckChannelRespPacks;
 import com.jian.beans.transfer.resp.ConnectRespPacks;
 import com.jian.beans.transfer.resp.HealthRespPacks;
@@ -18,6 +16,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -138,6 +137,23 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(autoreadReqPacks.getTarChannelHash());
                 Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
+            }
+            case 18 -> { //添加本地udp端口映射表
+                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;
+                List<NetAddr> netAddrList = udpPortMappingAddReqPacks.getNetAddrList();
+                log.info("接收到来自服务端下发的udp端口映射到本地地址信息：{}..", netAddrList);
+                for (NetAddr netAddr : netAddrList) {
+                    Integer sourcePort = netAddr.getSourcePort();
+                    String host = netAddr.getHost();
+                    Integer port = netAddr.getPort();
+                    InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
+                    Constants.UDP_SERVER_MAPPING_ADDR.put(sourcePort, inetSocketAddress);
+                }
+            }
+            case 19 -> { //移除本地udp端口映射
+                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
+                Integer sourcePort = udpPortMappingRemReqPacks.getSourcePort();
+                Constants.UDP_SERVER_MAPPING_ADDR.remove(sourcePort);
             }
         }
     }
