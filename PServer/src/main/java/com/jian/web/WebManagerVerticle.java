@@ -4,9 +4,10 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.jian.beans.transfer.beans.NetAddr;
 import com.jian.beans.transfer.req.DisConnectClientReqPacks;
-import com.jian.beans.transfer.req.DisConnectReqPacks;
-import com.jian.beans.transfer.req.MessageReqPacks;
+import com.jian.beans.transfer.req.UdpPortMappingAddReqPacks;
+import com.jian.beans.transfer.req.UdpPortMappingRemReqPacks;
 import com.jian.commons.Constants;
 import com.jian.start.Config;
 import com.jian.transmit.ClientInfo;
@@ -39,13 +40,11 @@ import io.vertx.ext.web.handler.ResponseContentTypeHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -492,7 +491,17 @@ public class WebManagerVerticle extends AbstractVerticle {
         //判断当前客户端是否在线，在线的话则需要监听新添加的端口
         if (clientInfo.isOnline()) {
             if (protocol == NetAddress.Protocol.UDP) {
-                UdpClient.listenLocal(Collections.singleton(serverPort), clientInfo);
+
+                NetAddr netAddr = new NetAddr(serverPort, host, port);
+                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
+                udpPortMappingAddReqPacks.setNetAddrList(Collections.singletonList(netAddr));
+
+                Channel ackChannel = clientInfo.getAckChannel();
+                ackChannel.writeAndFlush(udpPortMappingAddReqPacks).addListener(future -> {
+                    if (future.isSuccess()) {
+                        UdpClient.listenLocal(Collections.singleton(serverPort), clientInfo);
+                    }
+                });
             } else {
                 TcpServer.listenLocal(Collections.singleton(serverPort), clientInfo);
             }
@@ -568,34 +577,76 @@ public class WebManagerVerticle extends AbstractVerticle {
             //监听端口的通道
             Channel channel = clientInfo.getListenPortMap().get(oldServerPort);
 
-            //关闭本地端口
-            ChannelFuture channelFuture = TcpServer.closeLocalPort(clientInfo, channel, oldServerPort);
-            if (Objects.nonNull(channelFuture)) {
-                Boolean finalCliUseHttps = cliUseHttps;
-                channelFuture.addListener(closeFuture -> {
-                    //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
-                    if (closeFuture.isSuccess()) {
-                        clientInfo.getPortMappingAddress().remove(oldServerPort);
-                        clientInfo.getListenPortMap().remove(oldServerPort);
-                        //添加新端口信息
-                        clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol, finalCliUseHttps));
-                        //判断当前客户端是否在线，在线的话则需要监听新添加的端口
-                        if (clientInfo.isOnline()) {
+            //判断原端口是udp还是tcp
+            if (oldNetAddress.getProtocol() == NetAddressBase.Protocol.UDP) {
+
+                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = new UdpPortMappingRemReqPacks();
+                udpPortMappingRemReqPacks.setSourcePort(oldServerPort);
+                Channel ackChannel = clientInfo.getAckChannel();
+                //移除客户端udp映射
+                ackChannel.writeAndFlush(udpPortMappingRemReqPacks);
+
+                ChannelFuture channelFuture = UdpClient.closeLocalPortFuture(channel);
+                channelFuture.addListener(future -> {
+                    if (clientInfo.isOnline()) {
+                        if (protocol == NetAddress.Protocol.UDP) {
+                            NetAddr netAddr = new NetAddr(newServerPort, host, port);
+                            UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
+                            udpPortMappingAddReqPacks.setNetAddrList(Collections.singletonList(netAddr));
+                            ackChannel.writeAndFlush(udpPortMappingAddReqPacks).addListener(future1 -> {
+                                if (future1.isSuccess()) {
+                                    UdpClient.listenLocal(Set.of(newServerPort), clientInfo);
+                                }
+                            });
+                        } else {
                             TcpServer.listenLocal(Set.of(newServerPort), clientInfo);
                         }
-                        //重新保存数据
-                        Config.saveTransmitData();
                     }
+                    //重新保存数据
+                    Config.saveTransmitData();
                 });
             } else {
-                clientInfo.getPortMappingAddress().remove(oldServerPort);
-                oldNetAddress.setHost(host);
-                oldNetAddress.setPort(port);
-                oldNetAddress.setProtocol(protocol);
-                //添加新端口信息
-                clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
-                //重新保存数据
-                Config.saveTransmitData();
+                //关闭本地端口
+                ChannelFuture channelFuture = TcpServer.closeLocalPort(clientInfo, channel, oldServerPort);
+                if (Objects.nonNull(channelFuture)) {
+                    Boolean finalCliUseHttps = cliUseHttps;
+                    channelFuture.addListener(closeFuture -> {
+                        //是否关闭该端口成功，成功则需要移除该端口，并添加新端口信息
+                        if (closeFuture.isSuccess()) {
+                            clientInfo.getPortMappingAddress().remove(oldServerPort);
+                            clientInfo.getListenPortMap().remove(oldServerPort);
+                            //添加新端口信息
+                            clientInfo.getPortMappingAddress().put(newServerPort, new NetAddress(host, port, protocol, finalCliUseHttps));
+                            //判断当前客户端是否在线，在线的话则需要监听新添加的端口
+                            if (clientInfo.isOnline()) {
+                                if (protocol == NetAddress.Protocol.UDP) {
+                                    NetAddr netAddr = new NetAddr(newServerPort, host, port);
+                                    UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
+                                    udpPortMappingAddReqPacks.setNetAddrList(Collections.singletonList(netAddr));
+                                    Channel ackChannel = clientInfo.getAckChannel();
+                                    ackChannel.writeAndFlush(udpPortMappingAddReqPacks).addListener(future1 -> {
+                                        if (future1.isSuccess()) {
+                                            UdpClient.listenLocal(Set.of(newServerPort), clientInfo);
+                                        }
+                                    });
+                                } else {
+                                    TcpServer.listenLocal(Set.of(newServerPort), clientInfo);
+                                }
+                            }
+                            //重新保存数据
+                            Config.saveTransmitData();
+                        }
+                    });
+                } else {
+                    clientInfo.getPortMappingAddress().remove(oldServerPort);
+                    oldNetAddress.setHost(host);
+                    oldNetAddress.setPort(port);
+                    oldNetAddress.setProtocol(protocol);
+                    //添加新端口信息
+                    clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
+                    //重新保存数据
+                    Config.saveTransmitData();
+                }
             }
         } else {
             clientInfo.getPortMappingAddress().remove(oldServerPort);
@@ -641,7 +692,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
         NetAddressBase.Protocol protocol = netAddress.getProtocol();
         if (protocol == NetAddressBase.Protocol.UDP) {
-            //channel
+            UdpClient.closeLocalPort(channel);
         } else {
             //关闭端口
             ChannelFuture channelFuture = TcpServer.closeLocalPort(clientInfo, channel, port);
@@ -698,6 +749,7 @@ public class WebManagerVerticle extends AbstractVerticle {
 
     /***
      *
+     *
      * @param protocolType 1--tcp 2--http 3--https 4--udp
      * @return 响应结果
      */
@@ -736,11 +788,26 @@ public class WebManagerVerticle extends AbstractVerticle {
 
         //移除映射表
         clientInfo.getPortMappingAddress().remove(serverPort);
+
+
+        NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
+
         //移除该端口的本地监听channel，如果不为空，则将channel关闭
         Channel channel = clientInfo.getListenPortMap().remove(serverPort);
 
-        //关闭本地端口
-        TcpServer.closeLocalPort(clientInfo, channel, serverPort);
+        if (netAddress.getProtocol() == NetAddressBase.Protocol.UDP) {
+            UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = new UdpPortMappingRemReqPacks();
+            udpPortMappingRemReqPacks.setSourcePort(serverPort);
+            Channel ackChannel = clientInfo.getAckChannel();
+            ackChannel.writeAndFlush(udpPortMappingRemReqPacks).addListener(future -> {
+                if (future.isSuccess()) {
+                    UdpClient.closeLocalPort(channel);
+                }
+            });
+        } else {
+            //关闭本地端口
+            TcpServer.closeLocalPort(clientInfo, channel, serverPort);
+        }
 
         //保存数据
         Config.saveTransmitData();

@@ -37,7 +37,6 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
         byte type = baseTransferPacks.getType();
         Channel channel = ctx.channel();
         ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
-        ClientInfo finalClientInfo = clientInfo;
         switch (type) {
             case 2 -> {//连接响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
@@ -129,7 +128,6 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 MessageReqPacks messageReqPacks = new MessageReqPacks();
                 if (portMappingAddress.isEmpty()) {
                     messageReqPacks.setMsg("客户端暂未配置映射端口！");
-                    channel.writeAndFlush(messageReqPacks);
                 } else {
                     Set<Integer> tcpPorts = new HashSet<>();
                     Set<Integer> udpPorts = new HashSet<>();
@@ -144,13 +142,14 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                         }
                     });
                     messageReqPacks.setMsg("客户端配置的服务端tcp映射端口为：" + JsonUtils.toJson(tcpPorts) + ",udp映射端口为：" + JsonUtils.toJson(udpPorts));
-                    channel.writeAndFlush(messageReqPacks);
+
 
 
                     //向客户端下发udp服务端口对应的目标地址
                     if (!udpPorts.isEmpty()) {
                         UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = new UdpPortMappingAddReqPacks();
                         udpPortMappingAddReqPacks.setNetAddrList(netAddrs);
+                        ClientInfo finalClientInfo = clientInfo;
                         ctx.writeAndFlush(udpPortMappingAddReqPacks).addListener(future -> {
                             if (future.isSuccess()) {
                                 UdpClient.listenLocal(udpPorts, finalClientInfo);
@@ -166,6 +165,7 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
 
 
                 }
+                ctx.writeAndFlush(messageReqPacks);
                 //---------------------传输通道后续设置------------------
 
                 connectAckChannelRespPacks.setState(BaseTransferPacks.STATE.SUCCESS);

@@ -127,7 +127,13 @@ public class UdpClient {
     }
 
 
-    public static void closeLocalPort() {
-
+    public static void closeLocalPort(Channel channel) {
+        channel.close();
     }
+
+
+    public static ChannelFuture closeLocalPortFuture(Channel channel) {
+        return channel.close();
+    }
+
 }

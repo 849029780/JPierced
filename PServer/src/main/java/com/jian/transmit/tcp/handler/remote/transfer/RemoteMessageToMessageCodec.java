@@ -95,38 +95,6 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 buffer.writeByte(disConnectClientReqPacks.getCode());
                 out.add(buffer);
             }
-            case 18 -> { //下发添加服务端udp端口映射地址
-                UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;
-                packSize += 1;
-                List<NetAddr> netAddrList = udpPortMappingAddReqPacks.getNetAddrList();
-                ByteBuf nbuf = ctx.alloc().buffer();
-                for (NetAddr netAddr : netAddrList) {
-                    packSize += 4;
-                    String host = netAddr.getHost();
-                    byte[] hostBytes = host.getBytes(StandardCharsets.UTF_8);
-                    int hostLen = hostBytes.length;
-                    packSize += 4 + hostLen + 4;
-
-                    nbuf.writeInt(netAddr.getSourcePort());
-                    nbuf.writeByte(hostLen);
-                    nbuf.writeBytes(hostBytes);
-                    nbuf.writeInt(netAddr.getPort());
-                }
-                int size = netAddrList.size();
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeByte(size);
-                out.add(buffer);
-                out.add(nbuf);
-            }
-            case 19 -> {
-                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
-                packSize += 1 + 4;
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeInt(udpPortMappingRemReqPacks.getSourcePort());
-                out.add(buffer);
-            }
             case 20 -> { //udp数据传输
                 UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
                 ByteBuf data = udpTransferDataPacks.getDatas();
