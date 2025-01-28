@@ -9,9 +9,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 
 /***
@@ -32,17 +34,20 @@ public class LocalUdpChannelInboundHandler extends SimpleChannelInboundHandler<D
         Integer sourcePort = channel.attr(Constants.SOURCE_PORT).get();
         InetSocketAddress senderAddr = channel.attr(Constants.SENDER_ADDR).get();
 
+
+
         ByteBuf content = msg.content();
-        content.retain();
-
-
-        String senderHost = senderAddr.getHostName();
+        String senderHost = senderAddr.getHostString();
         Integer senderPort = senderAddr.getPort();
         String sender = senderHost + ":" + senderPort;
         UdpSenderChannelInfo udpSenderChannelInfo = Constants.SENDER_CHANNEL.get(sender);
+        if(Objects.isNull(udpSenderChannelInfo)){
+            ReferenceCountUtil.release(content);
+            return;
+        }
         udpSenderChannelInfo.setTime(LocalDateTime.now());
 
-
+        content.retain();
         UdpTransferDataPacks udpTransferDataPacks = new UdpTransferDataPacks();
         udpTransferDataPacks.setSourcePort(sourcePort);
         udpTransferDataPacks.setSenderHost(senderHost);

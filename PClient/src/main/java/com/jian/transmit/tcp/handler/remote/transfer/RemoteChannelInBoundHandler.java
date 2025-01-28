@@ -117,6 +117,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 UdpSenderChannelInfo udpSenderChannelInfo = Constants.SENDER_CHANNEL.get(sender);
                 if (Objects.isNull(udpSenderChannelInfo)) {
                     udpSenderChannelInfo = new UdpSenderChannelInfo();
+                    Constants.SENDER_CHANNEL.put(sender, udpSenderChannelInfo);
                     InetSocketAddress senderAddr = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
                     Channel udpChannel = UdpClient.getUdpClient().init().bind(0, sourcePort, senderAddr);
                     udpSenderChannelInfo.setChannel(udpChannel);

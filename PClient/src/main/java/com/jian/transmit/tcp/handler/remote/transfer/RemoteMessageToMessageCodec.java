@@ -83,13 +83,15 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             case 20 -> { //udp数据传输
                 UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
                 ByteBuf data = udpTransferDataPacks.getDatas();
-                int dataLen = data.readableBytes();
-                packSize += 4 + 1 + udpTransferDataPacks.getIpLen() + 4 + dataLen;
-                buffer.writeInt(packSize);
-                buffer.writeInt(udpTransferDataPacks.getSourcePort());
 
                 String senderHost = udpTransferDataPacks.getSenderHost();
                 byte[] bytes = senderHost.getBytes(StandardCharsets.UTF_8);
+
+                int dataLen = data.readableBytes();
+                packSize += 4 + 1 + bytes.length + 4 + 4 + dataLen;
+                buffer.writeInt(packSize);
+                buffer.writeByte(type);
+                buffer.writeInt(udpTransferDataPacks.getSourcePort());
 
                 buffer.writeByte(bytes.length);
                 buffer.writeBytes(bytes);

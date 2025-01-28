@@ -94,15 +94,8 @@ public class UdpClient {
                 }
                 stringBuffer.append(netAddress.getHost());
                 stringBuffer.append(":");
-                stringBuffer.append(port);
-
-
-                MessageReqPacks messageReqPacks = new MessageReqPacks();
-                String listenInfo = stringBuffer.toString();
-                log.info("客户端key:{},name:{}，{}", clientInfo.getKey(), clientInfo.getName(), listenInfo);
-                messageReqPacks.setMsg(listenInfo);
-                clientInfo.getAckChannel().writeAndFlush(messageReqPacks);
-
+                stringBuffer.append(netAddress.getPort());
+                stringBuffer.append(";");
             });
         }
 
