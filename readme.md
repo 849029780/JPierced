@@ -14,12 +14,12 @@
 2、拉取最新分支的代码到本地，由于基于JDK17编写，请确保安装的JDK版本在17或以上，可根据情况调整项目resources下的logback.xml日志级别等配置。  
 由于项目中默认放置了我自己生成的CA证书及密钥，可以直接使用，如需要自行生成，生成后替换掉resources/certs中相应的证书文件即可，注意生成的客户端及服务端证书都必须是统一CA签名的(目前默认传输关闭了SSL，使用Netty4.2后相关证书域名信息必须符合，否则会连接异常)。  
 使用Maven命令mvn package编译打包成可运行的jar包(打包后在项目目录的target目录下)；  
-3、将PServer.jar上传到有公网的服务器上，并同时上传server.properties配置文件(配置说明如上)  
+3、将PServer.jar上传到有公网的服务器上，并同时上传server.yml配置文件(配置说明如上)  
 然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PServer-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```  
-4、将PClient.jar放到被穿透的机器上，在同目录下放置client.properties配置文件(配置说明如上)  
+4、将PClient.jar放到被穿透的机器上，在同目录下放置client.yml配置文件(配置说明如上)  
 然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```   
-5、使用docker部署PServer，配置参考项目中的Dockerfile，为使达到更佳性能，网桥配置建议使用宿主机端口，详情参考Dockerbuild。   
-6、使用docker部署PClient，配置参考项目中的Dockerfile，如果连接宿主机，IP需要填写host.docker.internal，否则会导致连接不上，具体配置，请参考项目内Dockerfile。  
+5、使用docker部署PServer，配置参考项目中的Dockerfile，为使达到更佳性能，网桥配置建议使用宿主机端口。   
+6、使用docker部署PClient，配置参考项目中的Dockerfile，如果连接宿主机，IP需要填写host.docker.internal，否则会导致连接不上。  
 7、【注意】：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后才可使用，根据使用场景设置Jvm的内存大小。
 
 
