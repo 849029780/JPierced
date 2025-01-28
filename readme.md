@@ -5,7 +5,7 @@
 1、支持TCP,UDP,HTTP,HTTPS协议，类似Frp，对比Frp，服务端使用http接口动态管理穿透客户端和动态映射端口（由于前端好久没写了，所以未写前端页面，只有接口，后续可能会增加），具体操作api说明如下；  
 2、被穿透客户端与服务器之间使用多路通道复用，减少产生新的连接时重复连接，在网络环境较差的情况也能稳定使用；  
 3、穿透的客户端和服务端采用TLSv1.3/SSL双向认证加密通信保证数据传输的安全，使用Openssl的分支Google Boring实现（目前默认关闭SSL，需要的话手动更改配置开启，并配置相应证书即可）；  
-4、更好的支持HTTP及HTTPS协议，支持反向代理客户端 Https->Http或Http->Https的形式，在别的类似穿透应用所谓支持HTTP及HTTPS协议，实际上都只是做了TCP报文转发，而未对HTTP协议中Header的Host及Referer,Location中的URL地址及端口进行修改，导致请求部分较严格的HTTP服务时服务验证请求地址与报文中Host地址及端口不一致导致请求被拒绝，以及HTTP服务响应3xx重定向时地址未进行处理，导致跳转到真实地址的页面出现跨域等错误，对此服务端对Host，Referer，Location等HTTP Header中的URL及端口会进行相应修改替换，和Nginx的代理功能类似。  
+4、更好的支持http及https协议，支持反向代理客户端 https->http或http->https的形式，在别的类似穿透应用所谓支持http及https协议，实际上都只是做了TCP报文转发，而未对http协议中Header的Host及Referer,Location中的URL地址及端口进行修改，导致请求部分较严格的http服务时服务验证请求地址与报文中Host地址及端口不一致导致请求被拒绝，以及http服务响应3xx重定向时地址未进行处理，导致跳转到真实地址的页面出现跨域等错误，对此服务端对Host，Referer，Location等http Header中的URL及端口会进行相应修改替换，和Nginx的代理功能类似。  
 5、不同操作系统采用不同的Channel实现以使在该操作系统上达到最佳性能，Linux优先使用Io_uring，其次是Epoll，Mac使用Kqueue，Windows采用NIO(具体各系统机制区别可自行了解)，零copy模式实现通道数据处理，大幅提升性能和内存使用率。  
 6、一整套的连接管理去除废弃连接，提升性能，包括用户和服务端连接关闭，告知穿透本地和目标地址的连接关闭，服务端端口关闭，关闭所有穿透客户端所有相关连接等。
 
@@ -17,10 +17,10 @@
 3、将PServer.jar上传到有公网的服务器上，并同时上传server.properties配置文件(配置说明如上)  
 然后使用```jar -jar PServer.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PServer-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```  
 4、将PClient.jar放到被穿透的机器上，在同目录下放置client.properties配置文件(配置说明如上)  
-然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```  
-【注意】：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后才可使用，根据使用场景设置Jvm的内存大小。
-5、使用docker部署PServer，配置参考项目中的Dockerfile，为使达到更佳性能，网桥配置建议使用宿主机端口，详情参考Dockerbuild。
-6、使用docker部署PClient，配置参考项目中的Dockerfile，如果连接宿主机，IP需要填写host.docker.internal，否则会导致连接不上，具体配置，请参考项目内Dockerfile。
+然后使用```jar -jar PClient.jar```命令运行即可，或使用nohup命令在后台运行```nohup java -jar PClient-1.0-SNAPSHOT.jar > /dev/null 2>&1 &```   
+5、使用docker部署PServer，配置参考项目中的Dockerfile，为使达到更佳性能，网桥配置建议使用宿主机端口，详情参考Dockerbuild。   
+6、使用docker部署PClient，配置参考项目中的Dockerfile，如果连接宿主机，IP需要填写host.docker.internal，否则会导致连接不上，具体配置，请参考项目内Dockerfile。  
+7、【注意】：客户端连接前必须现在服务端上进行对客户端用户和密码添加，然后启动客户端 客户端将与服务进行连接，连接及认证完成后才可使用，根据使用场景设置Jvm的内存大小。
 
 
 ## PServer配置
