@@ -1,5 +1,6 @@
 package com.jian.transmit.tcp.handler.remote.ack;
 
+import com.jian.beans.UdpSenderChannelInfo;
 import com.jian.beans.transfer.*;
 import com.jian.beans.transfer.beans.NetAddr;
 import com.jian.beans.transfer.req.*;
@@ -12,6 +13,7 @@ import com.jian.transmit.tcp.client.TcpClient;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 
@@ -154,6 +156,19 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
                 Integer sourcePort = udpPortMappingRemReqPacks.getSourcePort();
                 Constants.UDP_SERVER_MAPPING_ADDR.remove(sourcePort);
+                List<Channel> channelList = Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.remove(sourcePort);
+                if (Objects.nonNull(channelList) && !channelList.isEmpty()) {
+                    channelList.forEach(ch -> {
+                        if(Objects.nonNull(ch)){
+                            InetSocketAddress senderAddr = ch.attr(Constants.SENDER_ADDR).get();
+                            String senderHost = senderAddr.getHostString();
+                            int senderPort = senderAddr.getPort();
+                            String sender = senderHost + ":" + senderPort;
+                            Constants.SENDER_CHANNEL.remove(sender);
+                        }
+                        ch.close();
+                    });
+                }
             }
         }
     }

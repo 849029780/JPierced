@@ -7,7 +7,10 @@
 3、穿透的客户端和服务端采用TLSv1.3/SSL双向认证加密通信保证数据传输的安全，使用Openssl的分支Google Boring实现（目前默认关闭SSL，需要的话手动更改配置开启，并配置相应证书即可）；  
 4、更好的支持http及https协议，支持反向代理客户端 https->http或http->https的形式，在别的类似穿透应用所谓支持http及https协议，实际上都只是做了TCP报文转发，而未对http协议中Header的Host及Referer,Location中的URL地址及端口进行修改，导致请求部分较严格的http服务时服务验证请求地址与报文中Host地址及端口不一致导致请求被拒绝，以及http服务响应3xx重定向时地址未进行处理，导致跳转到真实地址的页面出现跨域等错误，对此服务端对Host，Referer，Location等http Header中的URL及端口会进行相应修改替换，和Nginx的代理功能类似。  
 5、不同操作系统采用不同的Channel实现以使在该操作系统上达到最佳性能，Linux优先使用Io_uring，其次是Epoll，Mac使用Kqueue，Windows采用NIO(具体各系统机制区别可自行了解)，零copy模式实现通道数据处理，大幅提升性能和内存使用率。  
-6、一整套的连接管理去除废弃连接，提升性能，包括用户和服务端连接关闭，告知穿透本地和目标地址的连接关闭，服务端端口关闭，关闭所有穿透客户端所有相关连接等。
+6、一整套的连接管理去除废弃连接，提升性能，包括用户和服务端连接关闭，告知穿透本地和目标地址的连接关闭，服务端端口关闭，关闭所有穿透客户端所有相关连接等。  
+
+gitee: https://gitee.com/lijiann/JPierced.git  
+github：https://github.com/849029780/JPierced.git
 
 ## 部署和构建
 1、需要一台具备公网IP的服务器，以及需要穿透的内网客户机，将PServer服务部署至公网服务器中运行，被穿透客户机运行PClient服务，可使用api接口在服务端管理客户端及动态添加端口映射等。
