@@ -26,7 +26,8 @@ public class IoUringTcpClient extends AbstractTcpClient {
      */
     @Override
     public boolean support() {
-        return IoUring.isAvailable();
+        //return IoUring.isAvailable();
+        return false;
     }
 
 
