@@ -45,8 +45,7 @@ public class ChannelEventUtils {
      */
     private static EventLoopGroup getEventLoopGroup(int threadNum) {
         IoHandlerFactory ioHandlerFactory;
-        //if (IoUring.isAvailable()) {
-        if (false) {
+        if (IoUring.isAvailable()) {
             ioHandlerFactory = IoUringIoHandler.newFactory();
         } else if (Epoll.isAvailable()) {
             ioHandlerFactory = EpollIoHandler.newFactory();
@@ -80,8 +79,7 @@ public class ChannelEventUtils {
      */
     public static Class<? extends ServerSocketChannel> getSocketChannelClass() {
         Class<? extends ServerSocketChannel> clazz;
-        //if (IoUring.isAvailable()) {
-        if (false) {
+        if (IoUring.isAvailable()) {
             clazz = IoUringServerSocketChannel.class;
             log.info("使用IO_Uring Channel.");
         } else if (Epoll.isAvailable()) {
