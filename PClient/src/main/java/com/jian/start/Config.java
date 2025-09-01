@@ -9,18 +9,11 @@ import io.netty.handler.ssl.SslProtocols;
 import io.netty.handler.ssl.SslProvider;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.Objects;
 
 /**
@@ -58,9 +51,9 @@ public class Config {
     static final String crtKeyFileNameTransmit = "certs/client-pkcs8.key";
 
 
-    static final String CLIENT_KEYSTORE_FILE = "certs/client.keystore";
+    //static final String CLIENT_KEYSTORE_FILE = "certs/client.keystore";
 
-    static final String TRUST_STORE = "certs/truststore.jks";
+    //static final String TRUST_STORE = "certs/truststore.jks";
 
 
     /***
@@ -77,7 +70,7 @@ public class Config {
                 inputStream = Files.newInputStream(file.toPath());
             }
         } catch (IOException e) {
-            log.error("读取文件：" + fileName + "错误！", e);
+            log.error("读取文件：{} 错误！", fileName, e);
         }
         return inputStream;
     }
@@ -109,45 +102,21 @@ public class Config {
             return true;
         }
         try {
-            /*InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit);
+            InputStream caCrtInputTransmit = getFileInputStream(caCrtFileNameTransmit);
             InputStream crtInputTransmit = getFileInputStream(crtFileNameTransmit);
-            InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit);*/
-
-            InputStream clientKeyStoreIn = getFileInputStream(CLIENT_KEYSTORE_FILE);
-            InputStream trustStoreIn = getFileInputStream(TRUST_STORE);
-
+            InputStream crtKeyInputTransmit = getFileInputStream(crtKeyFileNameTransmit);
 
             //和本地的https连接为单向认证
             Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().build();
+
             //必须经过SSL双向认证
-
-
-            KeyStore clientKeyStore = KeyStore.getInstance("JKS");
-            clientKeyStore.load(clientKeyStoreIn, "123456".toCharArray());
-
-            // 创建 KeyManagerFactory
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmf.init(clientKeyStore, "123456".toCharArray());
-
-
-            // 加载信任库
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            KeyStore trustStore = KeyStore.getInstance("JKS");
-            trustStore.load(trustStoreIn, "123456".toCharArray());
-            tmf.init(trustStore);
-
-
-            //Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit,crtKeyInputTransmit).trustManager(caCrtInputTransmit).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).startTls(true).build();
-            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(kmf).trustManager(tmf).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).startTls(true).build();
-
+            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).startTls(true).build();
 
             return true;
         } catch (SSLException e) {
             log.error("传输端口ssl构建错误！", e);
         } catch (IOException e) {
             log.error("传输端口构建SSLContext失败，ssl证书错误！", e);
-        } catch (CertificateException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-            throw new RuntimeException(e);
         }
         return false;
     }

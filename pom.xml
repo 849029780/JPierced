@@ -15,18 +15,18 @@
     </modules>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <lombok.version>1.18.34</lombok.version>
-        <netty.version>4.2.0.RC3</netty.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <lombok.version>1.18.38</lombok.version>
+        <netty.version>4.2.4.Final</netty.version>
         <!--        <netty.version>4.1.113.Final</netty.version>-->
-        <logback.version>1.5.15</logback.version>
-        <netty-tcnative-boringssl.version>2.0.70.Final</netty-tcnative-boringssl.version>
+        <logback.version>1.5.18</logback.version>
+        <netty-tcnative-boringssl.version>2.0.73.Final</netty-tcnative-boringssl.version>
 
 <!--        <vertx.version>4.5.11</vertx.version>-->
-        <vertx.version>5.0.0.CR5</vertx.version>
-        <jackson.version>2.18.2</jackson.version>
-        <jwt.version>4.4.0</jwt.version>
+        <vertx.version>5.0.3</vertx.version>
+        <jackson.version>2.20.0</jackson.version>
+        <jwt.version>4.5.0</jwt.version>
         <jian.commons.version>1.0-SNAPSHOT</jian.commons.version>
     </properties>
 

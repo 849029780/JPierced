@@ -122,7 +122,9 @@ public class Constants {
     /***
      * 重连缓存线程
      */
-    public static final ExecutorService CACHED_EXECUTOR_POOL = new ThreadPoolExecutor(0, 1, 60L, TimeUnit.SECONDS, new SynchronousQueue<>());
+    //public static final ExecutorService CACHED_EXECUTOR_POOL = new ThreadPoolExecutor(0, 1, 60L, TimeUnit.SECONDS, new SynchronousQueue<>());
+
+    public static final ExecutorService CACHED_EXECUTOR_POOL = Executors.newVirtualThreadPerTaskExecutor();
 
     /***
      * 超过该阈值未接收到心跳则代表该连接已断开 s

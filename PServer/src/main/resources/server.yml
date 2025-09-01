@@ -1,6 +1,6 @@
 transmit:
   port: 9998
-  use-ssl: false
+  use-ssl: true
   ack-port: 6211
 
 web:

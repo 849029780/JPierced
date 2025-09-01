@@ -3,8 +3,8 @@
 纯Java和Netty写的STUN内网穿透应用，高性能低延迟，已稳定使用近3年；  
 (另还有P2P的TURN模式穿透方案，基于UDP实现打洞，延迟会更低些，例如市面上的向日葵等远程桌面软件都是基于该模式，如果TURN不支持，则如同本项目使用的STUN模式一样，但目前没有空再写，有空再说啦..)  
 1、支持TCP,UDP,HTTP,HTTPS协议，类似Frp，对比Frp，服务端使用http接口动态管理穿透客户端和动态映射端口（由于前端好久没写了，所以未写前端页面，只有接口，后续可能会增加），具体操作api说明如下；  
-2、被穿透客户端与服务器之间使用多路通道复用，减少产生新的连接时重复连接，在网络环境较差的情况也能稳定使用；  
-3、穿透的客户端和服务端采用TLSv1.3/SSL双向认证加密通信保证数据传输的安全，使用Openssl的分支Google Boring实现（目前默认关闭SSL，需要的话手动更改配置开启，并配置相应证书即可）；  
+2、被穿透客户端与服务器之间使用多路通道复用，减少产生新的连接时重复连接，在网络环境较差的情况也能稳定使用；  s
+3、穿透的客户端和服务端默认采用TLSv1.3/SSL双向认证加密通信保证数据传输的安全，使用Openssl的分支GoogleBoring；  
 4、更好的支持http及https协议，支持反向代理客户端 https->http或http->https的形式，在别的类似穿透应用所谓支持http及https协议，实际上都只是做了TCP报文转发，而未对http协议中Header的Host及Referer,Location中的URL地址及端口进行修改，导致请求部分较严格的http服务时服务验证请求地址与报文中Host地址及端口不一致导致请求被拒绝，以及http服务响应3xx重定向时地址未进行处理，导致跳转到真实地址的页面出现跨域等错误，对此服务端对Host，Referer，Location等http Header中的URL及端口会进行相应修改替换，和Nginx的代理功能类似。  
 5、不同操作系统采用不同的Channel实现以使在该操作系统上达到最佳性能，Linux优先使用Io_uring，其次是Epoll，Mac使用Kqueue，Windows采用NIO(具体各系统机制区别可自行了解)，零copy模式实现通道数据处理，大幅提升性能和内存使用率。  
 6、一整套的连接管理去除废弃连接，提升性能，包括用户和服务端连接关闭，告知穿透本地和目标地址的连接关闭，服务端端口关闭，关闭所有穿透客户端所有相关连接等。  
@@ -14,7 +14,7 @@ github：https://github.com/849029780/JPierced.git
 
 ## 部署和构建
 1、需要一台具备公网IP的服务器，以及需要穿透的内网客户机，将PServer服务部署至公网服务器中运行，被穿透客户机运行PClient服务，可使用api接口在服务端管理客户端及动态添加端口映射等。
-2、拉取最新分支的代码到本地，由于基于JDK17编写，请确保安装的JDK版本在17或以上，可根据情况调整项目resources下的logback.xml日志级别等配置。  
+2、拉取最新分支的代码到本地，由于基于JDK17编写，请确保安装的JDK版本在17或以上，可根据情况调整项目resource s下的logback.xml日志级别等配置。  
 由于项目中默认放置了我自己生成的CA证书及密钥，可以直接使用，如需要自行生成，生成后替换掉resources/certs中相应的证书文件即可，注意生成的客户端及服务端证书都必须是统一CA签名的(目前默认传输关闭了SSL，使用Netty4.2后相关证书域名信息必须符合，否则会连接异常)。  
 使用Maven命令mvn package编译打包成可运行的jar包(打包后在项目目录的target目录下)；  
 3、将PServer.jar上传到有公网的服务器上，并同时上传server.yml配置文件(配置说明如上)  
@@ -35,7 +35,7 @@ transmit:
   # 客户端和服务端的数据传输端口
   port: 9998
   # 是否启用ssl加密传输，启用后需要配置相关证书
-  use-ssl: false
+  use-ssl: true
   # ack通道的端口(该端口用于建立连接和开关闭自动读等操作，netty默认自动读，当发生大文件传输时网络较拥堵时，超出缓冲水位，需要关闭自动读，否则大量数据写入会发生OOM，具体的水位控制可自行了解)
   ack-port: 6211
 
@@ -67,7 +67,7 @@ server:
   username: 3333
   password: xxx
   # 开启ssl加密，开启后需配置ssl证书
-  use-ssl: false 
+  use-ssl: true 
 ```
 
 
@@ -109,12 +109,12 @@ http://xxx:port/api/modifyClient
 ```
 POST请求
 Json参数：{"key":数字key}
-http://xxx:port/api/removeClient
+http://xxx:port/api/ 
 ```
 
 客户端下线
 ```
-POST请求
+POST请求  
 Json参数：{"key":数字key}
 http://xxx:port/api/shotClient
 ```
@@ -135,7 +135,7 @@ Json参数：{"key":数字客户端key, "oldServerPort":原端口, "newServerPor
 http://xxx:port/api/modifyClientPortMapping
 ```
 
-移除客户端端口映射
+移除客户端端口映射 
 ```
 POST请求  
 Json参数：{"key":数字客户端key, "serverPort":要移除的端口}

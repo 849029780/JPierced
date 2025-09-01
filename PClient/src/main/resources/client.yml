@@ -1,6 +1,6 @@
 server:
   host: localhost
   port: 9998
-  username: 4444
+  username: 123456
   password: xxx
-  use-ssl: false
+  use-ssl: true

@@ -6,6 +6,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.ssl.SslHandler;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 
 /***
  *
@@ -27,8 +31,17 @@ public class CustomChannelInitializer extends ChannelInitializer<Channel> {
     @Override
     protected void initChannel(Channel channel) {
         ChannelPipeline pipeline = channel.pipeline();
-        if(Constants.CONFIG.getTransmit().getUseSsl()){
-            pipeline.addFirst(Constants.SSL_TRANSMIT_PORT_CONTEXT.newHandler(channel.alloc()));
+        if (Constants.CONFIG.getTransmit().getUseSsl()) {
+
+            SslHandler sslHandler = Constants.SSL_TRANSMIT_PORT_CONTEXT.newHandler(channel.alloc());
+            SSLEngine engine = sslHandler.engine();
+
+            // 关闭主机名校验
+            SSLParameters params = engine.getSSLParameters();
+            params.setEndpointIdentificationAlgorithm(null);
+            engine.setSSLParameters(params);
+
+            pipeline.addFirst(sslHandler);
         }
         pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
         pipeline.addLast(messageToMessageCodec);
