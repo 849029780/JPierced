@@ -10,7 +10,7 @@
 6、一整套的连接管理去除废弃连接，提升性能，包括用户和服务端连接关闭，告知穿透本地和目标地址的连接关闭，服务端端口关闭，关闭所有穿透客户端所有相关连接等。  
 
 gitee: https://gitee.com/lijiann/JPierced.git  
-github：https://github.com/849029780/JPierced.git
+github：https://github.com/849029780/JPierced.git  
 前端 vue3 + vite + element-plus：https://github.com/849029780/jpierced-frontend
 
 ## 管理端功能截图
