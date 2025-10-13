@@ -18,7 +18,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <lombok.version>1.18.38</lombok.version>
-        <netty.version>4.2.4.Final</netty.version>
+        <netty.version>4.2.6.Final</netty.version>
         <!--        <netty.version>4.1.113.Final</netty.version>-->
         <logback.version>1.5.18</logback.version>
         <netty-tcnative-boringssl.version>2.0.73.Final</netty-tcnative-boringssl.version>

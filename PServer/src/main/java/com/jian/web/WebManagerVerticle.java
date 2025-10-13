@@ -9,6 +9,7 @@ import com.jian.beans.transfer.req.DisConnectClientReqPacks;
 import com.jian.beans.transfer.req.UdpPortMappingAddReqPacks;
 import com.jian.beans.transfer.req.UdpPortMappingRemReqPacks;
 import com.jian.commons.Constants;
+import com.jian.commons.ServerConfig;
 import com.jian.start.Config;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
@@ -16,6 +17,7 @@ import com.jian.transmit.NetAddressBase;
 import com.jian.transmit.tcp.TcpServer;
 import com.jian.transmit.udp.UdpClient;
 import com.jian.utils.JsonUtils;
+import com.jian.web.result.LoginToken;
 import com.jian.web.result.Page;
 import com.jian.web.result.Result;
 import io.netty.channel.Channel;
@@ -71,7 +73,7 @@ public class WebManagerVerticle extends AbstractVerticle {
     /***
      * 跳过所有
      */
-    private final Boolean SKIP_ALL = true;
+    private final Boolean SKIP_ALL = false;
 
 
     @Override
@@ -139,12 +141,21 @@ public class WebManagerVerticle extends AbstractVerticle {
                         han.response().end(JsonUtils.toJson(Result.UN_LOGIN("请登录后操作！")));
                     } else {
                         //token认证
-                        if (checkToken(token)) {
-                            //token正确
-                            han.next();
-                        } else {
-                            //需要登录
-                            han.response().end(JsonUtils.toJson(Result.UN_LOGIN("请登录后操作！")));
+                        byte state = checkToken(token);
+                        switch (state) {
+                            case 1:
+                                //token正确
+                                han.next();
+                                break;
+                            case -1:
+                                //token已失效
+                                han.response().end(JsonUtils.toJson(Result.TOKEN_EXPIRE("token已失效！")));
+                                break;
+                            case 0:
+                            default:
+                                //需要登录
+                                han.response().end(JsonUtils.toJson(Result.UN_LOGIN("请登录后操作！")));
+                                break;
                         }
                     }
                 });
@@ -217,6 +228,22 @@ public class WebManagerVerticle extends AbstractVerticle {
             han.response().end(JsonUtils.toJson(result));
         });
 
+        router.route(HttpMethod.GET, "/api/getWeb").handler(han -> {
+            Result result = getWeb();
+            han.response().end(JsonUtils.toJson(result));
+        });
+
+        router.route(HttpMethod.GET, "/api/getTransmit").handler(han -> {
+            Result result = getTransmit();
+            han.response().end(JsonUtils.toJson(result));
+        });
+
+        router.route(HttpMethod.POST, "/api/setLoginUser").handler(han -> {
+            JsonObject params = getBodyAsJson(han);
+            Result result = setLoginUser(params);
+            han.response().end(JsonUtils.toJson(result));
+        });
+
         router.route(HttpMethod.POST, "/api/listenPort").handler(han -> {
             JsonObject params = getBodyAsJson(han);
             Result result = listenPort(params);
@@ -237,8 +264,8 @@ public class WebManagerVerticle extends AbstractVerticle {
      * @param token 登录token
      * @return 响应结果
      */
-    public boolean checkToken(String token) {
-        boolean isOk = false;
+    public byte checkToken(String token) {
+        byte isOk = 0;
         try {
             DecodedJWT tokenDecode = JWT.decode(token);
             //验证token
@@ -250,9 +277,11 @@ public class WebManagerVerticle extends AbstractVerticle {
             LocalDateTime now = LocalDateTime.now();
             //token是否过期
             boolean isBefore = expireTime.isAfter(now);
-            //token不能过期
+            //token未过期
             if (isBefore) {
-                isOk = true;
+                isOk = 1;
+            } else {
+                isOk = -1;
             }
         } catch (JWTDecodeException | SignatureVerificationException e) {
             //token错误
@@ -277,7 +306,9 @@ public class WebManagerVerticle extends AbstractVerticle {
             LocalDateTime localDateTime = LocalDateTime.now().plusDays(7L);
             long expiresTimestamp = localDateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
             String token = JWT.create().withClaim("auther", "Jian").withKeyId("0508").withClaim("uname", username).withClaim("expiresAt", expiresTimestamp).sign(Constants.JWT_ALGORITHM);
-            result = Result.SUCCESS(token, "登录成功！");
+
+            LoginToken loginToken = LoginToken.builder().token(token).expiresTimestamp(expiresTimestamp).build();
+            result = Result.SUCCESS(loginToken, "登录成功！");
         } else {
             result = Result.FAIL("用户名或密码错误！");
         }
@@ -524,6 +555,8 @@ public class WebManagerVerticle extends AbstractVerticle {
         Integer newServerPort = params.getInteger("newServerPort");
         String host = params.getString("host");
         Integer port = params.getInteger("port");
+
+
         //客户端是否使用Https
         Boolean cliUseHttps = params.getBoolean("cliUseHttps");
 
@@ -787,22 +820,21 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
 
         //移除映射表
-        clientInfo.getPortMappingAddress().remove(serverPort);
-
-
-        NetAddress netAddress = clientInfo.getPortMappingAddress().get(serverPort);
+        NetAddress netAddress = clientInfo.getPortMappingAddress().remove(serverPort);
 
         //移除该端口的本地监听channel，如果不为空，则将channel关闭
         Channel channel = clientInfo.getListenPortMap().remove(serverPort);
 
         if (netAddress.getProtocol() == NetAddressBase.Protocol.UDP) {
-            UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = new UdpPortMappingRemReqPacks();
-            udpPortMappingRemReqPacks.setSourcePort(serverPort);
             Channel ackChannel = clientInfo.getAckChannel();
-            ackChannel.writeAndFlush(udpPortMappingRemReqPacks).addListener(future -> {
-                if (future.isSuccess()) {
-                    UdpClient.closeLocalPort(channel);
-                }
+            Optional.ofNullable(ackChannel).ifPresent(ackCh -> {
+                UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = new UdpPortMappingRemReqPacks();
+                udpPortMappingRemReqPacks.setSourcePort(serverPort);
+                ackCh.writeAndFlush(udpPortMappingRemReqPacks).addListener(future -> {
+                    if (future.isSuccess()) {
+                        UdpClient.closeLocalPort(channel);
+                    }
+                });
             });
         } else {
             //关闭本地端口
@@ -851,6 +883,39 @@ public class WebManagerVerticle extends AbstractVerticle {
             }
         });
         return Result.SUCCESS("传输端口已重新设置！");
+    }
+
+    /***
+     * 获取web服务端口号
+     * @return
+     */
+    public Result getWeb() {
+        return Result.SUCCESS(Constants.CONFIG.getWeb());
+    }
+
+    /***
+     * 获取传输信息
+     * @return
+     */
+    public Result getTransmit() {
+        return Result.SUCCESS(Constants.CONFIG.getTransmit());
+    }
+
+
+    /***
+     * 修改登录用户名和密码
+     * @param params {"defUsername":"","defPassword":""}
+     * @return
+     */
+    public Result setLoginUser(JsonObject params) {
+        String defUsername = params.getString("defUsername");
+        String defPassword = params.getString("defPassword");
+        //设置配置
+        Constants.CONFIG.getWeb().setDefUsername(defUsername);
+        Constants.CONFIG.getWeb().setDefPassword(defPassword);
+        Config.saveProperties();
+
+        return Result.SUCCESS("登录用户名和密码已重新设置！");
     }
 
     /***

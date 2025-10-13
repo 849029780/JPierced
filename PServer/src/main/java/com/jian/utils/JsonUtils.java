@@ -23,7 +23,7 @@ public class JsonUtils {
 
     static{
         //属性为空时不转换
-        JSON_PARSER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        JSON_PARSER.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
     }
 
     public static String toJson(Object obj) {

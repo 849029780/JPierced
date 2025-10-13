@@ -2,7 +2,7 @@
 
 纯Java和Netty写的STUN内网穿透应用，高性能低延迟，已稳定使用近3年；  
 (另还有P2P的TURN模式穿透方案，基于UDP实现打洞，延迟会更低些，例如市面上的向日葵等远程桌面软件都是基于该模式，如果TURN不支持，则如同本项目使用的STUN模式一样，但目前没有空再写，有空再说啦..)  
-1、支持TCP,UDP,HTTP,HTTPS协议，类似Frp，对比Frp，服务端使用http接口动态管理穿透客户端和动态映射端口（由于前端好久没写了，所以未写前端页面，只有接口，后续可能会增加），具体操作api说明如下；  
+1、支持TCP,UDP,HTTP,HTTPS协议，类似Frp，对比Frp，服务端使用http接口动态管理穿透客户端和动态映射端口，具体操作api说明如下；  
 2、被穿透客户端与服务器之间使用多路通道复用，减少产生新的连接时重复连接，在网络环境较差的情况也能稳定使用；  
 3、穿透的客户端和服务端默认采用TLSv1.3/SSL双向认证加密通信保证数据传输的安全，使用Openssl的分支GoogleBoring；  
 4、更好的支持http及https协议，支持反向代理客户端 https->http或http->https的形式，在别的类似穿透应用所谓支持http及https协议，实际上都只是做了TCP报文转发，而未对http协议中Header的Host及Referer,Location中的URL地址及端口进行修改，导致请求部分较严格的http服务时服务验证请求地址与报文中Host地址及端口不一致导致请求被拒绝，以及http服务响应3xx重定向时地址未进行处理，导致跳转到真实地址的页面出现跨域等错误，对此服务端对Host，Referer，Location等http Header中的URL及端口会进行相应修改替换，和Nginx的代理功能类似。  
@@ -11,6 +11,10 @@
 
 gitee: https://gitee.com/lijiann/JPierced.git  
 github：https://github.com/849029780/JPierced.git
+前端 vue3 + vite + element-plus：https://github.com/849029780/jpierced-frontend
+
+## 管理端功能截图
+![img_1.png](img_1.png)
 
 ## 部署和构建
 1、需要一台具备公网IP的服务器，以及需要穿透的内网客户机，将PServer服务部署至公网服务器中运行，被穿透客户机运行PClient服务，可使用api接口在服务端管理客户端及动态添加端口映射等。
@@ -86,21 +90,21 @@ http://xxx:port/api/login
 查询在线客户端列表
 ```
 GET请求
-Json参数可选：{"key": 数字key, "name":"可选参数", "serverPort":数字}
+Json参数可选：{"key": Key Number, "name":"可选参数", "serverPort": Number}
 http://xxx:port/api/clientList
 ```
 
 添加客户端用户名及密码
 ```
 POST请求
-Json参数：{"key":不重复的数字key, "pwd":"密码", "name":"客户端名"}
+Json参数：{"key":不重复的Key Number, "pwd":"密码", "name":"客户端名"}
 http://xxx:port/api/addClient
 ```
 
 修改客户端信息
 ```
 POST请求
-Json参数：{"key":客户端数字key,"newKey":新的key, "pwd":"新密码", "name":"客户端名称"}
+Json参数：{"key":客户端Key Number,"newKey":新的Key Number, "pwd":"新密码", "name":"客户端名称"}
 http://xxx:port/api/modifyClient
 ```
 
@@ -108,14 +112,14 @@ http://xxx:port/api/modifyClient
 
 ```
 POST请求
-Json参数：{"key":数字key}
+Json参数：{"key": Number}
 http://xxx:port/api/ 
 ```
 
 客户端下线
 ```
 POST请求  
-Json参数：{"key":数字key}
+Json参数：{"key": Number}
 http://xxx:port/api/shotClient
 ```
 
@@ -123,7 +127,7 @@ http://xxx:port/api/shotClient
 ```
 POST请求  
 protocol参数值说明: 1--TCP,2--HTTP,3--HTTPS
-Json参数：{"key":数字客户端key, "serverPort":映射在服务端上的端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":数字，取值如上协议类型说明, "cliUseHttps": true 布尔值}
+Json参数：{"key":Key Number, "serverPort":映射在服务端上的端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":Number，取值如上协议类型说明, "cliUseHttps": true 布尔值}
 http://xxx:port/api/addClientPortMapping
 ```
 
@@ -131,40 +135,40 @@ http://xxx:port/api/addClientPortMapping
 ```
 POST请求  
 protocol参数值说明: 1--TCP,2--HTTP,3--HTTPS
-Json参数：{"key":数字客户端key, "oldServerPort":原端口, "newServerPort":新端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":数字，取值如上协议类型说明, "cliUseHttps": true 布尔值}
+Json参数：{"key":数字客户端key, "oldServerPort":原端口, "newServerPort":新端口, "host":"被穿透机器上到目标机器的host", "port":被穿透机器上到目标机器的端口号, "protocol":Number，取值如上协议类型说明, "cliUseHttps": true 布尔值}
 http://xxx:port/api/modifyClientPortMapping
 ```
 
 移除客户端端口映射 
 ```
 POST请求  
-Json参数：{"key":数字客户端key, "serverPort":要移除的端口}
+Json参数：{"key":客户端Key Number, "serverPort":要移除的端口}
 http://xxx:port/api/removeClientPortMapping
 ```
 
 重设置传输服务端口(重设置后将断开所有客户端，且老的客户端不可连接)
 ```
 POST请求  
-Json参数：{"serverPort":}
+Json参数：{"serverPort":Number}
 http://xxx:port/api/setTrasmitPort
 ```
 重新设置web服务端口(重新设置后将重启管理接口的web服务)
 ```
 POST请求  
-Json参数：{"webPort":数字端口}
+Json参数：{"webPort":Number}
 http://xxx:port/api/setWebPort
 ```
 监听指定映射客户端的端口
 ```
 POST请求  
-Json参数：{"key":数字，客户端key,"port":已添加的端口号}
+Json参数：{"key":客户端Key Number,"port":已添加的端口号}
 http://xxx:port/api/listenPort
 ```
 
 取消监听指定映射客户端的端口
 ```
 POST请求  
-Json参数：{"key":数字，客户端key,"port":端口}
+Json参数：{"key":客户端Key Number,"port":端口}
 http://xxx:port/api/closePort
 ```
 
