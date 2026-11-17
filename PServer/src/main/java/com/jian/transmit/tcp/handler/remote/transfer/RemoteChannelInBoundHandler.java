@@ -10,6 +10,7 @@ import com.jian.beans.transfer.resp.ConnectAuthRespPacks;
 import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.DatagramPacket;
@@ -51,7 +52,9 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Channel localChannel = connectedMap.remove(tarChannelHash);
 
                 //关闭本地连接的通道，必须将最后一条数据推送完毕后才可关闭
-                Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
+                if (localChannel != null && localChannel.isActive()) {
+                    localChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                }
                 log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
             case 4 -> {//客户端认证请求
@@ -125,10 +128,11 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
                 ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
                 Channel localChannel = connectedMap.get(targetChannelHash);
-                try {
-                    localChannel.writeAndFlush(tcpTransferDataPacks.getDatas());
-                } catch (NullPointerException e) {
-                    ReferenceCountUtil.release(tcpTransferDataPacks.getDatas());
+                ByteBuf datas = tcpTransferDataPacks.getDatas();
+                if (localChannel != null && localChannel.isActive()) {
+                    localChannel.writeAndFlush(datas);
+                } else {
+                    ReferenceCountUtil.release(datas);
                 }
             }
             case 8 -> { //接收心跳请求
@@ -138,7 +142,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 long msgId = healthReqPacks.getMsgId();
-                log.info("接收到客户端key:{}，name:{}，的心跳请求，msgId:{}", clientInfo.getKey(), clientInfo.getName(), msgId);
+                log.debug("接收到客户端key:{}，name:{}，的心跳请求，msgId:{}", clientInfo.getKey(), clientInfo.getName(), msgId);
                 HealthRespPacks healthRespPacks = new HealthRespPacks();
                 healthRespPacks.setMsgId(msgId);
                 ctx.writeAndFlush(healthRespPacks);

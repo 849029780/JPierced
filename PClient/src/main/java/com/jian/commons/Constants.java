@@ -28,11 +28,11 @@ import java.util.concurrent.*;
 public class Constants {
 
     /***
-     * 线程数
+     * 线程数（自适应系统CPU核心数）
      */
-    public static final int THREAD_NUM = 8;
+    public static final int THREAD_NUM = Math.max(2, Runtime.getRuntime().availableProcessors() * 2);
 
-    public static final int UDP_THREAD_NUM = 4;
+    public static final int UDP_THREAD_NUM = Math.max(2, Runtime.getRuntime().availableProcessors());
 
     /***
      * 绑定在本地通道上的 当前通道hash

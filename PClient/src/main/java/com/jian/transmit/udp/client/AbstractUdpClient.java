@@ -23,6 +23,18 @@ public abstract class AbstractUdpClient {
         return this;
     }
 
+    public ChannelFuture bindAsync(int port, int sourcePort, InetSocketAddress senderAddr) {
+        ChannelFuture channelFuture = bootstrap.bind(port);
+        channelFuture.addListener(future -> {
+            if (future.isSuccess()) {
+                Channel channel = ((ChannelFuture) future).channel();
+                channel.attr(Constants.SOURCE_PORT).set(sourcePort);
+                channel.attr(Constants.SENDER_ADDR).set(senderAddr);
+            }
+        });
+        return channelFuture;
+    }
+
     public Channel bind(int port) {
         ChannelFuture channelFuture = bootstrap.bind(port).syncUninterruptibly();
         return channelFuture.channel();

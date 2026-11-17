@@ -23,96 +23,96 @@ import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Objects;
-
-
 /***
- * channel和事件工具
+ * channel和事件工具（一次性固化 Native 传输类型，DCL 保证 EventLoopGroup 全局单例并发安全）
  * @author Jian
  * @date 2024-09-14
  */
 @Slf4j
 public class ChannelEventUtils {
 
-    private static EventLoopGroup BOSS_LOOP_GROUP;
+    public enum TransportType {
+        IO_URING, EPOLL, KQUEUE, NIO
+    }
 
-    private static EventLoopGroup WORK_LOOP_GROUP;
+    private static final TransportType DETECTED_TRANSPORT;
+    private static final Class<? extends ServerSocketChannel> SERVER_SOCKET_CHANNEL_CLASS;
+    private static final Class<? extends DatagramChannel> DATAGRAM_CHANNEL_CLASS;
+
+    private static volatile EventLoopGroup BOSS_LOOP_GROUP;
+    private static volatile EventLoopGroup WORK_LOOP_GROUP;
+
+    static {
+        if (IoUring.isAvailable()) {
+            DETECTED_TRANSPORT = TransportType.IO_URING;
+            SERVER_SOCKET_CHANNEL_CLASS = IoUringServerSocketChannel.class;
+            DATAGRAM_CHANNEL_CLASS = IoUringDatagramChannel.class;
+            log.info("检测到支持底层 Linux io_uring 高性能传输层");
+        } else if (Epoll.isAvailable()) {
+            DETECTED_TRANSPORT = TransportType.EPOLL;
+            SERVER_SOCKET_CHANNEL_CLASS = EpollServerSocketChannel.class;
+            DATAGRAM_CHANNEL_CLASS = EpollDatagramChannel.class;
+            log.info("检测到支持底层 Linux epoll 传输层");
+        } else if (KQueue.isAvailable()) {
+            DETECTED_TRANSPORT = TransportType.KQUEUE;
+            SERVER_SOCKET_CHANNEL_CLASS = KQueueServerSocketChannel.class;
+            DATAGRAM_CHANNEL_CLASS = KQueueDatagramChannel.class;
+            log.info("检测到支持底层 BSD/macOS kqueue 传输层");
+        } else {
+            DETECTED_TRANSPORT = TransportType.NIO;
+            SERVER_SOCKET_CHANNEL_CLASS = NioServerSocketChannel.class;
+            DATAGRAM_CHANNEL_CLASS = NioDatagramChannel.class;
+            log.info("使用标准 Java NIO 传输层");
+        }
+    }
 
     /***
-     * 根据操作系统获取线程组
-     * @param threadNum 线程数量
-     * @return EventLoopGroup
+     * 根据预检测的底层传输层获取线程组
      */
-    private static EventLoopGroup getEventLoopGroup(int threadNum) {
-        IoHandlerFactory ioHandlerFactory;
-        if (IoUring.isAvailable()) {
-            ioHandlerFactory = IoUringIoHandler.newFactory();
-        } else if (Epoll.isAvailable()) {
-            ioHandlerFactory = EpollIoHandler.newFactory();
-        } else if (KQueue.isAvailable()) {
-            ioHandlerFactory = KQueueIoHandler.newFactory();
-        } else {
-            ioHandlerFactory = NioIoHandler.newFactory();
-        }
+    private static EventLoopGroup createEventLoopGroup(int threadNum) {
+        IoHandlerFactory ioHandlerFactory = switch (DETECTED_TRANSPORT) {
+            case IO_URING -> IoUringIoHandler.newFactory();
+            case EPOLL -> EpollIoHandler.newFactory();
+            case KQUEUE -> KQueueIoHandler.newFactory();
+            case NIO -> NioIoHandler.newFactory();
+        };
         return new MultiThreadIoEventLoopGroup(threadNum, ioHandlerFactory);
     }
 
     public static EventLoopGroup getBossLoopGroup() {
-        if (Objects.isNull(BOSS_LOOP_GROUP)) {
-            BOSS_LOOP_GROUP = getEventLoopGroup(Constants.BOSS_THREAD_NUM);
+        if (BOSS_LOOP_GROUP == null) {
+            synchronized (ChannelEventUtils.class) {
+                if (BOSS_LOOP_GROUP == null) {
+                    BOSS_LOOP_GROUP = createEventLoopGroup(Constants.BOSS_THREAD_NUM);
+                }
+            }
         }
         return BOSS_LOOP_GROUP;
     }
 
-
     public static EventLoopGroup getWorkLoopGroup() {
-        if (Objects.isNull(WORK_LOOP_GROUP)) {
-            WORK_LOOP_GROUP = getEventLoopGroup(Constants.THREAD_NUM);
+        if (WORK_LOOP_GROUP == null) {
+            synchronized (ChannelEventUtils.class) {
+                if (WORK_LOOP_GROUP == null) {
+                    WORK_LOOP_GROUP = createEventLoopGroup(Constants.THREAD_NUM);
+                }
+            }
         }
         return WORK_LOOP_GROUP;
     }
 
-
     /***
-     * 根据操作系统获取对应seocketChannel
-     * @return EventLoopGroup
+     * 获取固化好的 ServerSocketChannel Class
      */
     public static Class<? extends ServerSocketChannel> getSocketChannelClass() {
-        Class<? extends ServerSocketChannel> clazz;
-        if (IoUring.isAvailable()) {
-            clazz = IoUringServerSocketChannel.class;
-            log.info("使用IO_Uring Channel.");
-        } else if (Epoll.isAvailable()) {
-            clazz = EpollServerSocketChannel.class;
-            log.info("使用Epoll Channel.");
-        } else if (KQueue.isAvailable()) {
-            clazz = KQueueServerSocketChannel.class;
-            log.info("使用Kqueue Channel.");
-        } else {
-            clazz = NioServerSocketChannel.class;
-            log.info("使用Nio Channel.");
-        }
-        return clazz;
+        return SERVER_SOCKET_CHANNEL_CLASS;
     }
-
 
     /***
-     * 根据操作系统获取对应datagramChannel
-     * @return EventLoopGroup
+     * 获取固化好的 DatagramChannel Class
      */
     public static Class<? extends DatagramChannel> getDatagramChannelClass() {
-        Class<? extends DatagramChannel> clazz;
-        if (IoUring.isAvailable()) {
-            clazz = IoUringDatagramChannel.class;
-        } else if (Epoll.isAvailable()) {
-            clazz = EpollDatagramChannel.class;
-        } else if (KQueue.isAvailable()) {
-            clazz = KQueueDatagramChannel.class;
-        } else {
-            clazz = NioDatagramChannel.class;
-        }
-        return clazz;
+        return DATAGRAM_CHANNEL_CLASS;
     }
-
 
 }

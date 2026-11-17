@@ -44,7 +44,7 @@ public class RemoteChannelInitializer extends ChannelInitializer<Channel> {
 
             //pipeline.addLast(Constants.REMOTE_SSL_CONTEXT.newHandler(channel.alloc()));
         }
-        pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, -4, 0));
+        pipeline.addLast(new LengthFieldBasedFrameDecoder(16 * 1024 * 1024, 0, 4, -4, 0));
         pipeline.addLast(this.remoteMessageToMessageCodec);
         pipeline.addLast(this.remoteChannelInBoundHandler);
     }

@@ -41,10 +41,12 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
             case 3 -> {//断开连接
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 Long tarChannelHash = disConnectReqPacks.getTarChannelHash();
-                Optional.ofNullable(Constants.LOCAL_CHANNEL_MAP).ifPresent(map -> {
-                    Channel localChannel = map.remove(tarChannelHash);
-                    Optional.ofNullable(localChannel).ifPresent(localCh -> localCh.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
-                });
+                if (Constants.LOCAL_CHANNEL_MAP != null) {
+                    Channel localChannel = Constants.LOCAL_CHANNEL_MAP.remove(tarChannelHash);
+                    if (localChannel != null && localChannel.isActive()) {
+                        localChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                    }
+                }
                 log.debug("接收到远程发起断开本地连接请求,tarChannelHash:{}", tarChannelHash);
             }
             case 5 -> { //认证响应
@@ -84,25 +86,24 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 Long targetChannelHash = tcpTransferDataPacks.getTarChannelHash();
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(targetChannelHash);
                 ByteBuf datas = tcpTransferDataPacks.getDatas();
-                try {
+                if (localChannel != null && localChannel.isActive()) {
                     localChannel.writeAndFlush(datas);
-                } catch (NullPointerException e) {
+                } else {
                     ReferenceCountUtil.release(datas);
                 }
             }
             case 9 -> { //心跳响应
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 Long msgId = healthRespPacks.getMsgId();
-                log.info("接收到服务端的心跳响应，msgId:{}", msgId);
+                log.debug("接收到服务端的心跳响应，msgId:{}", msgId);
             }
             case 10 -> {//断开和远程的连接
                 log.info("接收到服务端要求断开和服务端的连接！");
                 AbstractTcpClient abstractTcpClient = channel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才会将重试次数置空
-                Optional.ofNullable(abstractTcpClient).ifPresent(cli -> {
-                    //设置不可进行重连
+                if (abstractTcpClient != null) {
                     abstractTcpClient.setCanReconnect(false);
-                });
+                }
                 channel.close();
             }
             case 20 -> { //udp数据传输
@@ -111,27 +112,45 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 ByteBuf datas = udpTransferDataPacks.getDatas();
                 //目标地址
                 InetSocketAddress tarInetAddr = Constants.UDP_SERVER_MAPPING_ADDR.get(sourcePort);
+                if (tarInetAddr == null) {
+                    ReferenceCountUtil.release(datas);
+                    return;
+                }
                 String senderHost = udpTransferDataPacks.getSenderHost();
                 Integer senderPort = udpTransferDataPacks.getSenderPort();
                 String sender = senderHost + ":" + senderPort;
                 UdpSenderChannelInfo udpSenderChannelInfo = Constants.SENDER_CHANNEL.get(sender);
                 if (Objects.isNull(udpSenderChannelInfo)) {
-                    udpSenderChannelInfo = new UdpSenderChannelInfo();
-                    Constants.SENDER_CHANNEL.put(sender, udpSenderChannelInfo);
-                    InetSocketAddress senderAddr = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
-                    Channel udpChannel = UdpClient.getUdpClient().init().bind(0, sourcePort, senderAddr);
-                    udpSenderChannelInfo.setChannel(udpChannel);
-                    List<Channel> channels = Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.get(sourcePort);
-                    if (Objects.isNull(channels)) {
-                        channels = Collections.synchronizedList(new ArrayList<>());
-                        Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.put(sourcePort, channels);
+                    final UdpSenderChannelInfo newInfo = new UdpSenderChannelInfo();
+                    newInfo.setTime(LocalDateTime.now());
+                    Constants.SENDER_CHANNEL.put(sender, newInfo);
+                    InetSocketAddress senderAddr = new InetSocketAddress(senderHost, senderPort);
+                    UdpClient.getUdpClient().init().bindAsync(0, sourcePort, senderAddr).addListener(future -> {
+                        if (future.isSuccess()) {
+                            Channel udpChannel = ((ChannelFuture) future).channel();
+                            newInfo.setChannel(udpChannel);
+                            List<Channel> channels = Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.computeIfAbsent(
+                                    sourcePort, k -> Collections.synchronizedList(new ArrayList<>()));
+                            channels.add(udpChannel);
+                            DatagramPacket datagramPacket = new DatagramPacket(datas, tarInetAddr);
+                            newInfo.setTime(LocalDateTime.now());
+                            udpChannel.writeAndFlush(datagramPacket);
+                        } else {
+                            log.error("绑定本地UDP端口失败！", future.cause());
+                            Constants.SENDER_CHANNEL.remove(sender);
+                            ReferenceCountUtil.release(datas);
+                        }
+                    });
+                } else {
+                    Channel localUdpChannel = udpSenderChannelInfo.getChannel();
+                    if (Objects.nonNull(localUdpChannel) && localUdpChannel.isActive()) {
+                        DatagramPacket datagramPacket = new DatagramPacket(datas, tarInetAddr);
+                        udpSenderChannelInfo.setTime(LocalDateTime.now());
+                        localUdpChannel.writeAndFlush(datagramPacket);
+                    } else {
+                        ReferenceCountUtil.release(datas);
                     }
-                    channels.add(udpChannel);
                 }
-                Channel localUdpChannel = udpSenderChannelInfo.getChannel();
-                DatagramPacket datagramPacket = new DatagramPacket(datas, tarInetAddr);
-                udpSenderChannelInfo.setTime(LocalDateTime.now());
-                localUdpChannel.writeAndFlush(datagramPacket);
             }
         }
     }
@@ -148,7 +167,7 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                     break;
                 case WRITER_IDLE: //写空闲
                     long msgId = System.nanoTime();
-                    log.info("发送心跳请求，msgId:{}", msgId);
+                    log.debug("发送心跳请求，msgId:{}", msgId);
                     HealthReqPacks healthReqPacks = new HealthReqPacks();
                     healthReqPacks.setMsgId(msgId);
                     ctx.writeAndFlush(healthReqPacks);

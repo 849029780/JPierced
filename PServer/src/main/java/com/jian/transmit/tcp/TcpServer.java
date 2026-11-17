@@ -31,12 +31,14 @@ public class TcpServer {
 
     private TcpServer() {
         serverBootstrap = new ServerBootstrap();
+        // 父通道配置（监听 Socket）：全连接队列调优为 1024，开启端口复用
+        serverBootstrap.option(ChannelOption.SO_BACKLOG, 1024);
+        serverBootstrap.option(ChannelOption.SO_REUSEADDR, Boolean.TRUE);
+        // 子通道配置（传输 Socket）：长连接、端口复用、禁用 Nagle、高低水位调优
         serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
-        serverBootstrap.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
         serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, Boolean.TRUE);
         serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-        //关闭小包组装成大包，如果都是小流量 则可以关闭，以减少延迟，减少延迟后将会多发送tcp包头，会占用一定带宽
-        //serverBootstrap.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE);
+        serverBootstrap.childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(128 * 1024, 512 * 1024));
         serverBootstrap.channel(ChannelEventUtils.getSocketChannelClass());
     }
 
@@ -93,7 +95,7 @@ public class TcpServer {
             log.warn("客户端key:{},name:{}，当前不在线，暂不可监听端口！", clientInfo.getKey(), clientInfo.getName());
             return;
         }
-        Constants.FIXED_THREAD_POOL.execute(() -> {
+        Constants.VIRTUAL_THREAD_POOL.execute(() -> {
             log.info("客户端key:{},name:{}，需要监听端口:{}", clientInfo.getKey(), clientInfo.getName(), ports);
             StringBuffer stringBuffer = new StringBuffer();
             CountDownLatch countDownLatch = new CountDownLatch(ports.size());
@@ -184,21 +186,22 @@ public class TcpServer {
                     clientInfo.setOnline(false);
                     //客户端连接
                     Channel remoteChannel = clientInfo.getRemoteChannel();
-                    Optional.ofNullable(remoteChannel).ifPresent(ch -> {
-                        //关闭客户端连接
-                        ch.close();
+                    if (remoteChannel != null) {
+                        remoteChannel.close();
                         clientInfo.setRemoteChannel(null);
-                    });
+                    }
                     Map<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
-                    Optional.ofNullable(listenPortMap).ifPresent(map -> {
-                        for (Map.Entry<Integer, Channel> listenEntry : map.entrySet()) {
+                    if (listenPortMap != null) {
+                        for (Map.Entry<Integer, Channel> listenEntry : listenPortMap.entrySet()) {
                             //关闭该客户端监听的端口
                             listenEntry.getValue().close();
                             NetAddress netAddress = clientInfo.getPortMappingAddress().get(listenEntry.getKey());
-                            Optional.ofNullable(netAddress).ifPresent(addr -> addr.setListen(false));
+                            if (netAddress != null) {
+                                netAddress.setListen(false);
+                            }
                         }
                         clientInfo.setListenPortMap(new ConcurrentHashMap<>());
-                    });
+                    }
                 }
             });
             log.info("启动传输服务成功！端口:{}", port);
@@ -233,7 +236,7 @@ public class TcpServer {
     public static ChannelFuture closeLocalPort(ClientInfo clientInfo, Channel serverPortChannel, Integer serverPort) {
         //获取该客户端的远程连接，如果连接为空，则该客户端不在线
         Channel remoteChannel = clientInfo.getRemoteChannel();
-        Optional.ofNullable(remoteChannel).ifPresent(remoteCh -> {
+        if (remoteChannel != null) {
             //客户端在线，则获取该客户端上绑定的本地连接通道
             ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
             if (!connectedMap.isEmpty()) {
@@ -252,7 +255,7 @@ public class TcpServer {
                     }
                 }
             }
-        });
+        }
 
         //如果不为空，则将channel关闭
         ChannelFuture close = null;

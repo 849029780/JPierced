@@ -110,12 +110,10 @@ public class Config {
             Constants.LOCAL_SSL_CONTEXT = SslContextBuilder.forClient().build();
 
             //必须经过SSL双向认证
-            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).startTls(true).build();
+            Constants.REMOTE_SSL_CONTEXT = SslContextBuilder.forClient().keyManager(crtInputTransmit, crtKeyInputTransmit).trustManager(caCrtInputTransmit).sslProvider(SslProvider.OPENSSL).protocols(SslProtocols.TLS_v1_3).build();
 
             return true;
         } catch (SSLException e) {
-            log.error("传输端口ssl构建错误！", e);
-        } catch (IOException e) {
             log.error("传输端口构建SSLContext失败，ssl证书错误！", e);
         }
         return false;

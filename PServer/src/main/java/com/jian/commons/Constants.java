@@ -35,14 +35,14 @@ import java.util.concurrent.Executors;
 public class Constants {
 
     /***
-     * 线程数
+     * worker 线程数（自适应系统CPU核心数）
      */
-    public static final int THREAD_NUM = 8;
+    public static final int THREAD_NUM = Math.max(2, Runtime.getRuntime().availableProcessors() * 2);
 
     /***
-     * boss线程数
+     * boss 线程数
      */
-    public static final int BOSS_THREAD_NUM = 4;
+    public static final int BOSS_THREAD_NUM = 1;
 
     /***
      * 绑定在本地通道上的 当前通道hash
@@ -95,9 +95,14 @@ public class Constants {
     public static Map<Long, ClientInfo> CLIENTS = new ConcurrentHashMap<>();
 
     /***
-     * 固定活动线程数的线程池
+     * 虚拟线程执行器（Java 21/25 虚拟线程，按需调度、阻塞让出、彻底消除平台线程饥饿）
      */
-    public static final ExecutorService FIXED_THREAD_POOL = Executors.newFixedThreadPool(3);
+    public static final ExecutorService VIRTUAL_THREAD_POOL = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("jpierced-vt-", 0).factory()
+    );
+
+    @Deprecated
+    public static final ExecutorService FIXED_THREAD_POOL = VIRTUAL_THREAD_POOL;
 
     /***
      * 读取本地端口的第一个handler

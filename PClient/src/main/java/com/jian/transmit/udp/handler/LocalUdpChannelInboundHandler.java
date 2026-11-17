@@ -42,7 +42,6 @@ public class LocalUdpChannelInboundHandler extends SimpleChannelInboundHandler<D
         String sender = senderHost + ":" + senderPort;
         UdpSenderChannelInfo udpSenderChannelInfo = Constants.SENDER_CHANNEL.get(sender);
         if(Objects.isNull(udpSenderChannelInfo)){
-            ReferenceCountUtil.release(content);
             return;
         }
         udpSenderChannelInfo.setTime(LocalDateTime.now());

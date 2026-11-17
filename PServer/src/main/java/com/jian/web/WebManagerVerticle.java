@@ -930,7 +930,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         }
         //原端口
         Integer oldPort = Constants.CONFIG.getWeb().getPort();
-        Constants.FIXED_THREAD_POOL.execute(() -> {
+        Constants.VIRTUAL_THREAD_POOL.execute(() -> {
             //设置配置
             Constants.CONFIG.getWeb().setPort(port);
             Constants.VERTX.undeploy(Constants.VERTX_WEB_DEPLOY_ID).onSuccess(han -> {

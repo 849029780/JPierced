@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /***
  *
@@ -25,7 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @ChannelHandler.Sharable
-public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class LocalChannelInBoundHandler extends ChannelInboundHandlerAdapter {
+
+    private static final AtomicLong CHANNEL_ID_GENERATOR = new AtomicLong(1);
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -47,9 +50,9 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
             channel.close();
             return;
         }
-          //生成通道码
-        long thisChannelHash = System.nanoTime();
-        long tarChannelHash = thisChannelHash >> 1;
+          //生成全局唯一且防冲突的通道码
+        long thisChannelHash = CHANNEL_ID_GENERATOR.getAndIncrement();
+        long tarChannelHash = -thisChannelHash;
 
         channel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
         channel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
@@ -90,7 +93,9 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         //tcp处理
         pipeline.addLast(Constants.LOCAL_TCP_CHANNEL_IN_BOUND_HANDLER);
         //给客户端发送客户端本地的连接信息
-        Optional.of(ackChannel).ifPresent(ch -> ch.writeAndFlush(connectReqPacks));
+        if (ackChannel != null && ackChannel.isActive()) {
+            ackChannel.writeAndFlush(connectReqPacks);
+        }
     }
 
 
@@ -119,12 +124,6 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
             //发送关闭通道消息
             remoteChannel.writeAndFlush(disConnectReqPacks);
         }
-    }
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
-        byteBuf.retain();
-        channelHandlerContext.fireChannelRead(byteBuf);
     }
 
     @Override

@@ -32,19 +32,23 @@ public class IoUringTcpClient extends AbstractTcpClient {
 
     @Override
     public AbstractTcpClient getInstance() {
-        log.info("使用IoUring Channel.");
-        if (Objects.isNull(AbstractTcpClient.EVENT_LOOP_GROUP)) {
-            IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory();
-            AbstractTcpClient.EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(Constants.THREAD_NUM, ioHandlerFactory);
+        if (AbstractTcpClient.EVENT_LOOP_GROUP == null) {
+            synchronized (AbstractTcpClient.class) {
+                if (AbstractTcpClient.EVENT_LOOP_GROUP == null) {
+                    log.info("使用IoUring Channel.");
+                    IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory();
+                    AbstractTcpClient.EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(Constants.THREAD_NUM, ioHandlerFactory);
+                }
+            }
         }
         IoUringTcpClient ioUringTcpClient = new IoUringTcpClient();
         ioUringTcpClient.bootstrap = new Bootstrap();
         ioUringTcpClient.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         ioUringTcpClient.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
+        ioUringTcpClient.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
+        ioUringTcpClient.bootstrap.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new io.netty.channel.WriteBufferWaterMark(128 * 1024, 512 * 1024));
         ioUringTcpClient.bootstrap.channel(IoUringSocketChannel.class);
         ioUringTcpClient.bootstrap.group(AbstractTcpClient.EVENT_LOOP_GROUP);
-        //禁用组包
-        //ioUringTcpClient.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
         return ioUringTcpClient;
     }
 

@@ -134,7 +134,7 @@ public class LocalHttpByteToMessageCodec extends ByteToMessageCodec<ByteBuf> {
         try {
             if (acceptOutboundMessage(msg)) {
                 first = cumulation == null;
-                cumulation = ByteToMessageDecoder.MERGE_CUMULATOR.cumulate(ctx.alloc(), first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);
+                cumulation = ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(ctx.alloc(), first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);
                 buf = ctx.alloc().compositeBuffer();
                 //buf = ctx.alloc().buffer();
                 try {

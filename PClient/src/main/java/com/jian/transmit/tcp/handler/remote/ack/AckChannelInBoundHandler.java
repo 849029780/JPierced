@@ -31,6 +31,11 @@ import java.util.concurrent.TimeUnit;
 @ChannelHandler.Sharable
 public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTransferPacks> {
 
+    /***
+     * 本地目标地址缓存，消除每次新建连接时的同步 DNS/hosts 解析开销
+     */
+    private static final ConcurrentHashMap<String, InetSocketAddress> LOCAL_ADDRESS_CACHE = new ConcurrentHashMap<>();
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks) {
         byte type = baseTransferPacks.getType();
@@ -43,35 +48,30 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 Long thisChannelHash = connectReqPacks.getSourceChannelHash();
                 long tarChannelHash = connectReqPacks.getTarChannelHash();
 
-                InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
+                // 优化：复用已解析的 InetSocketAddress，避免 EventLoop 线程内同步解析
+                InetSocketAddress inetSocketAddress = LOCAL_ADDRESS_CACHE.computeIfAbsent(host + ":" + port, k -> new InetSocketAddress(host, port));
                 log.debug("连接本地服务:{}:{}，协议类型:{}", host, port, connectReqPacks.getProtocol());
-                AbstractTcpClient tcpClient;
-                if (connectReqPacks.getProtocol() == ConnectReqPacks.Protocol.HTTPS) {
-                    tcpClient = TcpClient.getTcpClient().localHttpsChannelInitializer().option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-                } else {
-                    tcpClient = TcpClient.getTcpClient().localChannelInitializer().option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
-                }
+                boolean isHttps = connectReqPacks.getProtocol() == ConnectReqPacks.Protocol.HTTPS;
 
-                //发起连接本地
-                tcpClient.connect(inetSocketAddress, (GenericFutureListener<ChannelFuture>) null).addListener(future -> {
+                //发起连接本地（单例 Bootstrap 复用）
+                TcpClient.connectLocal(inetSocketAddress, isHttps).addListener(future -> {
                     ChannelFuture channelFuture = (ChannelFuture) future;
                     ConnectRespPacks connectRespPacks = new ConnectRespPacks();
                     connectRespPacks.setThisChannelHash(tarChannelHash);
                     connectRespPacks.setTarChannelHash(thisChannelHash);
                     if (channelFuture.isSuccess()) {
                         Channel localChannel = channelFuture.channel();
-                        //暂设置本地连接为不可读
-                        localChannel.config().setAutoRead(Boolean.FALSE);
                         localChannel.attr(Constants.THIS_CHANNEL_HASH_KEY).set(thisChannelHash);
                         localChannel.attr(Constants.TAR_CHANNEL_HASH_KEY).set(tarChannelHash);
                         if (Objects.isNull(Constants.LOCAL_CHANNEL_MAP)) {
                             Constants.LOCAL_CHANNEL_MAP = new ConcurrentHashMap<>();
                         }
                         Constants.LOCAL_CHANNEL_MAP.put(thisChannelHash, localChannel);
+                        //属性与映射已绑定完成，开启自动读
                         localChannel.config().setAutoRead(Boolean.TRUE);
                         connectRespPacks.setState(ConnectRespPacks.STATE.SUCCESS);
                         connectRespPacks.setMsg("连接本地服务成功！");
-                        log.info("连接本地服务:{}:{}成功！", host, port);
+                        log.debug("连接本地服务:{}:{}成功！", host, port);
                     } else {
                         connectRespPacks.setState(ConnectRespPacks.STATE.FAIL);
                         connectRespPacks.setMsg("连接本地服务失败！请检查地址和端口再试！");
@@ -125,18 +125,17 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
 
                 AbstractTcpClient abstractTcpClient = transimitChannel.attr(Constants.CLIENT_KEY).get();
                 //连接成功后才允许断开重连
-                Optional.ofNullable(abstractTcpClient).ifPresent(cli -> {
-                    //可进行重连
+                if (abstractTcpClient != null) {
                     abstractTcpClient.setCanReconnect(true);
-                    //重连次数置空
-                    //client.getRecount().set(0);
-                });
+                }
                 //---------------------传输通道后续设置------------------
             }
             case 14 -> { //ack通道消息-设置是否自动读
                 AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
                 Channel localChannel = Constants.LOCAL_CHANNEL_MAP.get(autoreadReqPacks.getTarChannelHash());
-                Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
+                if (localChannel != null) {
+                    localChannel.config().setAutoRead(autoreadReqPacks.isAutoRead());
+                }
             }
             case 18 -> { //添加本地udp端口映射表
                 UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;

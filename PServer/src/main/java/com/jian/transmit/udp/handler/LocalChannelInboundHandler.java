@@ -6,45 +6,50 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
 
-
 /***
- * udp数据处理
+ * udp数据处理（避免 SimpleChannelInboundHandler 的类型匹配及反射开销）
  * @author Jian
  * @date 2025-01-22
  */
 @ChannelHandler.Sharable
-public class LocalChannelInboundHandler extends SimpleChannelInboundHandler<DatagramPacket> {
-
+public class LocalChannelInboundHandler extends ChannelInboundHandlerAdapter {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
-        Channel channel = ctx.channel();
-        InetSocketAddress localAddress = (InetSocketAddress) channel.localAddress();
-        int localPort = localAddress.getPort();
-        InetSocketAddress sender = msg.sender();
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof DatagramPacket packet) {
+            try {
+                Channel channel = ctx.channel();
+                InetSocketAddress localAddress = (InetSocketAddress) channel.localAddress();
+                int localPort = localAddress.getPort();
+                InetSocketAddress sender = packet.sender();
 
+                String ip = sender.getHostString();
+                int port = sender.getPort();
 
-        String ip = sender.getHostString();
-        int port = sender.getPort();
+                //远程通道
+                Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
 
-        //远程通道
-        Channel remoteChannel = channel.attr(Constants.REMOTE_CHANNEL_KEY).get();
-
-        ByteBuf content = msg.content();
-        content.retain();
-
-        UdpTransferDataPacks udpTransferDataPacks = new UdpTransferDataPacks();
-        udpTransferDataPacks.setSourcePort(localPort);
-        udpTransferDataPacks.setSenderHost(ip);
-        udpTransferDataPacks.setSenderPort(port);
-        udpTransferDataPacks.setDatas(content);
-        remoteChannel.writeAndFlush(udpTransferDataPacks);
+                ByteBuf content = packet.content();
+                if (remoteChannel != null && remoteChannel.isActive()) {
+                    content.retain();
+                    UdpTransferDataPacks udpTransferDataPacks = new UdpTransferDataPacks();
+                    udpTransferDataPacks.setSourcePort(localPort);
+                    udpTransferDataPacks.setSenderHost(ip);
+                    udpTransferDataPacks.setSenderPort(port);
+                    udpTransferDataPacks.setDatas(content);
+                    remoteChannel.writeAndFlush(udpTransferDataPacks);
+                }
+            } finally {
+                ReferenceCountUtil.release(packet);
+            }
+        } else {
+            ctx.fireChannelRead(msg);
+        }
     }
-
-
 }

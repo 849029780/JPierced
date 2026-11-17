@@ -32,19 +32,23 @@ public class EpollTcpClient extends AbstractTcpClient {
 
     @Override
     public AbstractTcpClient getInstance() {
-        log.info("使用Epoll Channel.");
-        if (Objects.isNull(AbstractTcpClient.EVENT_LOOP_GROUP)) {
-            IoHandlerFactory ioHandlerFactory = EpollIoHandler.newFactory();
-            AbstractTcpClient.EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(Constants.THREAD_NUM, ioHandlerFactory);
+        if (AbstractTcpClient.EVENT_LOOP_GROUP == null) {
+            synchronized (AbstractTcpClient.class) {
+                if (AbstractTcpClient.EVENT_LOOP_GROUP == null) {
+                    log.info("使用Epoll Channel.");
+                    IoHandlerFactory ioHandlerFactory = EpollIoHandler.newFactory();
+                    AbstractTcpClient.EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(Constants.THREAD_NUM, ioHandlerFactory);
+                }
+            }
         }
         EpollTcpClient epollTcpClient = new EpollTcpClient();
         epollTcpClient.bootstrap = new Bootstrap();
         epollTcpClient.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         epollTcpClient.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
+        epollTcpClient.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
+        epollTcpClient.bootstrap.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new io.netty.channel.WriteBufferWaterMark(128 * 1024, 512 * 1024));
         epollTcpClient.bootstrap.channel(EpollSocketChannel.class);
         epollTcpClient.bootstrap.group(AbstractTcpClient.EVENT_LOOP_GROUP);
-        //禁用组包
-        //epollTcpClient.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
         return epollTcpClient;
     }
 

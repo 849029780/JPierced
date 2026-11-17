@@ -96,7 +96,7 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
      */
     protected LocalHttpBaseDecoder(String host, Integer port) {
         this(host, port, DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_CHUNKED_SUPPORTED);
-        //setCumulator(COMPOSITE_CUMULATOR);
+        setCumulator(COMPOSITE_CUMULATOR);
     }
 
     /**
@@ -322,18 +322,20 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
     }
 
     private Boolean readFixedLengthContent(ByteBuf buffer, List<Object> outs) {
-
-        Boolean isContinueRcc = readContent(buffer, outs);
-        if (!isContinueRcc) {
+        // 一次性读取所有可用的 body 数据，内联 readContent 逻辑避免方法调用开销
+        int toRead = buffer.readableBytes();
+        if (toRead == 0) {
             return FALSE;
         }
+        if (toRead > chunkSize) {
+            toRead = (int) chunkSize;
+        }
+        outs.add(buffer.readRetainedSlice(toRead));
+        chunkSize -= toRead;
 
         if (chunkSize == 0) {
-            // Read all content.
-            //out.add(new DefaultLastHttpContent(content, validateHeaders));
+            // 读取完所有固定长度内容
             resetNow();
-        } else {
-            //out.add(new DefaultHttpContent(content));
         }
         return FALSE;
     }
@@ -405,19 +407,14 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
 
 
     private Boolean readChunkDelimiter(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> outs) {
-        final int wIdx = buffer.writerIndex();
-        ByteBuf buf = ctx.alloc().buffer();
         int rIdx = buffer.readerIndex();
-        while (wIdx > rIdx) {
-            byte next = buffer.getByte(rIdx++);
-            buf.writeByte(next);
-            if (next == HttpConstants.LF) {
-                outs.add(buf);
-                reqState = State.READ_CHUNK_SIZE;
-                break;
-            }
+        int lfIdx = buffer.indexOf(rIdx, buffer.writerIndex(), HttpConstants.LF);
+        if (lfIdx < 0) {
+            return FALSE;
         }
-        buffer.readerIndex(rIdx);
+        int delimiterLen = lfIdx - rIdx + 1;
+        outs.add(buffer.readRetainedSlice(delimiterLen));
+        reqState = State.READ_CHUNK_SIZE;
         readChunkSize(ctx, buffer, outs);
         return FALSE;
     }
@@ -808,19 +805,8 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
      * @param value header值
      */
     private void replaceOrigin(ByteBuf buf, String value) {
-        int bufWriteIdx = buf.writerIndex();
-        byte[] nameBytes = HttpHeaderNames.ORIGIN.array();
-        //获取到host的header后,替换原Location
-        try {
-            //添加header名
-            if (appendHeaderNames(buf, nameBytes, value)) return;
-            String localHost = this.host + ":" + this.port;
-            commonReplaceUrl(buf, value, getReqHost(), localHost);
-        } catch (Exception e) {
-            log.error("Origin URL处理错误！{}", e.getMessage());
-            buf.writerIndex(bufWriteIdx);
-            appendHeader(buf, nameBytes, value);
-        }
+        String localHost = this.host + ":" + this.port;
+        fastReplaceUrl(buf, HttpHeaderNames.ORIGIN.array(), value, getReqHost(), localHost);
     }
 
 
@@ -830,25 +816,60 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
      * @param value header值
      */
     public void replaceReferer(ByteBuf buf, String value) {
-        int bufWriteIdx = buf.writerIndex();
-        byte[] nameBytes = HttpHeaderNames.REFERER.array();
-        try {
-            //从0开始到referer: 结束位置
-            if (appendHeaderNames(buf, nameBytes, value)) return;
-            URI uri = new URI(value);
-            String rawAuthority = uri.getRawAuthority();
-            //如果host和原host一致，则替换掉host为被穿透地址的host
-            if (!StringUtil.isNullOrEmpty(rawAuthority) && rawAuthority.equalsIgnoreCase(getReqHost())) {
-                String localHost = this.host + ":" + this.port;
-                joinUrl(buf, uri, localHost);
-            } else {
-                throw new IllegalStateException("匹配条件不满足抛出异常，可忽略！");
-            }
-        } catch (Exception e) {
-            log.error("Referer URL处理错误！{}", e.getMessage());
-            buf.writerIndex(bufWriteIdx);
-            appendHeader(buf, nameBytes, value);
+        String localHost = this.host + ":" + this.port;
+        fastReplaceUrl(buf, HttpHeaderNames.REFERER.array(), value, getReqHost(), localHost);
+    }
+
+    /***
+     * 替换location
+     * @param buf 替换后新的buffer
+     * @param value header值
+     */
+    public void replaceLocation(ByteBuf buf, String value) {
+        String localHost = this.host + ":" + this.port;
+        fastReplaceUrl(buf, HttpHeaderNames.LOCATION.array(), value, localHost, getReqHost());
+    }
+
+    /***
+     * 极速 URL Header 重写（纯字符串索引切分，消除 new URI 解析与异常创建开销）
+     */
+    private void fastReplaceUrl(ByteBuf buf, byte[] nameBytes, String value, String matchHost, String replaceHost) {
+        if (appendHeaderNames(buf, nameBytes, value)) {
+            return;
         }
+        if (value != null && !value.isEmpty() && matchHost != null && replaceHost != null) {
+            int schemeEnd = value.indexOf("://");
+            if (schemeEnd > 0) {
+                int authStart = schemeEnd + 3;
+                int authEnd = value.indexOf('/', authStart);
+                if (authEnd < 0) {
+                    authEnd = value.indexOf('?', authStart);
+                }
+                if (authEnd < 0) {
+                    authEnd = value.length();
+                }
+
+                String currentAuthority = value.substring(authStart, authEnd);
+                if (currentAuthority.equalsIgnoreCase(matchHost)) {
+                    // 命中替换条件：拼接 scheme:// + replaceHost + 剩余路径
+                    buf.writeBytes(value.substring(0, authStart).getBytes(StandardCharsets.UTF_8));
+                    buf.writeBytes(replaceHost.getBytes(StandardCharsets.UTF_8));
+                    if (authEnd < value.length()) {
+                        buf.writeBytes(value.substring(authEnd).getBytes(StandardCharsets.UTF_8));
+                    }
+                    buf.writeByte(HttpConstants.CR);
+                    buf.writeByte(HttpConstants.LF);
+                    return;
+                }
+            }
+        }
+
+        // 不匹配或非绝对 URL：直接保留原值输出（无需进入异常创建与回滚流程）
+        if (value != null) {
+            buf.writeBytes(value.getBytes(StandardCharsets.UTF_8));
+        }
+        buf.writeByte(HttpConstants.CR);
+        buf.writeByte(HttpConstants.LF);
     }
 
     /***
@@ -884,69 +905,6 @@ public abstract class LocalHttpBaseDecoder extends ByteToMessageDecoder {
             return true;
         }
         return false;
-    }
-
-    private void joinUrl(ByteBuf buf, URI uri, String rHost) {
-        String path = uri.getRawPath();
-        String query = uri.getRawQuery();
-        StringBuilder urlBuilfer = new StringBuilder();
-        urlBuilfer.append(uri.getScheme());
-        urlBuilfer.append("://");
-        urlBuilfer.append(rHost);
-        if (!StringUtil.isNullOrEmpty(path)) {
-            urlBuilfer.append(path);
-        }
-        if (!StringUtil.isNullOrEmpty(query)) {
-            urlBuilfer.append("?");
-            urlBuilfer.append(query);
-        }
-        byte[] urlBytes = urlBuilfer.toString().getBytes(StandardCharsets.UTF_8);
-        buf.writeBytes(urlBytes);
-        buf.writeByte(HttpConstants.CR);
-        buf.writeByte(HttpConstants.LF);
-    }
-
-
-    /***
-     * 替换location
-     * @param buf 替换后新的buffer
-     * @param value header值
-     */
-    public void replaceLocation(ByteBuf buf, String value) {
-        int bufWriteIdx = buf.writerIndex();
-        byte[] nameBytes = HttpHeaderNames.LOCATION.array();
-        //获取到host的header后,替换原Location
-        try {
-            //从0开始到location: 结束位置
-            if (appendHeaderNames(buf, nameBytes, value)) return;
-            String localHost = this.host + ":" + this.port;
-            commonReplaceUrl(buf, value, localHost, getReqHost());
-        } catch (Exception e) {
-            log.error("Location URL处理错误！{}", e.getMessage());
-            buf.writerIndex(bufWriteIdx);
-            appendHeader(buf, nameBytes, value);
-        }
-    }
-
-    /***
-     * 替换host
-     * @param buf buffer
-     * @param value 原buffer
-     * @param host 与该host匹配
-     * @param rHost 替换为新的host
-     * @throws Exception 处理异常
-     */
-    public void commonReplaceUrl(ByteBuf buf, String value, String host, String rHost) throws Exception {
-        if (!StringUtil.isNullOrEmpty(value)) {
-            URI uri = new URI(value);
-            String rawAuthority = uri.getRawAuthority();
-            //如果host和原host一致，则替换掉host为被穿透地址的host
-            if (!StringUtil.isNullOrEmpty(rawAuthority) && rawAuthority.equalsIgnoreCase(host)) {
-                joinUrl(buf, uri, rHost);
-            } else {
-                throw new IllegalStateException("匹配条件不满足抛出异常，可忽略！");
-            }
-        }
     }
 
 

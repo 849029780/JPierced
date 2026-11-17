@@ -9,7 +9,14 @@ import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /***
@@ -51,6 +58,7 @@ public class App {
                 log.error("pwd配置为空！启动失败！");
                 return;
             }
+            startUdpCleaner();
             TcpClient.getTcpClient().remoteChannelInitializer().connect(new InetSocketAddress(hostProperty, portProperty), (Consumer<ChannelFuture>) future -> {
                 Channel channel = future.channel();
                 ConnectAuthReqPacks connectAuthReqPacks = new ConnectAuthReqPacks();
@@ -59,6 +67,40 @@ public class App {
                 channel.writeAndFlush(connectAuthReqPacks);
             });
         }
+    }
+
+    private static void startUdpCleaner() {
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "udp-channel-cleaner");
+            t.setDaemon(true);
+            return t;
+        }).scheduleAtFixedRate(() -> {
+            try {
+                LocalDateTime now = LocalDateTime.now();
+                Iterator<Map.Entry<String, com.jian.beans.UdpSenderChannelInfo>> iterator = Constants.SENDER_CHANNEL.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<String, com.jian.beans.UdpSenderChannelInfo> entry = iterator.next();
+                    com.jian.beans.UdpSenderChannelInfo info = entry.getValue();
+                    if (info.getTime() != null && Duration.between(info.getTime(), now).getSeconds() > 60) {
+                        iterator.remove();
+                        Channel ch = info.getChannel();
+                        if (ch != null) {
+                            Integer sourcePort = ch.attr(Constants.SOURCE_PORT).get();
+                            if (sourcePort != null) {
+                                List<Channel> list = Constants.UDP_SERVER_MAPPING_LOCAL_CHANNEL.get(sourcePort);
+                                if (list != null) {
+                                    list.remove(ch);
+                                }
+                            }
+                            ch.close();
+                            log.debug("UDP映射通道超时已释放: {}", entry.getKey());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("UDP通道清理任务异常", e);
+            }
+        }, 15, 15, TimeUnit.SECONDS);
     }
 
 }

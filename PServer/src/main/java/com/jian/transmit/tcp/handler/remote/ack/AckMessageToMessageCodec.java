@@ -34,7 +34,6 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
     protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
-        ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
             case 1 -> { //服务发起连接请求
                 ConnectReqPacks connectReqPacks = (ConnectReqPacks) baseTransferPacks;
@@ -42,6 +41,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 byte[] hostBytes = connectReqPacks.getHost().getBytes(StandardCharsets.UTF_8);
                 int hostLen = hostBytes.length;
                 packSize += hostLen;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(connectReqPacks.getSourceChannelHash());
@@ -57,6 +57,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
             case 9 -> { //响应心跳
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 packSize += 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(healthRespPacks.getMsgId());
@@ -74,6 +75,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                     msgLen = msgBytes.length;
                     packSize += msgLen;
                 }
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
 
@@ -95,6 +97,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                     msgLen = msgBytes.length;
                     packSize += msgLen;
                 }
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
 
@@ -108,6 +111,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
             case 14 -> { //ack通道-设置自动读
                 AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
                 packSize += 1 + 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(autoreadReqPacks.getTarChannelHash());
@@ -118,29 +122,29 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 UdpPortMappingAddReqPacks udpPortMappingAddReqPacks = (UdpPortMappingAddReqPacks) baseTransferPacks;
                 packSize += 1;
                 List<NetAddr> netAddrList = udpPortMappingAddReqPacks.getNetAddrList();
-                ByteBuf nbuf = ctx.alloc().buffer();
                 for (NetAddr netAddr : netAddrList) {
                     packSize += 4;
-                    String host = netAddr.getHost();
-                    byte[] hostBytes = host.getBytes(StandardCharsets.UTF_8);
-                    int hostLen = hostBytes.length;
-                    packSize += 1 + hostLen + 4;
-
-                    nbuf.writeInt(netAddr.getSourcePort());
-                    nbuf.writeByte(hostLen);
-                    nbuf.writeBytes(hostBytes);
-                    nbuf.writeInt(netAddr.getPort());
+                    byte[] hostBytes = netAddr.getHost().getBytes(StandardCharsets.UTF_8);
+                    packSize += 1 + hostBytes.length + 4;
                 }
                 int size = netAddrList.size();
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeByte(size);
+                for (NetAddr netAddr : netAddrList) {
+                    byte[] hostBytes = netAddr.getHost().getBytes(StandardCharsets.UTF_8);
+                    buffer.writeInt(netAddr.getSourcePort());
+                    buffer.writeByte(hostBytes.length);
+                    buffer.writeBytes(hostBytes);
+                    buffer.writeInt(netAddr.getPort());
+                }
                 out.add(buffer);
-                out.add(nbuf);
             }
             case 19 -> {
                 UdpPortMappingRemReqPacks udpPortMappingRemReqPacks = (UdpPortMappingRemReqPacks) baseTransferPacks;
                 packSize += 1 + 4;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeInt(udpPortMappingRemReqPacks.getSourcePort());

@@ -9,6 +9,7 @@ import com.jian.commons.Constants;
 import com.jian.transmit.ClientInfo;
 import com.jian.transmit.NetAddress;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageCodec;
@@ -34,11 +35,11 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
-        ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
             case 3 -> { //服务发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 packSize += 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(13);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(disConnectReqPacks.getTarChannelHash());
@@ -53,6 +54,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 if (msgLen > 0) {
                     packSize += msgLen;
                 }
+                ByteBuf buffer = ctx.alloc().ioBuffer(21 + msgLen);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(connectAuthRespPacks.getKey());
@@ -64,23 +66,23 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 }
                 out.add(buffer);
             }
-            case 7 -> { //传输数据
+            case 7 -> { //传输数据（精准分配13字节固定包头）
                 TcpTransferDataPacks tcpTransferDataPacks = (TcpTransferDataPacks) baseTransferPacks;
-                packSize += 8;
                 ByteBuf data = tcpTransferDataPacks.getDatas();
-                int readableBytes = data.readableBytes();
-                packSize += readableBytes;
+                packSize += 8 + data.readableBytes();
 
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeLong(tcpTransferDataPacks.getTarChannelHash());
-                out.add(buffer);
-                out.add(data);
+                ByteBuf header = ctx.alloc().ioBuffer(13);
+                header.writeInt(packSize);
+                header.writeByte(type);
+                header.writeLong(tcpTransferDataPacks.getTarChannelHash());
+                CompositeByteBuf composite = ctx.alloc().compositeBuffer(2);
+                composite.addComponents(true, header, data);
+                out.add(composite);
             }
             case 9 -> { //响应心跳
                 HealthRespPacks healthRespPacks = (HealthRespPacks) baseTransferPacks;
                 packSize += 8;
-
+                ByteBuf buffer = ctx.alloc().ioBuffer(13);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(healthRespPacks.getMsgId());
@@ -89,7 +91,7 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             case 10 -> { //要求客户端断开连接
                 DisConnectClientReqPacks disConnectClientReqPacks = (DisConnectClientReqPacks) baseTransferPacks;
                 packSize += 1;
-
+                ByteBuf buffer = ctx.alloc().ioBuffer(6);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeByte(disConnectClientReqPacks.getCode());
@@ -98,24 +100,22 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             case 20 -> { //udp数据传输
                 UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
                 ByteBuf data = udpTransferDataPacks.getDatas();
-
-                String senderHost = udpTransferDataPacks.getSenderHost();
-                byte[] bytes = senderHost.getBytes(StandardCharsets.UTF_8);
-
+                byte[] bytes = udpTransferDataPacks.getSenderHost().getBytes(StandardCharsets.UTF_8);
                 int dataLen = data.readableBytes();
                 packSize += 4 + 1 + bytes.length + 4 + 4 + dataLen;
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeInt(udpTransferDataPacks.getSourcePort());
 
-
-
-                buffer.writeByte(bytes.length);
-                buffer.writeBytes(bytes);
-                buffer.writeInt(udpTransferDataPacks.getSenderPort());
-                buffer.writeInt(dataLen);
-                out.add(buffer);
-                out.add(data);
+                int headerLen = 18 + bytes.length;
+                ByteBuf header = ctx.alloc().ioBuffer(headerLen);
+                header.writeInt(packSize);
+                header.writeByte(type);
+                header.writeInt(udpTransferDataPacks.getSourcePort());
+                header.writeByte(bytes.length);
+                header.writeBytes(bytes);
+                header.writeInt(udpTransferDataPacks.getSenderPort());
+                header.writeInt(dataLen);
+                CompositeByteBuf composite = ctx.alloc().compositeBuffer(2);
+                composite.addComponents(true, header, data);
+                out.add(composite);
             }
         }
 
@@ -193,25 +193,23 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
 
         //如果是关闭的传输通道，则本地端口上连接的通道，将这些通道关闭，然后再关闭端口监听
         ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
-
-        Optional.ofNullable(connectedMap).ifPresent(map -> {
-            if (!map.isEmpty()) {
-                for (Map.Entry<Long, Channel> entry : connectedMap.entrySet()) {
-                    if (Objects.nonNull(entry)) {
-                        Channel localChannel = entry.getValue();
-                        Optional.ofNullable(localChannel).ifPresent(ch -> ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
+        if (connectedMap != null && !connectedMap.isEmpty()) {
+            for (Map.Entry<Long, Channel> entry : connectedMap.entrySet()) {
+                if (entry != null) {
+                    Channel localChannel = entry.getValue();
+                    if (localChannel != null && localChannel.isActive()) {
+                        localChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
                     }
                 }
             }
-        });
-
+        }
 
         clientInfo.setOnline(false);
         clientInfo.setRemoteChannel(null);
 
         //如果远程通道上有ack通道，则需要关闭ack通道
         Channel ackChannel = clientInfo.getAckChannel();
-        if (Objects.nonNull(ackChannel)) {
+        if (ackChannel != null) {
             ackChannel.close();
         }
 
@@ -222,9 +220,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             //监听的端口通道，非连接通道
             Channel listenChannel = listen.getValue();
             //关闭监听的端口
-            Optional.ofNullable(listenChannel).ifPresent(ChannelOutboundInvoker::close);
+            if (listenChannel != null) {
+                listenChannel.close();
+            }
             NetAddress netAddress = clientInfo.getPortMappingAddress().get(listen.getKey());
-            Optional.ofNullable(netAddress).ifPresent(addr -> addr.setListen(false));
+            if (netAddress != null) {
+                netAddress.setListen(false);
+            }
         }
         clientInfo.setListenPortMap(new ConcurrentHashMap<>());
 
@@ -238,11 +240,15 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         boolean writable = channel.isWritable();
         //远程通道写缓冲状态和本地自动读状态设置为一致，如果通道缓冲写满了，则不允许本地通道自动读
         ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
-        if (Objects.isNull(clientInfo)) return;
+        if (clientInfo == null) return;
         ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
-        for (Map.Entry<Long, Channel> entry : connectedMap.entrySet()) {
-            Channel localChannel = entry.getValue();
-            Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
+        if (connectedMap != null) {
+            for (Map.Entry<Long, Channel> entry : connectedMap.entrySet()) {
+                Channel localChannel = entry.getValue();
+                if (localChannel != null && localChannel.isActive()) {
+                    localChannel.config().setAutoRead(writable);
+                }
+            }
         }
     }
 

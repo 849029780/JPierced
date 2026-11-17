@@ -31,19 +31,23 @@ public class KqueueTcpClient extends AbstractTcpClient {
 
     @Override
     public AbstractTcpClient getInstance() {
-        log.info("使用Kqueue Channel.");
-        if (Objects.isNull(AbstractTcpClient.EVENT_LOOP_GROUP)) {
-            IoHandlerFactory ioHandlerFactory = KQueueIoHandler.newFactory();
-            AbstractTcpClient.EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(Constants.THREAD_NUM, ioHandlerFactory);
+        if (AbstractTcpClient.EVENT_LOOP_GROUP == null) {
+            synchronized (AbstractTcpClient.class) {
+                if (AbstractTcpClient.EVENT_LOOP_GROUP == null) {
+                    log.info("使用Kqueue Channel.");
+                    IoHandlerFactory ioHandlerFactory = KQueueIoHandler.newFactory();
+                    AbstractTcpClient.EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(Constants.THREAD_NUM, ioHandlerFactory);
+                }
+            }
         }
         KqueueTcpClient kqueueTcpClient = new KqueueTcpClient();
         kqueueTcpClient.bootstrap = new Bootstrap();
         kqueueTcpClient.bootstrap.option(ChannelOption.SO_KEEPALIVE, Boolean.TRUE);
         kqueueTcpClient.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000);
+        kqueueTcpClient.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
+        kqueueTcpClient.bootstrap.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new io.netty.channel.WriteBufferWaterMark(128 * 1024, 512 * 1024));
         kqueueTcpClient.bootstrap.channel(KQueueSocketChannel.class);
         kqueueTcpClient.bootstrap.group(AbstractTcpClient.EVENT_LOOP_GROUP);
-        //禁用组包
-        //kqueueTcpClient.bootstrap.option(ChannelOption.TCP_NODELAY, Boolean.TRUE);
         return kqueueTcpClient;
     }
 }

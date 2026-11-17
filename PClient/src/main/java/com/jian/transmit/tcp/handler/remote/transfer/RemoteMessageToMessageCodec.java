@@ -8,6 +8,7 @@ import com.jian.beans.transfer.resp.HealthRespPacks;
 import com.jian.commons.Constants;
 import com.jian.transmit.tcp.client.AbstractTcpClient;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -33,11 +34,11 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
     protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
-        ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
             case 3 -> { //发起断开连接请求
                 DisConnectReqPacks disConnectReqPacks = (DisConnectReqPacks) baseTransferPacks;
                 packSize += 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(13);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(disConnectReqPacks.getTarChannelHash());
@@ -45,11 +46,10 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             }
             case 4 -> { //发起认证
                 ConnectAuthReqPacks connectAuthReqPacks = (ConnectAuthReqPacks) baseTransferPacks;
-                packSize += 8 + 4;
-                String pwd = connectAuthReqPacks.getPwd();
-                byte[] pwdBytes = pwd.getBytes(StandardCharsets.UTF_8);
+                byte[] pwdBytes = connectAuthReqPacks.getPwd().getBytes(StandardCharsets.UTF_8);
                 int pwdLen = pwdBytes.length;
-                packSize += pwdLen;
+                packSize += 8 + 4 + pwdLen;
+                ByteBuf buffer = ctx.alloc().ioBuffer(17 + pwdLen);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(connectAuthReqPacks.getKey());
@@ -59,22 +59,23 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
                 }
                 out.add(buffer);
             }
-            case 7 -> { //传输数据
+            case 7 -> { //传输数据（精准分配13字节固定包头，避免PooledByteBuf浪费与零散碎片）
                 TcpTransferDataPacks tcpTransferDataPacks = (TcpTransferDataPacks) baseTransferPacks;
-                packSize += 8;
                 ByteBuf datas = tcpTransferDataPacks.getDatas();
-                int readableBytes = datas.readableBytes();
-                packSize += readableBytes;
+                packSize += 8 + datas.readableBytes();
 
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeLong(tcpTransferDataPacks.getTarChannelHash());
-                out.add(buffer);
-                out.add(datas);
+                ByteBuf header = ctx.alloc().ioBuffer(13);
+                header.writeInt(packSize);
+                header.writeByte(type);
+                header.writeLong(tcpTransferDataPacks.getTarChannelHash());
+                CompositeByteBuf composite = ctx.alloc().compositeBuffer(2);
+                composite.addComponents(true, header, datas);
+                out.add(composite);
             }
             case 8 -> {//心跳请求
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 packSize += 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(13);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(healthReqPacks.getMsgId());
@@ -83,22 +84,22 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
             case 20 -> { //udp数据传输
                 UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
                 ByteBuf data = udpTransferDataPacks.getDatas();
-
-                String senderHost = udpTransferDataPacks.getSenderHost();
-                byte[] bytes = senderHost.getBytes(StandardCharsets.UTF_8);
-
+                byte[] bytes = udpTransferDataPacks.getSenderHost().getBytes(StandardCharsets.UTF_8);
                 int dataLen = data.readableBytes();
                 packSize += 4 + 1 + bytes.length + 4 + 4 + dataLen;
-                buffer.writeInt(packSize);
-                buffer.writeByte(type);
-                buffer.writeInt(udpTransferDataPacks.getSourcePort());
 
-                buffer.writeByte(bytes.length);
-                buffer.writeBytes(bytes);
-                buffer.writeInt(udpTransferDataPacks.getSenderPort());
-                buffer.writeInt(dataLen);
-                out.add(buffer);
-                out.add(data);
+                int headerLen = 18 + bytes.length;
+                ByteBuf header = ctx.alloc().ioBuffer(headerLen);
+                header.writeInt(packSize);
+                header.writeByte(type);
+                header.writeInt(udpTransferDataPacks.getSourcePort());
+                header.writeByte(bytes.length);
+                header.writeBytes(bytes);
+                header.writeInt(udpTransferDataPacks.getSenderPort());
+                header.writeInt(dataLen);
+                CompositeByteBuf composite = ctx.alloc().compositeBuffer(2);
+                composite.addComponents(true, header, data);
+                out.add(composite);
             }
         }
 
@@ -187,23 +188,26 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         //将连接置空
         Constants.REMOTE_TRANSIMIT_CHANNEL = null;
 
-        if (Objects.nonNull(Constants.LOCAL_CHANNEL_MAP)) {
+        if (Constants.LOCAL_CHANNEL_MAP != null) {
             //和服务端的连接断开，关闭本地所有的连接
             for (Map.Entry<Long, Channel> entry : Constants.LOCAL_CHANNEL_MAP.entrySet()) {
-                Optional.ofNullable(entry.getValue()).ifPresent(ch -> ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE));
+                Channel ch = entry.getValue();
+                if (ch != null && ch.isActive()) {
+                    ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                }
             }
             //本地连接关闭后置空
             Constants.LOCAL_CHANNEL_MAP = null;
         }
         AbstractTcpClient abstractTcpClient = channel.attr(Constants.CLIENT_KEY).get();
-        Optional.ofNullable(abstractTcpClient).ifPresent(cli -> {
+        if (abstractTcpClient != null) {
             if (abstractTcpClient.isCanReconnect()) {
                 //重连
-                Constants.CACHED_EXECUTOR_POOL.execute(cli::reConnct);
+                Constants.CACHED_EXECUTOR_POOL.execute(abstractTcpClient::reConnct);
             } else {
                 System.exit(0);
             }
-        });
+        }
 
     }
 
@@ -215,9 +219,13 @@ public class RemoteMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, 
         boolean writable = channel.isWritable();
 
         //远程通道写缓冲状态和本地自动读状态设置为一致，如果通道缓冲写满了，则不允许本地通道自动读
-        for (Map.Entry<Long, Channel> entry : Constants.LOCAL_CHANNEL_MAP.entrySet()) {
-            Channel localChannel = entry.getValue();
-            Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(writable));
+        if (Constants.LOCAL_CHANNEL_MAP != null) {
+            for (Map.Entry<Long, Channel> entry : Constants.LOCAL_CHANNEL_MAP.entrySet()) {
+                Channel localChannel = entry.getValue();
+                if (localChannel != null && localChannel.isActive()) {
+                    localChannel.config().setAutoRead(writable);
+                }
+            }
         }
     }
 

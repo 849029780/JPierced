@@ -22,9 +22,13 @@ import java.util.function.Consumer;
 @Slf4j
 public abstract class AbstractTcpClient {
 
-    public static MultiThreadIoEventLoopGroup EVENT_LOOP_GROUP;
+    public static volatile MultiThreadIoEventLoopGroup EVENT_LOOP_GROUP;
 
     Bootstrap bootstrap;
+
+    public Bootstrap getBootstrap() {
+        return this.bootstrap;
+    }
 
     public abstract boolean support();
 
@@ -99,7 +103,7 @@ public abstract class AbstractTcpClient {
                 successFuture.accept((ChannelFuture) future);
             } else if (canReconnect) {
                 //重连
-                Constants.CACHED_EXECUTOR_POOL.execute(this::reConnct);
+                reConnct();
             } else {
                 log.warn("连接服务:{}失败！", this.connectInetSocketAddress, future.cause());
                 System.exit(0);
@@ -115,16 +119,16 @@ public abstract class AbstractTcpClient {
     }
 
     /***
-     * 重连
+     * 重连（基于 Netty EventLoop 定时调度，完全非阻塞）
      */
     public void reConnct() {
         log.warn("连接服务断开！{}秒后将进行重连:{}", Constants.RECONNECT_DELAY, this.connectInetSocketAddress);
-        try {
-            Thread.sleep(Duration.ofSeconds(Constants.RECONNECT_DELAY).toMillis());
-        } catch (InterruptedException e) {
-            log.error("重连延迟错误..", e);
+        if (EVENT_LOOP_GROUP != null) {
+            EVENT_LOOP_GROUP.next().schedule(() -> connect(this.connectInetSocketAddress, this.successFuture),
+                    Constants.RECONNECT_DELAY, java.util.concurrent.TimeUnit.SECONDS);
+        } else {
+            connect(this.connectInetSocketAddress, this.successFuture);
         }
-        connect(this.connectInetSocketAddress, this.successFuture);
     }
 
 

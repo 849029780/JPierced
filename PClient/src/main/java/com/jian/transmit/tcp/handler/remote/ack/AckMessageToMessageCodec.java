@@ -33,7 +33,6 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
     protected void encode(ChannelHandlerContext ctx, BaseTransferPacks baseTransferPacks, List<Object> out) {
         int packSize = Constants.BASE_PACK_SIZE;
         byte type = baseTransferPacks.getType();
-        ByteBuf buffer = ctx.alloc().buffer();
         switch (type) {
             case 2 -> { //连接请求响应
                 ConnectRespPacks connectRespPacks = (ConnectRespPacks) baseTransferPacks;
@@ -43,6 +42,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 int msgLen = msgBytes.length;
                 packSize += msgLen;
 
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(connectRespPacks.getThisChannelHash());
@@ -57,6 +57,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
             case 8 -> {//心跳请求
                 HealthReqPacks healthReqPacks = (HealthReqPacks) baseTransferPacks;
                 packSize += 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(healthReqPacks.getMsgId());
@@ -69,6 +70,8 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
                 byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
                 int msgLen = msgBytes.length;
                 packSize += msgLen;
+
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeInt(msgLen);
@@ -78,6 +81,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
             case 12 -> { //ack连接请求
                 ConnectAckChannelReqPacks connectAckChannelReqPacks = (ConnectAckChannelReqPacks) baseTransferPacks;
                 packSize += 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(connectAckChannelReqPacks.getKey());
@@ -86,6 +90,7 @@ public class AckMessageToMessageCodec extends MessageToMessageCodec<ByteBuf, Bas
             case 14 -> { //ack通道-设置自动读
                 AutoreadReqPacks autoreadReqPacks = (AutoreadReqPacks) baseTransferPacks;
                 packSize += 1 + 8;
+                ByteBuf buffer = ctx.alloc().ioBuffer(packSize + 4);
                 buffer.writeInt(packSize);
                 buffer.writeByte(type);
                 buffer.writeLong(autoreadReqPacks.getTarChannelHash());

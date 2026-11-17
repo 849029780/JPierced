@@ -22,19 +22,28 @@ import java.util.Optional;
  */
 @Slf4j
 @ChannelHandler.Sharable
-public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class LocalChannelInBoundHandler extends ChannelInboundHandlerAdapter {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (!(msg instanceof ByteBuf byteBuf)) {
+            ctx.fireChannelRead(msg);
+            return;
+        }
         Channel channel = ctx.channel();
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-        byteBuf.retain();
-        TcpTransferDataPacks tcpTransferDataPacks = new TcpTransferDataPacks();
-        tcpTransferDataPacks.setTarChannelHash(tarChannelHash);
-        tcpTransferDataPacks.setDatas(byteBuf);
-        try {
-            Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(tcpTransferDataPacks);
-        } catch (Exception e) {
+        if (Objects.isNull(tarChannelHash)) {
+            log.warn("本地通道尚未绑定 tarChannelHash，忽略未就绪数据！");
+            ReferenceCountUtil.release(byteBuf);
+            return;
+        }
+        Channel remoteChannel = Constants.REMOTE_TRANSIMIT_CHANNEL;
+        if (Objects.nonNull(remoteChannel) && remoteChannel.isActive()) {
+            TcpTransferDataPacks tcpTransferDataPacks = new TcpTransferDataPacks();
+            tcpTransferDataPacks.setTarChannelHash(tarChannelHash);
+            tcpTransferDataPacks.setDatas(byteBuf);
+            remoteChannel.writeAndFlush(tcpTransferDataPacks);
+        } else {
             ReferenceCountUtil.release(byteBuf);
         }
     }
@@ -44,11 +53,20 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         super.channelInactive(ctx);
         Channel channel = ctx.channel();
         SocketAddress socketAddress = channel.remoteAddress();
+        // 修复内存泄漏：本地通道断开时，立即从 LOCAL_CHANNEL_MAP 中清理自身
+        Long thisChannelHash = channel.attr(Constants.THIS_CHANNEL_HASH_KEY).get();
+        if (thisChannelHash != null && Constants.LOCAL_CHANNEL_MAP != null) {
+            Constants.LOCAL_CHANNEL_MAP.remove(thisChannelHash);
+        }
         Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-        DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
-        disConnectReqPacks.setTarChannelHash(tarChannelHash);
-        Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> ch.writeAndFlush(disConnectReqPacks));
-        log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
+        if (tarChannelHash != null) {
+            DisConnectReqPacks disConnectReqPacks = new DisConnectReqPacks();
+            disConnectReqPacks.setTarChannelHash(tarChannelHash);
+            if (Constants.REMOTE_TRANSIMIT_CHANNEL != null && Constants.REMOTE_TRANSIMIT_CHANNEL.isActive()) {
+                Constants.REMOTE_TRANSIMIT_CHANNEL.writeAndFlush(disConnectReqPacks);
+            }
+            log.debug("本地连接:{}已关闭，已通知远程通道tarChannelHash:{}关闭连接..", socketAddress, tarChannelHash);
+        }
     }
 
     @Override
@@ -56,20 +74,16 @@ public class LocalChannelInBoundHandler extends SimpleChannelInboundHandler<Byte
         super.channelWritabilityChanged(ctx);
         Channel channel = ctx.channel();
 
-        if (Objects.nonNull(Constants.REMOTE_ACK_CHANNEL)) {
-            //向ack通道发送对远程端设置是否可读
+        if (Constants.REMOTE_ACK_CHANNEL != null && Constants.REMOTE_ACK_CHANNEL.isActive()) {
             Long tarChannelHash = channel.attr(Constants.TAR_CHANNEL_HASH_KEY).get();
-            AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
-            autoreadReqPacks.setTarChannelHash(tarChannelHash);
-            autoreadReqPacks.setAutoRead(channel.isWritable());
-            Constants.REMOTE_ACK_CHANNEL.writeAndFlush(autoreadReqPacks);
+            if (tarChannelHash != null) {
+                //向ack通道发送对远程端设置是否可读
+                AutoreadReqPacks autoreadReqPacks = new AutoreadReqPacks();
+                autoreadReqPacks.setTarChannelHash(tarChannelHash);
+                autoreadReqPacks.setAutoRead(channel.isWritable());
+                Constants.REMOTE_ACK_CHANNEL.writeAndFlush(autoreadReqPacks);
+            }
         }
-
-        //本地写缓冲状态和远程通道自动读状态设置为一致，如果本地写缓冲满了的话则不允许远程通道自动读
-        /*Optional.ofNullable(Constants.REMOTE_TRANSIMIT_CHANNEL).ifPresent(ch -> {
-            ch.config().setAutoRead(channel.isWritable());
-            ch.attr(Constants.LOCK_CHANNEL_ID_KEY).set(channel.id());
-        });*/
     }
 
 

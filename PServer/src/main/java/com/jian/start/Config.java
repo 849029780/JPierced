@@ -19,6 +19,8 @@ import javax.net.ssl.SSLException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.Objects;
@@ -126,7 +128,7 @@ public class Config {
             if (!file.exists()) {
                 file.createNewFile();
             }
-            outputStream = Files.newOutputStream(file.toPath(), StandardOpenOption.WRITE);
+            outputStream = Files.newOutputStream(file.toPath(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             log.error("获取文件outputSteam：{},错误！", fileName, e);
         }
@@ -186,12 +188,12 @@ public class Config {
             //序列化浅copy对象为json
             String dataJson = JsonUtils.JSON_PARSER.writerWithDefaultPrettyPrinter().writeValueAsString(mapSaved);
 
-            OutputStream fileOutStream = getFileOutStream(dataFileName);
-            BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(fileOutStream));
-            bufferedWriter.write(dataJson);
-            bufferedWriter.flush();
-            bufferedWriter.close();
-            fileOutStream.close();
+            // 崩溃安全：先写入临时文件，再通过原子移动替换目标文件
+            Path targetPath = Path.of(dirPath, dataFileName);
+            Path tmpPath = Path.of(dirPath, dataFileName + ".tmp");
+            Files.writeString(tmpPath, dataJson, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.move(tmpPath, targetPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             log.info("保存客户数据:{}，成功！", dataJson);
         } catch (JsonProcessingException e) {
             log.error("保存客户数据失败！客户数据:{}，转换为Json错误！", Constants.CLIENTS, e);
@@ -204,11 +206,14 @@ public class Config {
      * 保存配置文件
      */
     public static void saveProperties() {
-        try (OutputStream outputStream = getFileOutStream(propertiesFileName)) {
+        try {
             String yaml = YamlUtils.getYamlObjectMapper().writeValueAsString(Constants.CONFIG);
-            byte[] bytes = yaml.getBytes(StandardCharsets.UTF_8);
-            outputStream.write(bytes, 0, bytes.length);
-            outputStream.flush();
+            // 崩溃安全：先写入临时文件，再通过原子移动替换目标文件
+            Path targetPath = Path.of(dirPath, propertiesFileName);
+            Path tmpPath = Path.of(dirPath, propertiesFileName + ".tmp");
+            Files.writeString(tmpPath, yaml, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.move(tmpPath, targetPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             log.error("保存配置文件失败！写入配置文件错误！", e);
         }

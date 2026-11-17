@@ -180,7 +180,9 @@ public class AckChannelInBoundHandler extends SimpleChannelInboundHandler<BaseTr
                 if (Objects.nonNull(remoteChannel)) {
                     ConcurrentHashMap<Long, Channel> connectedMap = clientInfo.getConnectedMap();
                     Channel localChannel = connectedMap.get(autoreadReqPacks.getTarChannelHash());
-                    Optional.ofNullable(localChannel).ifPresent(ch -> ch.config().setAutoRead(autoreadReqPacks.isAutoRead()));
+                    if (localChannel != null && localChannel.isActive()) {
+                        localChannel.config().setAutoRead(autoreadReqPacks.isAutoRead());
+                    }
                 }
             }
             default -> throw new IllegalStateException("Unexpected value: " + type);
