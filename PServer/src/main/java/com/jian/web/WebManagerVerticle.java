@@ -382,8 +382,8 @@ public class WebManagerVerticle extends AbstractVerticle {
         clientInfo.setPwd(pwd);
 
         Constants.CLIENTS.put(key, clientInfo);
-        //重新保存数据
-        Config.saveTransmitData();
+        //重新异步保存数据（虚拟线程非阻塞写入）
+        Config.saveTransmitDataAsync();
         return Result.SUCCESS("添加客户端成功！");
     }
 
@@ -418,8 +418,8 @@ public class WebManagerVerticle extends AbstractVerticle {
             clientInfo.setName(name);
         }
 
-        //重新保存数据
-        Config.saveTransmitData();
+        //重新异步保存数据
+        Config.saveTransmitDataAsync();
         return Result.SUCCESS("修改客户端信息成功！");
     }
 
@@ -440,8 +440,8 @@ public class WebManagerVerticle extends AbstractVerticle {
         //远程连接不为空，则该客户端在线，在线时需要将该客户端下线操作
         Channel remoteChannel = clientInfo.getRemoteChannel();
         Optional.ofNullable(remoteChannel).ifPresent(ChannelOutboundInvoker::close);
-        //重新保存数据
-        Config.saveTransmitData();
+        //重新异步保存数据
+        Config.saveTransmitDataAsync();
         return Result.SUCCESS("移除客户端成功！");
     }
 
@@ -538,8 +538,8 @@ public class WebManagerVerticle extends AbstractVerticle {
             }
         }
 
-        //重新保存数据
-        Config.saveTransmitData();
+        //重新异步保存数据
+        Config.saveTransmitDataAsync();
         return Result.SUCCESS("添加映射端口成功！");
     }
 
@@ -635,8 +635,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                             TcpServer.listenLocal(Set.of(newServerPort), clientInfo);
                         }
                     }
-                    //重新保存数据
-                    Config.saveTransmitData();
+                    //重新异步保存数据
+                    Config.saveTransmitDataAsync();
                 });
             } else {
                 //关闭本地端口
@@ -666,8 +666,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                                     TcpServer.listenLocal(Set.of(newServerPort), clientInfo);
                                 }
                             }
-                            //重新保存数据
-                            Config.saveTransmitData();
+                            //重新异步保存数据
+                            Config.saveTransmitDataAsync();
                         }
                     });
                 } else {
@@ -677,8 +677,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                     oldNetAddress.setProtocol(protocol);
                     //添加新端口信息
                     clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
-                    //重新保存数据
-                    Config.saveTransmitData();
+                    //重新异步保存数据
+                    Config.saveTransmitDataAsync();
                 }
             }
         } else {
@@ -689,8 +689,8 @@ public class WebManagerVerticle extends AbstractVerticle {
             oldNetAddress.setCliUseHttps(cliUseHttps);
             //添加新端口信息
             clientInfo.getPortMappingAddress().put(newServerPort, oldNetAddress);
-            //重新保存数据
-            Config.saveTransmitData();
+            //重新异步保存数据
+            Config.saveTransmitDataAsync();
         }
         return Result.SUCCESS("修改映射端口完成！修改后如无法访问，请继续使用原端口！");
     }
@@ -841,8 +841,8 @@ public class WebManagerVerticle extends AbstractVerticle {
             TcpServer.closeLocalPort(clientInfo, channel, serverPort);
         }
 
-        //保存数据
-        Config.saveTransmitData();
+        //异步保存数据
+        Config.saveTransmitDataAsync();
         return Result.SUCCESS("移除映射端口成功！");
     }
 
@@ -870,8 +870,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                 //重新监听服务
                 TcpServer.listenRemote().addListener(future -> {
                     if (future.isSuccess()) {
-                        //保存配置
-                        Config.saveProperties();
+                        //异步保存配置
+                        Config.savePropertiesAsync();
                     } else {
                         log.warn("重启传输服务失败！端口:{}，即将恢复原端口:{}重启..", port, oldPort);
                         //设置配置
@@ -913,7 +913,7 @@ public class WebManagerVerticle extends AbstractVerticle {
         //设置配置
         Constants.CONFIG.getWeb().setDefUsername(defUsername);
         Constants.CONFIG.getWeb().setDefPassword(defPassword);
-        Config.saveProperties();
+        Config.savePropertiesAsync();
 
         return Result.SUCCESS("登录用户名和密码已重新设置！");
     }
@@ -937,8 +937,8 @@ public class WebManagerVerticle extends AbstractVerticle {
                 log.info("web服务已停止，准备重启web服务，端口:{}", port);
                 Constants.VERTX.deployVerticle(new WebManagerVerticle()).onSuccess(deployId -> {
                     Constants.VERTX_WEB_DEPLOY_ID = deployId;
-                    //保存配置
-                    Config.saveProperties();
+                    //异步保存配置
+                    Config.savePropertiesAsync();
                 }).onFailure(hann -> {
                     log.error("web服务重启失败！端口:{}，将恢复原端口:{}重启...", port, oldPort, hann);
                     //设置配置

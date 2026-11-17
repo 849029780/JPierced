@@ -148,21 +148,26 @@ public class RemoteChannelInBoundHandler extends SimpleChannelInboundHandler<Bas
                 ctx.writeAndFlush(healthRespPacks);
             }
             case 20 -> { //udp数据传输
+                UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
+                ByteBuf datas = udpTransferDataPacks.getDatas();
                 if (checkIsAuth(channel)) {
+                    ReferenceCountUtil.release(datas);
                     return;
                 }
-                UdpTransferDataPacks udpTransferDataPacks = (UdpTransferDataPacks) baseTransferPacks;
                 ClientInfo clientInfo = channel.attr(Constants.CLIENT_INFO_KEY).get();
                 ConcurrentHashMap<Integer, Channel> listenPortMap = clientInfo.getListenPortMap();
                 Integer sourcePort = udpTransferDataPacks.getSourcePort();
-                Channel udpChannel = listenPortMap.get(sourcePort);
+                Channel udpChannel = listenPortMap != null ? listenPortMap.get(sourcePort) : null;
 
-                InetSocketAddress inetSocketAddress = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
-
-                DatagramPacket datagramPacket = new DatagramPacket(udpTransferDataPacks.getDatas(), inetSocketAddress);
-                //回复udp数据到原发送者
-                udpChannel.writeAndFlush(datagramPacket);
-
+                if (udpChannel != null && udpChannel.isActive()) {
+                    InetSocketAddress inetSocketAddress = new InetSocketAddress(udpTransferDataPacks.getSenderHost(), udpTransferDataPacks.getSenderPort());
+                    DatagramPacket datagramPacket = new DatagramPacket(datas, inetSocketAddress);
+                    //回复udp数据到原发送者
+                    udpChannel.writeAndFlush(datagramPacket);
+                } else {
+                    // 若udp监听通道已失效或未找到，安全释放数据包内容防止堆外直接内存泄漏
+                    ReferenceCountUtil.release(datas);
+                }
             }
             default -> throw new IllegalStateException("Unexpected value: " + type);
         }

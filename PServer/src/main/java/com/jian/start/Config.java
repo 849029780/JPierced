@@ -203,6 +203,13 @@ public class Config {
     }
 
     /***
+     * 异步保存传输数据（通过 Java 25 虚拟线程后台执行，彻底消除 Vert.x/Netty EventLoop 线程阻塞）
+     */
+    public static void saveTransmitDataAsync() {
+        Constants.VIRTUAL_THREAD_POOL.execute(Config::saveTransmitData);
+    }
+
+    /***
      * 保存配置文件
      */
     public static void saveProperties() {
@@ -217,6 +224,13 @@ public class Config {
         } catch (IOException e) {
             log.error("保存配置文件失败！写入配置文件错误！", e);
         }
+    }
+
+    /***
+     * 异步保存配置文件（通过 Java 25 虚拟线程后台执行）
+     */
+    public static void savePropertiesAsync() {
+        Constants.VIRTUAL_THREAD_POOL.execute(Config::saveProperties);
     }
 
 
